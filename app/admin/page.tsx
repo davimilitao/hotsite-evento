@@ -1,0 +1,140 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { getAllInvites, getAllTables, getEventConfig } from '@/lib/db';
+import { Invite, Table, EventConfig } from '@/types';
+import { GuestList } from '@/components/admin/GuestList';
+import { TableManager } from '@/components/admin/TableManager';
+import { CheckinScanner } from '@/components/admin/CheckinScanner';
+import { SettingsForm } from '@/components/admin/SettingsForm';
+import { Users, Armchair, DoorOpen, Settings, RefreshCw, Crown, Sparkles } from 'lucide-react';
+
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'checkin' | 'settings'>('guests');
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [config, setConfig] = useState<EventConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [invitesData, tablesData, configData] = await Promise.all([
+        getAllInvites(),
+        getAllTables(),
+        getEventConfig(),
+      ]);
+
+      setInvites(invitesData);
+      setTables(tablesData);
+      setConfig(configData);
+    } catch (err) {
+      console.error('Erro ao carregar dados do admin:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+      {/* Topo Admin Header */}
+      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-md">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-tr from-purple-600 to-pink-600 text-white rounded-xl shadow-lg">
+              <Crown className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="font-extrabold text-base sm:text-lg text-white flex items-center gap-2">
+                Painel do Anfitrião <Sparkles className="w-4 h-4 text-amber-400" />
+              </h1>
+              <p className="text-xs text-slate-400">
+                {config ? config.title : 'Gestão de Convidados & Evento'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={loadAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold self-start sm:self-auto transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Atualizar Dados</span>
+          </button>
+        </div>
+
+        {/* Abas Principais de Navegação */}
+        <div className="max-w-6xl mx-auto px-4 flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none border-t border-slate-800/80">
+          <button
+            onClick={() => setActiveTab('guests')}
+            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === 'guests'
+                ? 'border-purple-500 text-purple-400 bg-purple-500/10'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>📋 Convidados & WhatsApp</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('tables')}
+            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === 'tables'
+                ? 'border-amber-500 text-amber-400 bg-amber-500/10'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Armchair className="w-4 h-4" />
+            <span>🪑 Gestão de Mesas</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('checkin')}
+            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === 'checkin'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <DoorOpen className="w-4 h-4" />
+            <span>🚪 Portaria / Check-in</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>⚙️ Configurações</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Conteúdo da Aba Ativa */}
+      <div className="max-w-6xl mx-auto px-4 pt-6">
+        {loading && invites.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mb-3" />
+            <p className="text-sm font-medium text-slate-400">Carregando painel de gestão...</p>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'guests' && <GuestList invites={invites} onRefresh={loadAll} />}
+            {activeTab === 'tables' && <TableManager tables={tables} invites={invites} onRefresh={loadAll} />}
+            {activeTab === 'checkin' && <CheckinScanner invites={invites} onRefresh={loadAll} />}
+            {activeTab === 'settings' && config && <SettingsForm config={config} onRefresh={loadAll} />}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
