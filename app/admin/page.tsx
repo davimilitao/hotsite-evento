@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData } from '@/lib/db';
+import { isFirebaseConfigured } from '@/lib/firebase';
 import { Invite, Table, EventConfig } from '@/types';
 import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
 import { CheckinScanner } from '@/components/admin/CheckinScanner';
 import { SettingsForm } from '@/components/admin/SettingsForm';
-import { Users, Armchair, DoorOpen, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2 } from 'lucide-react';
+import { Users, Armchair, DoorOpen, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'checkin' | 'settings'>('guests');
@@ -42,8 +43,12 @@ export default function AdminPage() {
     setSeedSuccess(false);
     try {
       await seedFirestoreData();
-      setSeedSuccess(true);
-      setTimeout(() => setSeedSuccess(false), 4000);
+      if (isFirebaseConfigured) {
+        setSeedSuccess(true);
+        setTimeout(() => setSeedSuccess(false), 4000);
+      } else {
+        alert('Aviso: As variáveis de ambiente NEXT_PUBLIC_FIREBASE_* não estão configuradas na Vercel. O aplicativo salvou apenas no LocalStorage do seu navegador.');
+      }
       await loadAll();
     } catch (err) {
       console.error('Erro ao popular Firestore:', err);
@@ -59,6 +64,16 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+      {/* Banner de Aviso de Configuração do Firebase */}
+      {!isFirebaseConfigured && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 px-4 py-2 text-xs text-center flex items-center justify-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>
+            <strong>Modo Local (Demo):</strong> O banco Firestore ainda não foi detectado no navegador. Adicione o prefixo <code className="bg-amber-950 px-1 py-0.5 rounded font-mono">NEXT_PUBLIC_</code> nas variáveis de ambiente da Vercel.
+          </span>
+        </div>
+      )}
+
       {/* Topo Admin Header */}
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
