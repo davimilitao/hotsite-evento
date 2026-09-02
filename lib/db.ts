@@ -131,6 +131,32 @@ function setLS<T>(key: string, data: T): void {
   }
 }
 
+/**
+ * Popula o banco de dados do Firestore com os dados iniciais do evento, mesas e convites
+ */
+export async function seedFirestoreData(): Promise<void> {
+  if (!isFirebaseConfigured) {
+    console.warn('Firebase não configurado, salvando seed no LocalStorage.');
+    setLS(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
+    setLS(LS_KEYS.TABLES, INITIAL_TABLES);
+    setLS(LS_KEYS.INVITES, INITIAL_INVITES);
+    return;
+  }
+
+  // 1. Salva Configuração do Evento
+  await setDoc(doc(db, 'event_config', 'settings'), INITIAL_EVENT_CONFIG);
+
+  // 2. Salva Mesas
+  for (const table of INITIAL_TABLES) {
+    await setDoc(doc(db, 'tables', table.id), table);
+  }
+
+  // 3. Salva Convites
+  for (const invite of INITIAL_INVITES) {
+    await setDoc(doc(db, 'invites', invite.id), invite);
+  }
+}
+
 // ---- API DO BANCO DE DADOS (Firestore com fallback localStorage) ----
 
 export async function getEventConfig(): Promise<EventConfig> {

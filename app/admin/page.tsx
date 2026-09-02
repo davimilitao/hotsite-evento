@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllInvites, getAllTables, getEventConfig } from '@/lib/db';
+import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData } from '@/lib/db';
 import { Invite, Table, EventConfig } from '@/types';
 import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
 import { CheckinScanner } from '@/components/admin/CheckinScanner';
 import { SettingsForm } from '@/components/admin/SettingsForm';
-import { Users, Armchair, DoorOpen, Settings, RefreshCw, Crown, Sparkles } from 'lucide-react';
+import { Users, Armchair, DoorOpen, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2 } from 'lucide-react';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'checkin' | 'settings'>('guests');
@@ -15,6 +15,8 @@ export default function AdminPage() {
   const [tables, setTables] = useState<Table[]>([]);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedSuccess, setSeedSuccess] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
@@ -32,6 +34,22 @@ export default function AdminPage() {
       console.error('Erro ao carregar dados do admin:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSeedDatabase = async () => {
+    setSeeding(true);
+    setSeedSuccess(false);
+    try {
+      await seedFirestoreData();
+      setSeedSuccess(true);
+      setTimeout(() => setSeedSuccess(false), 4000);
+      await loadAll();
+    } catch (err) {
+      console.error('Erro ao popular Firestore:', err);
+      alert('Erro ao inicializar banco de dados.');
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -58,14 +76,34 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <button
-            onClick={loadAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold self-start sm:self-auto transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Atualizar Dados</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={handleSeedDatabase}
+              disabled={seeding}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+              title="Popula o Firestore com coleções e dados de teste com 1 clique"
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>{seeding ? 'Populando...' : '⚡ Inicializar Firestore'}</span>
+            </button>
+
+            <button
+              onClick={loadAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Atualizar</span>
+            </button>
+          </div>
         </div>
+
+        {/* Notificação Toast de Seed com Sucesso */}
+        {seedSuccess && (
+          <div className="bg-emerald-500 text-slate-950 px-4 py-2 text-center text-xs font-black flex items-center justify-center gap-2 animate-fade-in">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Coleções `invites`, `tables` e `event_config` criadas com sucesso no seu Firestore!</span>
+          </div>
+        )}
 
         {/* Abas Principais de Navegação */}
         <div className="max-w-6xl mx-auto px-4 flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none border-t border-slate-800/80">
