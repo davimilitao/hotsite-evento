@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { EventConfig, GiftSuggestion } from '@/types';
+import { EventConfig, GiftSuggestion, ThemePreset, EventTheme } from '@/types';
 import { saveEventConfig } from '@/lib/db';
-import { Settings, Save, Plus, Trash2, CheckCircle2, QrCode, MapPin, Gift } from 'lucide-react';
+import { Settings, Save, Plus, Trash2, CheckCircle2, QrCode, MapPin, Palette, Sparkles } from 'lucide-react';
 
 interface SettingsFormProps {
   config: EventConfig;
@@ -15,8 +15,78 @@ export function SettingsForm({ config: initialConfig, onRefresh }: SettingsFormP
   const [loading, setLoading] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
 
+  const theme: EventTheme = config.theme || {
+    preset: 'lavender_floral',
+    primary_color: '#6b4684',
+    accent_color: '#c5a059',
+    bg_color: '#faf6f0',
+    card_bg_color: '#ffffff',
+    text_color: '#2d2138',
+    font_family: 'serif',
+  };
+
   const handleChange = (field: keyof EventConfig, value: any) => {
     setConfig({ ...config, [field]: value });
+  };
+
+  const handleThemeChange = (field: keyof EventTheme, value: any) => {
+    setConfig({
+      ...config,
+      theme: { ...theme, [field]: value },
+    });
+  };
+
+  const handleApplyPreset = (preset: ThemePreset) => {
+    let updatedTheme: EventTheme = { ...theme, preset };
+
+    switch (preset) {
+      case 'lavender_floral':
+        updatedTheme = {
+          preset: 'lavender_floral',
+          primary_color: '#6b4684',
+          accent_color: '#c5a059',
+          bg_color: '#faf6f0',
+          card_bg_color: '#ffffff',
+          text_color: '#2d2138',
+          font_family: 'serif',
+        };
+        break;
+      case 'midnight_gold':
+        updatedTheme = {
+          preset: 'midnight_gold',
+          primary_color: '#d97706',
+          accent_color: '#fbbf24',
+          bg_color: '#0f172a',
+          card_bg_color: '#1e293b',
+          text_color: '#f8fafc',
+          font_family: 'playfair',
+        };
+        break;
+      case 'rose_gold':
+        updatedTheme = {
+          preset: 'rose_gold',
+          primary_color: '#be123c',
+          accent_color: '#f43f5e',
+          bg_color: '#fff1f2',
+          card_bg_color: '#ffffff',
+          text_color: '#4c0519',
+          font_family: 'serif',
+        };
+        break;
+      case 'royal_purple':
+        updatedTheme = {
+          preset: 'royal_purple',
+          primary_color: '#7e22ce',
+          accent_color: '#a855f7',
+          bg_color: '#090514',
+          card_bg_color: '#190e2b',
+          text_color: '#f3e8ff',
+          font_family: 'sans',
+        };
+        break;
+    }
+
+    setConfig({ ...config, theme: updatedTheme });
   };
 
   const handleAddGift = () => {
@@ -70,6 +140,141 @@ export function SettingsForm({ config: initialConfig, onRefresh }: SettingsFormP
           <span>Configurações salvas com sucesso!</span>
         </div>
       )}
+
+      {/* Editor de Temas & Cores (NOVO) */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <h3 className="font-bold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <Palette className="w-5 h-5 text-purple-600" /> Editor de Tema & Identidade Visual
+        </h3>
+
+        <div className="space-y-3">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Presets de Cores Prontos:
+          </label>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={() => handleApplyPreset('lavender_floral')}
+              className={`p-3 rounded-xl border text-left font-bold text-xs space-y-1 transition-all ${
+                theme.preset === 'lavender_floral'
+                  ? 'border-purple-600 ring-2 ring-purple-500/20 bg-purple-50 dark:bg-purple-950/40'
+                  : 'border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <div className="flex gap-1">
+                <span className="w-4 h-4 rounded-full bg-[#6b4684] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#c5a059] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#faf6f0] border inline-block" />
+              </div>
+              <span className="block text-slate-800 dark:text-slate-100 text-[11px]">🌸 Lavanda & Dourado</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleApplyPreset('midnight_gold')}
+              className={`p-3 rounded-xl border text-left font-bold text-xs space-y-1 transition-all ${
+                theme.preset === 'midnight_gold'
+                  ? 'border-amber-600 ring-2 ring-amber-500/20 bg-amber-950/20'
+                  : 'border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <div className="flex gap-1">
+                <span className="w-4 h-4 rounded-full bg-[#d97706] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#fbbf24] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#0f172a] inline-block" />
+              </div>
+              <span className="block text-slate-800 dark:text-slate-100 text-[11px]">✨ Midnight Gold</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleApplyPreset('rose_gold')}
+              className={`p-3 rounded-xl border text-left font-bold text-xs space-y-1 transition-all ${
+                theme.preset === 'rose_gold'
+                  ? 'border-rose-600 ring-2 ring-rose-500/20 bg-rose-50 dark:bg-rose-950/40'
+                  : 'border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <div className="flex gap-1">
+                <span className="w-4 h-4 rounded-full bg-[#be123c] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#f43f5e] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#fff1f2] border inline-block" />
+              </div>
+              <span className="block text-slate-800 dark:text-slate-100 text-[11px]">🌹 Rose Gold</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleApplyPreset('royal_purple')}
+              className={`p-3 rounded-xl border text-left font-bold text-xs space-y-1 transition-all ${
+                theme.preset === 'royal_purple'
+                  ? 'border-purple-600 ring-2 ring-purple-500/20 bg-purple-950/40'
+                  : 'border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <div className="flex gap-1">
+                <span className="w-4 h-4 rounded-full bg-[#7e22ce] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#a855f7] inline-block" />
+                <span className="w-4 h-4 rounded-full bg-[#090514] inline-block" />
+              </div>
+              <span className="block text-slate-800 dark:text-slate-100 text-[11px]">👑 Royal Purple</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Ajustes Finos de Cor & Tipografia */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Cor Primária</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={theme.primary_color}
+                onChange={(e) => handleThemeChange('primary_color', e.target.value)}
+                className="w-9 h-9 rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={theme.primary_color}
+                onChange={(e) => handleThemeChange('primary_color', e.target.value)}
+                className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Cor de Destaque</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={theme.accent_color}
+                onChange={(e) => handleThemeChange('accent_color', e.target.value)}
+                className="w-9 h-9 rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={theme.accent_color}
+                onChange={(e) => handleThemeChange('accent_color', e.target.value)}
+                className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Estilo de Fonte</label>
+            <select
+              value={theme.font_family}
+              onChange={(e) => handleThemeChange('font_family', e.target.value as any)}
+              className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="serif">Serif Clássico (Elegante Convite)</option>
+              <option value="playfair">Playfair Moderno</option>
+              <option value="sans">Sans-Serif Clean / Tech</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
       {/* Seção Dados do Evento */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">

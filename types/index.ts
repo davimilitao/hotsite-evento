@@ -44,6 +44,19 @@ export interface GiftSuggestion {
   link?: string;
 }
 
+export type ThemePreset = 'lavender_floral' | 'midnight_gold' | 'rose_gold' | 'royal_purple' | 'custom';
+
+export interface EventTheme {
+  preset: ThemePreset;
+  primary_color: string; // ex: #6b4684
+  accent_color: string;  // ex: #c5a059
+  bg_color: string;      // ex: #faf6f0 ou #0f172a
+  card_bg_color: string; // ex: #ffffff
+  text_color: string;    // ex: #332940
+  font_family: 'playfair' | 'serif' | 'sans';
+  banner_image_url?: string;
+}
+
 export interface EventConfig {
   title: string;
   birthday_person: string;
@@ -61,4 +74,5 @@ export interface EventConfig {
   floorplan_image_url?: string;
   gift_suggestions: GiftSuggestion[];
   custom_message_template?: string;
+  theme?: EventTheme;
 }

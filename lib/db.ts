@@ -11,54 +11,63 @@ import { db, isFirebaseConfigured } from './firebase';
 import { Invite, Table, EventConfig, Guest } from '@/types';
 import { generateInviteToken } from './utils';
 
-// Dados Iniciais de Demonstração (Seed)
+// Dados Reais da Festa de Fernanda Seppi (40 Anos)
 export const INITIAL_EVENT_CONFIG: EventConfig = {
-  title: 'Aniversário de 30 Anos do Lucas 🎂',
-  birthday_person: 'Lucas Silva',
-  age_celebrating: 30,
-  date_time: '2026-10-20T19:00:00.000Z',
-  deadline_rsvp: '2026-10-10T23:59:59.000Z',
-  location_name: 'Espaço Celebrar - Salão Principal',
-  address: 'Av. das Nações, 1500 - Jardim Primavera, São Paulo - SP',
-  maps_url: 'https://maps.google.com/?q=Espaco+Celebrar+Sao+Paulo',
-  waze_url: 'https://waze.com/ul?q=Espaco+Celebrar+Sao+Paulo',
-  pix_key: 'lucas.aniversario30@email.com',
-  pix_name: 'Lucas Silva (Vaquinha da Viagem)',
+  title: 'Fernanda Seppi - 40 Anos 🌸✨',
+  birthday_person: 'Fernanda Seppi',
+  age_celebrating: 40,
+  date_time: '2026-11-07T17:00:00.000Z',
+  deadline_rsvp: '2026-10-25T23:59:59.000Z',
+  location_name: 'Buffet Espaço Estupendo',
+  address: 'São Bernardo do Campo - SP',
+  maps_url: 'https://maps.google.com/?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
+  waze_url: 'https://waze.com/ul?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
+  pix_key: 'fernanda.seppi40@email.com',
+  pix_name: 'Fernanda Seppi (Vaquinha da Comemoração)',
   pix_bank: 'Banco Nubank',
   floorplan_image_url: '',
+  theme: {
+    preset: 'lavender_floral',
+    primary_color: '#6b4684', // Roxo Lavanda Elegante
+    accent_color: '#c5a059',  // Dourado Nobre
+    bg_color: '#faf6f0',      // Creme Suave / Marfim
+    card_bg_color: '#ffffff',
+    text_color: '#2d2138',
+    font_family: 'serif',
+  },
   gift_suggestions: [
     {
       id: 'g1',
-      title: 'Vaquinha da Viagem do Aniversariante ✈️',
-      description: 'Qualquer valor via Pix é super bem-vindo para realizar o sonho da viagem!',
+      title: 'Vaquinha Especial 40 Anos ✈️',
+      description: 'Contribua com qualquer valor via Pix para marcar essa data inesquecível!',
       category: 'vaquinha',
     },
     {
       id: 'g2',
-      title: 'Roupas & Estilo 👕',
-      description: 'Camisetas tamanho G / Calças jeans tamanho 42 / Cores neutras',
+      title: 'Roupas & Estilo 👗',
+      description: 'Vestidos / Blusas tamanho M / Cores suaves e elegantes',
       category: 'clothes',
     },
     {
       id: 'g3',
-      title: 'Calçados & Tênis 👟',
-      description: 'Tênis casual ou esportivo tamanho 41',
+      title: 'Calçados & Acessórios 👠',
+      description: 'Sandálias ou calçados confortáveis tamanho 37',
       category: 'shoes',
     },
     {
       id: 'g4',
-      title: 'Vinhos & Bebidas Especiais 🍷',
-      description: 'Vinho Seco (Cabernet Sauvignon ou Malbec) ou Cerveja Artesanal',
+      title: 'Vinhos & Espumantes 🥂',
+      description: 'Vinho Seco (Pinot Noir ou Chardonnay) ou Espumante Brut',
       category: 'experience',
     },
   ],
 };
 
 export const INITIAL_TABLES: Table[] = [
-  { id: 'mesa-01', name: 'Mesa 01 - Família VIP', capacity: 8, allocated_count: 4, shape: 'round', description: 'Próxima ao palco principal' },
+  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, allocated_count: 4, shape: 'round', description: 'Próxima ao palco principal' },
   { id: 'mesa-02', name: 'Mesa 02 - Amigos de Infância', capacity: 8, allocated_count: 6, shape: 'round', description: 'Central' },
   { id: 'mesa-03', name: 'Mesa 03 - Pessoal do Trabalho', capacity: 10, allocated_count: 3, shape: 'square', description: 'Próxima ao Bar' },
-  { id: 'mesa-04', name: 'Mesa 04 - Amigos da Faculdade', capacity: 8, allocated_count: 0, shape: 'round', description: 'Próxima à Pista de Dança' },
+  { id: 'mesa-04', name: 'Mesa 04 - Amigos Especiais', capacity: 8, allocated_count: 0, shape: 'round', description: 'Próxima à Pista de Dança' },
   { id: 'lounge-01', name: 'Lounge Estofados', capacity: 12, allocated_count: 0, shape: 'lounge', description: 'Área externa / Descanso' },
 ];
 

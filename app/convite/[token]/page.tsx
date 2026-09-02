@@ -8,7 +8,9 @@ import { EventLocationCard } from '@/components/guest/EventLocationCard';
 import { RSVPForm } from '@/components/guest/RSVPForm';
 import { SeatCard } from '@/components/guest/SeatCard';
 import { GiftSection } from '@/components/guest/GiftSection';
-import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { MobileBottomNav, ActiveTabType } from '@/components/guest/MobileBottomNav';
+import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
+import { Sparkles, AlertCircle, RefreshCw, Navigation } from 'lucide-react';
 
 interface ConvitePageProps {
   params: Promise<{ token: string }>;
@@ -21,6 +23,8 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<ActiveTabType>('rsvp');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -76,36 +80,62 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     );
   }
 
+  const assignedTable = tables.find((t) => t.id === invite.table_id);
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24 sm:pb-16">
       {/* Container Principal Mobile Centralizado */}
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Header com Contagem Regressiva */}
+        {/* Header Hero com Arte Floral & Contagem Regressiva */}
         <HeaderHero config={config} invite={invite} />
 
-        {/* Corpo do Hotsite em Seções */}
+        {/* Visualização por Abas no Mobile / Visão Completa no Desktop */}
         <div className="px-4 space-y-6">
-          {/* Seção 1: Formulário de Confirmação (RSVP) */}
-          <RSVPForm invite={invite} onUpdate={(updated) => setInvite(updated)} />
+          {/* ABA 1: RSVP & Formulário */}
+          <div className={`${activeTab === 'rsvp' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+            <RSVPForm
+              invite={invite}
+              onUpdate={(updated) => setInvite(updated)}
+              onSubmittedFeedback={() => setShowFeedbackModal(true)}
+            />
+          </div>
 
-          {/* Seção 2: Card de Assento / Mesa Atribuída */}
-          <SeatCard invite={invite} tables={tables} />
+          {/* ABA 2: Assento Reservado & Localização */}
+          <div className={`${activeTab === 'location' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+            <SeatCard invite={invite} tables={tables} />
+            <EventLocationCard config={config} />
+          </div>
 
-          {/* Seção 3: Endereço & Waze / Google Maps */}
-          <EventLocationCard config={config} />
-
-          {/* Seção 4: Sugestões de Presentes & Pix */}
-          <GiftSection config={config} />
+          {/* ABA 3: Guia de Presentes & Pix */}
+          <div className={`${activeTab === 'gifts' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+            <GiftSection config={config} />
+          </div>
         </div>
 
         {/* Rodapé Fofo */}
-        <footer className="text-center text-xs text-slate-500 pt-8 pb-4">
+        <footer className="text-center text-xs text-slate-500 pt-8 pb-4 px-4">
           <p className="flex items-center justify-center gap-1">
-            Feito com carinho para o <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <strong className="text-slate-400">{config.birthday_person}</strong>
+            Feito com carinho para <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <strong className="text-slate-300">{config.birthday_person}</strong>
           </p>
         </footer>
       </div>
+
+      {/* Barra de Navegação Flutuante Inferior para Mobile */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onChangeTab={(tab) => setActiveTab(tab)}
+        hasAssignedTable={Boolean(invite.table_id && invite.status === 'confirmed')}
+      />
+
+      {/* Modal Pop-up de Feedback Imediato Pós-RSVP */}
+      <RSVPFeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        invite={invite}
+        assignedTable={assignedTable}
+        onGoToLocation={() => setActiveTab('location')}
+      />
     </main>
   );
 }

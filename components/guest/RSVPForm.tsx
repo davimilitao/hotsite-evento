@@ -3,15 +3,16 @@
 import React, { useState } from 'react';
 import { Invite, Guest } from '@/types';
 import { updateInviteRSVP } from '@/lib/db';
-import { Check, UserPlus, Trash2, Utensils, Send, AlertTriangle, Sparkles, HeartHandshake } from 'lucide-react';
+import { UserPlus, Trash2, Utensils, Send, AlertTriangle, Sparkles, HeartHandshake } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RSVPFormProps {
   invite: Invite;
   onUpdate: (updated: Invite) => void;
+  onSubmittedFeedback?: () => void;
 }
 
-export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
+export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProps) {
   const [willAttend, setWillAttend] = useState<boolean>(invite.status !== 'declined');
   const [guests, setGuests] = useState<Guest[]>(() => {
     if (invite.guests && invite.guests.length > 0) return invite.guests;
@@ -19,7 +20,6 @@ export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
   });
   const [notes, setNotes] = useState<string>(invite.notes || '');
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleAddGuest = () => {
     if (guests.length >= invite.max_guests) return;
@@ -40,7 +40,6 @@ export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setSuccessMsg(null);
 
     try {
       const status = willAttend ? 'confirmed' : 'declined';
@@ -62,16 +61,16 @@ export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
 
       if (status === 'confirmed') {
         confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.5 },
         });
-        setSuccessMsg('🎉 Presença confirmada com sucesso! Mal podemos esperar por você!');
-      } else {
-        setSuccessMsg('Sua resposta foi registrada. Sentiremos sua falta na festa!');
       }
 
       onUpdate(updatedInvite);
+      if (onSubmittedFeedback) {
+        onSubmittedFeedback();
+      }
     } catch (err) {
       console.error('Erro ao enviar RSVP:', err);
       alert('Ocorreu um erro ao salvar sua resposta. Tente novamente.');
@@ -89,17 +88,10 @@ export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
         <div>
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Confirmação de Presença (RSVP)</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Convite para até <strong className="text-slate-700 dark:text-slate-200">{invite.max_guests} vagas</strong>
+            Convite reservado para até <strong className="text-slate-700 dark:text-slate-200">{invite.max_guests} pessoas</strong>
           </p>
         </div>
       </div>
-
-      {successMsg && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 p-4 rounded-2xl text-sm font-medium animate-fade-in flex items-start gap-2">
-          <Sparkles className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-          <div>{successMsg}</div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Opção de Presença */}
@@ -213,7 +205,7 @@ export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
             {/* Recado para o Anfitrião */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                Deixe uma mensagem para o aniversariante (opcional):
+                Deixe uma mensagem para a aniversariante (opcional):
               </label>
               <textarea
                 rows={2}
@@ -242,7 +234,7 @@ export function RSVPForm({ invite, onUpdate }: RSVPFormProps) {
           className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-base rounded-2xl shadow-lg hover:shadow-purple-500/25 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? (
-            <span>Enviando resposta...</span>
+            <span>Salvando sua resposta...</span>
           ) : (
             <>
               <Send className="w-5 h-5" />
