@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { EventConfig, Invite } from '@/types';
-import { Calendar, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { formatDateExtenso } from '@/lib/utils';
+import React, { useState, useEffect } from 'react';
+import { EventConfig, Invite, EventTheme } from '@/types';
+import { Calendar, MapPin, Sparkles } from 'lucide-react';
 
 interface HeaderHeroProps {
   config: EventConfig;
@@ -11,7 +10,18 @@ interface HeaderHeroProps {
 }
 
 export function HeaderHero({ config, invite }: HeaderHeroProps) {
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
+  const theme: EventTheme = config.theme || {
+    preset: 'lavender_floral',
+    primary_color: '#6b4684',
+    accent_color: '#c5a059',
+    bg_color: '#faf6f0',
+    card_bg_color: '#ffffff',
+    text_color: '#2d2138',
+    font_family: 'serif',
+    banner_image_url: '',
+  };
+
+  const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
     minutes: 0,
@@ -19,109 +29,98 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
   });
 
   useEffect(() => {
-    const target = new Date(config.date_time).getTime();
+    const targetDate = new Date(config.date_time).getTime();
 
-    const updateCountdown = () => {
+    const interval = setInterval(() => {
       const now = new Date().getTime();
-      const diff = target - now;
+      const difference = targetDate - now;
 
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        return;
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((difference % (1000 * 60)) / 1000),
+        });
+      } else {
+        clearInterval(interval);
       }
+    }, 1000);
 
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
-      });
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, [config.date_time]);
 
-  const getStatusBadge = () => {
-    switch (invite.status) {
-      case 'confirmed':
-        return (
-          <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            Presença Confirmada ({invite.confirmed_count} {invite.confirmed_count === 1 ? 'pessoa' : 'pessoas'})
-          </div>
-        );
-      case 'declined':
-        return (
-          <div className="inline-flex items-center gap-2 bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md">
-            <XCircle className="w-4 h-4 text-rose-400" />
-            Ausência Registrada
-          </div>
-        );
-      default:
-        return (
-          <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md animate-pulse">
-            <AlertCircle className="w-4 h-4 text-amber-400" />
-            Aguardando sua Confirmação
-          </div>
-        );
-    }
-  };
-
   return (
-    <header className="relative bg-gradient-to-b from-purple-900 via-indigo-900 to-slate-900 text-white pt-10 pb-16 px-4 text-center overflow-hidden rounded-b-[2.5rem] shadow-2xl border-b border-indigo-500/20">
-      {/* Elementos Decorativos de Fundo */}
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+    <header className="relative text-center space-y-6 pt-6 px-4">
+      {/* Moldura de Boas-Vindas Floral Elegante */}
+      <div className="bg-white/90 rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-[#c5a059]/40 relative overflow-hidden backdrop-blur-sm">
+        {/* Detalhe de Aquarela sutil de fundo */}
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative max-w-lg mx-auto space-y-5">
-        {/* Badge do Convidado */}
-        <div>{getStatusBadge()}</div>
-
-        <p className="text-purple-300 text-sm font-medium tracking-wide uppercase">
-          Você está convidado(a) especial!
-        </p>
-
-        {/* Título Principal */}
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-pink-200 to-amber-200">
-          {config.title}
-        </h1>
-
-        <p className="text-slate-300 text-sm sm:text-base font-light">
-          Convite exclusivo para <strong className="font-semibold text-amber-300">{invite.head_name}</strong>
-          {invite.max_guests > 1 && ` (até ${invite.max_guests} pessoas)`}
-        </p>
-
-        {/* Card Data & Hora */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-4 inline-block max-w-md w-full shadow-lg">
-          <div className="flex items-center justify-center gap-2 text-amber-300 font-semibold text-sm mb-1">
-            <Calendar className="w-4 h-4" />
-            <span>{formatDateExtenso(config.date_time)}</span>
+        <div className="relative space-y-4">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6b4684]/10 text-[#6b4684] rounded-full text-xs font-extrabold border border-[#6b4684]/20">
+            <Sparkles className="w-3.5 h-3.5 text-[#c5a059]" /> Convite Exclusivo para {invite.head_name}
           </div>
-        </div>
 
-        {/* Contagem Regressiva */}
-        <div className="pt-2">
-          <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 font-semibold flex items-center justify-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" /> Faltam apenas
-          </p>
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 max-w-xs mx-auto">
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 shadow-inner">
-              <span className="block text-xl sm:text-2xl font-extrabold text-amber-400">{timeLeft.days}</span>
-              <span className="text-[10px] uppercase text-slate-400 font-medium">Dias</span>
+          <div className="space-y-1">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-[#c5a059] block">
+              SAVE THE DATE
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] font-serif tracking-tight">
+              {config.birthday_person}
+            </h1>
+            <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider">
+              {config.age_celebrating} Anos 🌸✨
+            </p>
+          </div>
+
+          {/* Banner da Arte do Convite (se cadastrado) */}
+          {theme.banner_image_url && (
+            <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-[#c5a059]/30">
+              <img
+                src={theme.banner_image_url}
+                alt="Arte do Convite"
+                className="w-full h-auto max-h-64 object-cover"
+              />
             </div>
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 shadow-inner">
-              <span className="block text-xl sm:text-2xl font-extrabold text-slate-200">{timeLeft.hours}</span>
-              <span className="text-[10px] uppercase text-slate-400 font-medium">Horas</span>
+          )}
+
+          {/* Data & Localização Detalhada */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 text-xs font-bold text-[#2d2138]">
+            <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
+              <Calendar className="w-4 h-4 text-[#6b4684]" />
+              <span>Sábado, 07 de Novembro • 17h às 23h</span>
             </div>
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 shadow-inner">
-              <span className="block text-xl sm:text-2xl font-extrabold text-slate-200">{timeLeft.minutes}</span>
-              <span className="text-[10px] uppercase text-slate-400 font-medium">Min</span>
+
+            <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
+              <MapPin className="w-4 h-4 text-[#6b4684]" />
+              <span>{config.location_name}</span>
             </div>
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 shadow-inner">
-              <span className="block text-xl sm:text-2xl font-extrabold text-pink-400">{timeLeft.seconds}</span>
-              <span className="text-[10px] uppercase text-slate-400 font-medium">Seg</span>
+          </div>
+
+          {/* Contador Regressivo Dourado */}
+          <div className="pt-4 border-t border-[#c5a059]/20">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6b4684] block mb-2">
+              Contagem Regressiva para a Festa
+            </span>
+            <div className="grid grid-cols-4 gap-2 max-w-xs mx-auto">
+              {[
+                { label: 'Dias', value: timeLeft.days },
+                { label: 'Horas', value: timeLeft.hours },
+                { label: 'Minutos', value: timeLeft.minutes },
+                { label: 'Segundos', value: timeLeft.seconds },
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-gradient-to-b from-[#faf6f0] to-white p-2 rounded-2xl border border-[#c5a059]/40 shadow-sm text-center"
+                >
+                  <span className="block text-xl font-black text-[#6b4684] font-serif">
+                    {String(item.value).padStart(2, '0')}
+                  </span>
+                  <span className="text-[9px] font-bold text-[#c5a059] uppercase">{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

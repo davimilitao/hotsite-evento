@@ -10,7 +10,7 @@ import { SeatCard } from '@/components/guest/SeatCard';
 import { GiftSection } from '@/components/guest/GiftSection';
 import { MobileBottomNav, ActiveTabType } from '@/components/guest/MobileBottomNav';
 import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
-import { Sparkles, AlertCircle, RefreshCw, Navigation } from 'lucide-react';
+import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface ConvitePageProps {
   params: Promise<{ token: string }>;
@@ -51,27 +51,27 @@ export default function ConvitePage({ params }: ConvitePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
-        <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mb-3" />
-        <p className="text-sm font-medium text-slate-400">Carregando seu convite especial...</p>
+      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex flex-col items-center justify-center p-4">
+        <RefreshCw className="w-8 h-8 text-[#6b4684] animate-spin mb-3" />
+        <p className="text-sm font-semibold text-[#6b4684]">Carregando seu convite especial...</p>
       </div>
     );
   }
 
   if (!invite || !config) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
-          <div className="p-4 bg-rose-500/20 text-rose-400 rounded-full inline-block">
+      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex items-center justify-center p-4">
+        <div className="bg-white border border-[#c5a059]/40 rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
+          <div className="p-4 bg-rose-100 text-rose-600 rounded-full inline-block">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-extrabold text-white">Convite Não Encontrado</h2>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h2 className="text-xl font-extrabold text-[#6b4684]">Convite Não Encontrado</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
             Não encontramos um convite válido para este link. Verifique se a URL foi copiada corretamente pelo WhatsApp.
           </p>
           <a
             href="/"
-            className="inline-block px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-all"
+            className="inline-block px-5 py-2.5 bg-[#6b4684] hover:bg-[#5a3973] text-white text-xs font-bold rounded-xl transition-all shadow-md"
           >
             Ir para a Página Inicial
           </a>
@@ -81,12 +81,26 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   }
 
   const assignedTable = tables.find((t) => t.id === invite.table_id);
+  const theme = config.theme || {
+    primary_color: '#6b4684',
+    accent_color: '#c5a059',
+    bg_color: '#faf6f0',
+    text_color: '#2d2138',
+    font_family: 'serif',
+  };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24 sm:pb-16">
+    <main
+      className="min-h-screen font-sans pb-24 sm:pb-16 transition-colors duration-300"
+      style={{
+        backgroundColor: theme.bg_color || '#faf6f0',
+        color: theme.text_color || '#2d2138',
+        fontFamily: theme.font_family === 'serif' ? 'Georgia, serif' : 'sans-serif',
+      }}
+    >
       {/* Container Principal Mobile Centralizado */}
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Header Hero com Arte Floral & Contagem Regressiva */}
+        {/* Header Hero com Arte Floral Aquarelada */}
         <HeaderHero config={config} invite={invite} />
 
         {/* Visualização por Abas no Mobile / Visão Completa no Desktop */}
@@ -113,11 +127,11 @@ export default function ConvitePage({ params }: ConvitePageProps) {
           </div>
         </div>
 
-        {/* Rodapé Fofo */}
+        {/* Rodapé Fofo Aquarelado */}
         <footer className="text-center text-xs text-slate-500 pt-8 pb-4 px-4">
-          <p className="flex items-center justify-center gap-1">
-            Feito com carinho para <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <strong className="text-slate-300">{config.birthday_person}</strong>
+          <p className="flex items-center justify-center gap-1 font-medium">
+            Feito com carinho para <Sparkles className="w-3.5 h-3.5 text-[#c5a059]" />
+            <strong className="text-[#6b4684]">{config.birthday_person}</strong>
           </p>
         </footer>
       </div>

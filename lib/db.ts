@@ -11,7 +11,7 @@ import { db, isFirebaseConfigured } from './firebase';
 import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier } from '@/types';
 import { generateInviteToken } from './utils';
 
-// Dados Reais da Festa de Fernanda Seppi (40 Anos)
+// Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
 export const INITIAL_EVENT_CONFIG: EventConfig = {
   title: 'Fernanda Seppi - 40 Anos 🌸✨',
   birthday_person: 'Fernanda Seppi',
@@ -29,12 +29,13 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   floorplan_image_url: '',
   theme: {
     preset: 'lavender_floral',
-    primary_color: '#6b4684', // Roxo Lavanda Elegante
-    accent_color: '#c5a059',  // Dourado Nobre
-    bg_color: '#faf6f0',      // Creme Suave / Marfim
-    card_bg_color: '#ffffff',
-    text_color: '#2d2138',
+    primary_color: '#6b4684', // Roxo Lavanda Elegante do Convite Impresso
+    accent_color: '#c5a059',  // Dourado Nobre das Letras
+    bg_color: '#faf6f0',      // Creme Suave / Marfim do Papel Aquarelado
+    card_bg_color: '#ffffff', // Branco Puro para os Cards de Conteúdo
+    text_color: '#2d2138',    // Violeta Escuro Profundo Legível
     font_family: 'serif',
+    banner_image_url: '',
   },
   gift_suggestions: [
     {
@@ -142,9 +143,9 @@ export const INITIAL_INVITES: Invite[] = [
 
 // Helper para gerenciar dados no localStorage quando sem Firebase ativo
 const LS_KEYS = {
-  INVITES: 'festa_invites_v2', // Versão 2 para purgar cache antigo de Lucas
-  TABLES: 'festa_tables_v2',
-  CONFIG: 'festa_config_v2',
+  INVITES: 'festa_invites_v3', // Versão 3 para atualizar tema claro de Fernanda Seppi
+  TABLES: 'festa_tables_v3',
+  CONFIG: 'festa_config_v3',
 };
 
 function getLS<T>(key: string, defaultData: T): T {
