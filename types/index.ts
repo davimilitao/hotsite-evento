@@ -10,6 +10,8 @@ export interface Guest {
 
 export type InviteStatus = 'pending' | 'confirmed' | 'declined' | 'pending_date' | 'expired';
 
+export type InviteTier = 'main' | 'reserve'; // 'main' = Lista Principal | 'reserve' = Lista de Espera (Reserva)
+
 export interface Invite {
   id: string; // Token (ex: carlos-silva-9x7k)
   head_name: string;
@@ -25,7 +27,8 @@ export interface Invite {
   guests: Guest[];
   notes?: string;
   
-  // Recursos de SLA & Rastreamento de Envio
+  // Controle de Lista de Espera & Rastreamento de Envio
+  tier?: InviteTier;                  // 'main' ou 'reserve'
   sent_at?: string | null;
   sent_status?: 'not_sent' | 'sent';
   individual_deadline?: string | null; // ISO Date String

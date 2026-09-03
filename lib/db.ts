@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos)
@@ -83,6 +83,7 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: 'mesa-01',
     checked_in: false,
     updated_at: new Date().toISOString(),
+    tier: 'main',
     sent_at: '2026-09-02T18:00:00.000Z',
     sent_status: 'sent',
     individual_deadline: '2026-10-10T23:59:59.000Z',
@@ -102,6 +103,7 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: 'mesa-02',
     checked_in: false,
     updated_at: new Date().toISOString(),
+    tier: 'main',
     sent_at: '2026-09-02T19:30:00.000Z',
     sent_status: 'sent',
     individual_deadline: '2026-10-15T23:59:59.000Z',
@@ -117,8 +119,23 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: null,
     checked_in: false,
     updated_at: new Date().toISOString(),
+    tier: 'main',
     sent_at: '2026-09-01T14:00:00.000Z',
     sent_status: 'sent',
+    guests: [],
+  },
+  {
+    id: 'patricia-mendes-9x1',
+    head_name: 'Patrícia Mendes',
+    phone: '5511966665555',
+    max_guests: 2,
+    status: 'pending',
+    confirmed_count: 0,
+    table_id: null,
+    checked_in: false,
+    updated_at: new Date().toISOString(),
+    tier: 'reserve', // Lista de Espera (Reserva)
+    sent_status: 'not_sent',
     guests: [],
   },
 ];
@@ -267,6 +284,37 @@ export async function markInviteAsSent(token: string): Promise<void> {
   setLS(LS_KEYS.INVITES, all);
 }
 
+export async function promoteInviteToMain(token: string): Promise<void> {
+  const current = await getInviteByToken(token);
+  if (!current) return;
+
+  const nowIso = new Date().toISOString();
+  const updated: Invite = {
+    ...current,
+    tier: 'main',
+    updated_at: nowIso,
+  };
+
+  if (isFirebaseConfigured) {
+    try {
+      const docRef = doc(db, 'invites', token);
+      await updateDoc(docRef, {
+        tier: 'main',
+        updated_at: nowIso,
+      });
+    } catch (err) {
+      console.error('Erro ao promover convite no Firestore:', err);
+    }
+  }
+
+  const all = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+  const idx = all.findIndex((i) => i.id === token);
+  if (idx !== -1) {
+    all[idx] = updated;
+  }
+  setLS(LS_KEYS.INVITES, all);
+}
+
 export async function updateInviteRSVP(
   token: string,
   rsvpData: {
@@ -332,6 +380,7 @@ export async function saveInvite(inviteData: Partial<Invite>): Promise<Invite> {
     table_id: inviteData.table_id || null,
     checked_in: inviteData.checked_in || false,
     updated_at: new Date().toISOString(),
+    tier: inviteData.tier || 'main',
     sent_at: inviteData.sent_at || null,
     sent_status: inviteData.sent_status || 'not_sent',
     individual_deadline: inviteData.individual_deadline || null,
@@ -360,7 +409,7 @@ export async function saveInvite(inviteData: Partial<Invite>): Promise<Invite> {
 }
 
 export async function bulkImportInvites(
-  rows: Array<{ head_name: string; phone: string; max_guests: number; individual_deadline?: string }>
+  rows: Array<{ head_name: string; phone: string; max_guests: number; individual_deadline?: string; tier?: InviteTier }>
 ): Promise<Invite[]> {
   const currentInvites = await getAllInvites();
   const createdInvites: Invite[] = [];
@@ -377,6 +426,7 @@ export async function bulkImportInvites(
       table_id: null,
       checked_in: false,
       updated_at: new Date().toISOString(),
+      tier: row.tier || 'main',
       sent_status: 'not_sent',
       individual_deadline: row.individual_deadline || null,
       guests: [],

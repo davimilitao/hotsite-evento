@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite, Table, EventConfig } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent } from '@/lib/db';
-import { buildWhatsAppLink, formatPhoneDisplay, getSLAInfo, formatDateShort } from '@/lib/utils';
+import { Invite, Table, EventConfig, InviteTier } from '@/types';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain } from '@/lib/db';
+import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
   Users,
@@ -25,6 +25,9 @@ import {
   Utensils,
   Edit,
   Send,
+  Sparkles,
+  ArrowUpRight,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -36,7 +39,7 @@ interface GuestListProps {
 
 export function GuestList({ invites, tables, config, onRefresh }: GuestListProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'not_sent' | 'confirmed' | 'pending' | 'pending_date' | 'expired' | 'declined'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'main' | 'reserve' | 'sent' | 'not_sent' | 'confirmed' | 'pending' | 'pending_date' | 'expired' | 'declined'>('all');
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
@@ -46,16 +49,18 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
   const [headName, setHeadName] = useState('');
   const [phone, setPhone] = useState('');
   const [maxGuests, setMaxGuests] = useState(2);
+  const [tier, setTier] = useState<InviteTier>('main');
   const [individualDeadline, setIndividualDeadline] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
 
-  // Métricas do Buffet & SLA
+  // Métricas do Buffet & Lista de Espera
   const buffetCapacity = config.buffet_capacity || 100;
   const totalInvites = invites.length;
   
+  const mainInvites = invites.filter((i) => !i.tier || i.tier === 'main');
+  const reserveInvites = invites.filter((i) => i.tier === 'reserve');
   const confirmedInvites = invites.filter((i) => i.status === 'confirmed');
   const declinedInvites = invites.filter((i) => i.status === 'declined');
-  const pendingInvites = invites.filter((i) => i.status === 'pending');
   const pendingDateInvites = invites.filter((i) => i.status === 'pending_date');
   const sentInvites = invites.filter((i) => i.sent_status === 'sent');
 
@@ -65,6 +70,11 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
   );
 
   const totalReleasedSeats = declinedInvites.reduce(
+    (sum, i) => sum + (i.max_guests || 1),
+    0
+  );
+
+  const totalReserveGuests = reserveInvites.reduce(
     (sum, i) => sum + (i.max_guests || 1),
     0
   );
@@ -85,6 +95,8 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
     if (!matchesSearch) return false;
 
     if (statusFilter === 'all') return true;
+    if (statusFilter === 'main') return !invite.tier || invite.tier === 'main';
+    if (statusFilter === 'reserve') return invite.tier === 'reserve';
     if (statusFilter === 'sent') return invite.sent_status === 'sent';
     if (statusFilter === 'not_sent') return !invite.sent_status || invite.sent_status === 'not_sent';
     if (statusFilter === 'confirmed') return invite.status === 'confirmed';
@@ -92,8 +104,8 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
     if (statusFilter === 'pending') return invite.status === 'pending';
     if (statusFilter === 'pending_date') return invite.status === 'pending_date';
     if (statusFilter === 'expired') {
-      const sla = getSLAInfo(invite, config.deadline_rsvp);
-      return sla.expired;
+      const deadlineInfo = getDeadlineInfo(invite, config.deadline_rsvp);
+      return deadlineInfo.expired;
     }
 
     return true;
@@ -104,6 +116,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
     setHeadName('');
     setPhone('');
     setMaxGuests(2);
+    setTier('main');
     setIndividualDeadline('');
     setIsAddOpen(true);
   };
@@ -113,6 +126,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
     setHeadName(invite.head_name);
     setPhone(invite.phone);
     setMaxGuests(invite.max_guests);
+    setTier(invite.tier || 'main');
     setIndividualDeadline(invite.individual_deadline ? invite.individual_deadline.slice(0, 10) : '');
     setIsAddOpen(true);
   };
@@ -127,6 +141,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
         head_name: headName,
         phone,
         max_guests: maxGuests,
+        tier,
         individual_deadline: individualDeadline ? new Date(individualDeadline).toISOString() : null,
       });
 
@@ -137,6 +152,11 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
     } finally {
       setLoadingForm(false);
     }
+  };
+
+  const handlePromoteToMain = async (invite: Invite) => {
+    await promoteInviteToMain(invite.id);
+    onRefresh();
   };
 
   const handleWhatsAppDispatch = async (invite: Invite) => {
@@ -170,7 +190,34 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
 
   return (
     <div className="space-y-6">
-      {/* Dashboard de Métricas do Buffet & SLA */}
+      {/* Alerta de Liberação de Vagas para a Lista de Espera */}
+      {totalReleasedSeats > 0 && reserveInvites.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border border-amber-500/40 text-amber-300 p-4 rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-amber-400/20 text-amber-300 rounded-xl shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-sm text-amber-200">
+                {totalReleasedSeats} vagas foram liberadas por recusa!
+              </h4>
+              <p className="text-xs text-slate-300">
+                Você tem <strong>{reserveInvites.length} convite(s) ({totalReserveGuests} pessoas)</strong> aguardando na Lista de Espera.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setStatusFilter('reserve')}
+            className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shrink-0 flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            <span>Ver Lista de Espera</span>
+          </button>
+        </div>
+      )}
+
+      {/* Dashboard de Métricas do Buffet & Convites */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
@@ -207,19 +254,19 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
             <span className="text-2xl font-black text-rose-600 dark:text-rose-400">{totalReleasedSeats}</span>
             <span className="text-xs text-slate-400 ml-1">por recusa</span>
           </div>
-          <p className="text-[10px] text-emerald-500 font-semibold">Liberadas p/ Lista Reserva</p>
+          <p className="text-[10px] text-emerald-500 font-semibold">Liberadas p/ Espera</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Aguardando Prazo</span>
-            <CalendarClock className="w-4 h-4 text-purple-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lista de Espera</span>
+            <CalendarClock className="w-4 h-4 text-amber-500" />
           </div>
           <div>
-            <span className="text-2xl font-black text-purple-500">{pendingDateInvites.length}</span>
-            <span className="text-xs text-slate-400 ml-1">convites</span>
+            <span className="text-2xl font-black text-amber-500">{reserveInvites.length}</span>
+            <span className="text-xs text-slate-400 ml-1">({totalReserveGuests} pes)</span>
           </div>
-          <p className="text-[10px] text-purple-400">Pediram prazo específico</p>
+          <p className="text-[10px] text-amber-400">Aguardando vaga</p>
         </div>
 
         <div className="col-span-2 sm:col-span-1 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
@@ -229,9 +276,9 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
           </div>
           <div>
             <span className="text-2xl font-black text-sky-500">{sentInvites.length}</span>
-            <span className="text-xs text-slate-400 ml-1">/ {totalInvites} disparados</span>
+            <span className="text-xs text-slate-400 ml-1">/ {mainInvites.length} disparados</span>
           </div>
-          <p className="text-[10px] text-slate-400">{totalInvites - sentInvites.length} ainda não disparados</p>
+          <p className="text-[10px] text-slate-400">{mainInvites.length - sentInvites.length} a disparar</p>
         </div>
       </div>
 
@@ -265,16 +312,18 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
           </div>
         </div>
 
-        {/* Filtros Avançados de SLA */}
+        {/* Filtros Limpos de Navegação */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-700/60 pt-3">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtro SLA:</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtrar:</span>
           {[
             { id: 'all', label: 'Todos' },
+            { id: 'main', label: 'Lista Principal' },
+            { id: 'reserve', label: `Lista de Espera (${reserveInvites.length})` },
             { id: 'sent', label: 'Enviados' },
             { id: 'not_sent', label: 'Não Enviados' },
             { id: 'confirmed', label: 'Confirmados' },
             { id: 'pending_date', label: 'Pediram Prazo' },
-            { id: 'expired', label: 'SLA Expirado' },
+            { id: 'expired', label: 'Prazo Vencido' },
             { id: 'declined', label: 'Recusados' },
           ].map((item) => (
             <button
@@ -292,14 +341,14 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
         </div>
       </div>
 
-      {/* Tabela CRUD Master Mestre com SLA */}
+      {/* Tabela CRUD Master Mestre */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
                 <th className="py-3.5 px-4">Titular / WhatsApp</th>
-                <th className="py-3.5 px-4">Status & SLA</th>
+                <th className="py-3.5 px-4">Lista & Status</th>
                 <th className="py-3.5 px-4">Composição & Alergias</th>
                 <th className="py-3.5 px-4">Mesa Atribuída</th>
                 <th className="py-3.5 px-4 text-center">Disparo WhatsApp</th>
@@ -315,23 +364,31 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                 </tr>
               ) : (
                 filteredInvites.map((invite) => {
-                  const sla = getSLAInfo(invite, config.deadline_rsvp);
+                  const deadlineInfo = getDeadlineInfo(invite, config.deadline_rsvp);
                   const isSent = invite.sent_status === 'sent';
+                  const isReserve = invite.tier === 'reserve';
 
                   return (
                     <tr key={invite.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
                       {/* Coluna 1: Titular & Token */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800 dark:text-slate-100">{invite.head_name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 dark:text-slate-100">{invite.head_name}</span>
+                          {isReserve && (
+                            <span className="bg-amber-400/20 text-amber-500 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-amber-500/30">
+                              Reserva
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[11px] text-slate-400">{formatPhoneDisplay(invite.phone)}</div>
                         <div className="text-[10px] font-mono text-purple-500 mt-0.5">/convite/{invite.id}</div>
                       </td>
 
-                      {/* Coluna 2: Status & SLA */}
+                      {/* Coluna 2: Status & Prazo */}
                       <td className="py-3.5 px-4 space-y-1">
                         <div className="flex items-center gap-1.5">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${sla.color}`}>
-                            {sla.label}
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo.color}`}>
+                            {deadlineInfo.label}
                           </span>
                         </div>
 
@@ -350,7 +407,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
 
                         {invite.individual_deadline && (
                           <div className="text-[10px] text-purple-400 font-medium">
-                            Lote Prazo: {formatDateShort(invite.individual_deadline)}
+                            Prazo Lote: {formatDateShort(invite.individual_deadline)}
                           </div>
                         )}
                       </td>
@@ -401,20 +458,31 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                         </select>
                       </td>
 
-                      {/* Coluna 5: Disparo WhatsApp com marcação automática */}
+                      {/* Coluna 5: Disparo WhatsApp com opção de promoção */}
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleWhatsAppDispatch(invite)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
-                            isSent
-                              ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          }`}
-                          title="Disparar link via WhatsApp"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>{isSent ? 'Re-enviar WhatsApp' : 'Disparar WhatsApp'}</span>
-                        </button>
+                        {isReserve ? (
+                          <button
+                            onClick={() => handlePromoteToMain(invite)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95"
+                            title="Promover este convite para a Lista Principal Oficial"
+                          >
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                            <span>Promover p/ Principal</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleWhatsAppDispatch(invite)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+                              isSent
+                                ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                            title="Disparar link via WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>{isSent ? 'Re-enviar WhatsApp' : 'Disparar WhatsApp'}</span>
+                          </button>
+                        )}
                       </td>
 
                       {/* Coluna 6: Ações CRUD */}
@@ -510,6 +578,20 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tipo de Lista *
+                  </label>
+                  <select
+                    value={tier}
+                    onChange={(e) => setTier(e.target.value as any)}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="main">Lista Principal (Oficial)</option>
+                    <option value="reserve">Lista de Espera (Reserva)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Limite de Vagas *
                   </label>
                   <input
@@ -521,18 +603,18 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                     className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Prazo Limite (Lote)
-                  </label>
-                  <input
-                    type="date"
-                    value={individualDeadline}
-                    onChange={(e) => setIndividualDeadline(e.target.value)}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Prazo Limite do Lote (opcional)
+                </label>
+                <input
+                  type="date"
+                  value={individualDeadline}
+                  onChange={(e) => setIndividualDeadline(e.target.value)}
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

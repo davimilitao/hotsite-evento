@@ -104,7 +104,7 @@ export function formatDateShort(dateIso?: string | null): string {
 }
 
 /**
- * Verifica se o prazo (SLA) do convite expirou
+ * Verifica se o prazo do convite expirou
  */
 export function isInviteExpired(invite: Invite, globalDeadline: string): boolean {
   if (invite.status === 'confirmed' || invite.status === 'declined') return false;
@@ -118,14 +118,14 @@ export function isInviteExpired(invite: Invite, globalDeadline: string): boolean
 }
 
 /**
- * Retorna o status de SLA amigável em texto e cor
+ * Retorna o status de prazo amigável em texto limpo em português (sem siglas técnicas)
  */
-export function getSLAInfo(invite: Invite, globalDeadline: string): { label: string; color: string; expired: boolean } {
+export function getDeadlineInfo(invite: Invite, globalDeadline: string): { label: string; color: string; expired: boolean } {
   if (invite.status === 'confirmed') {
-    return { label: 'Respondido (Confirmado)', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30', expired: false };
+    return { label: 'Confirmado', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30', expired: false };
   }
   if (invite.status === 'declined') {
-    return { label: 'Respondido (Recusado)', color: 'text-rose-500 bg-rose-500/10 border-rose-500/30', expired: false };
+    return { label: 'Recusado', color: 'text-rose-500 bg-rose-500/10 border-rose-500/30', expired: false };
   }
   if (invite.status === 'pending_date') {
     return {
@@ -142,19 +142,19 @@ export function getSLAInfo(invite: Invite, globalDeadline: string): { label: str
 
   if (diffDays < 0) {
     return {
-      label: `SLA Expirado há ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'}`,
+      label: `Prazo Vencido há ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'}`,
       color: 'text-rose-400 bg-rose-500/20 border-rose-500/40 font-black animate-pulse',
       expired: true,
     };
   } else if (diffDays === 0) {
     return {
-      label: 'SLA Vence Hoje!',
+      label: 'Prazo Vence Hoje!',
       color: 'text-amber-400 bg-amber-500/20 border-amber-500/40 font-extrabold',
       expired: false,
     };
   } else {
     return {
-      label: `SLA: Faltam ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`,
+      label: `Faltam ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`,
       color: 'text-amber-300 bg-amber-500/10 border-amber-500/30',
       expired: false,
     };
