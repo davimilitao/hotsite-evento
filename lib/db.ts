@@ -134,7 +134,7 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: null,
     checked_in: false,
     updated_at: new Date().toISOString(),
-    tier: 'reserve', // Lista de Espera (Reserva)
+    tier: 'reserve',
     sent_status: 'not_sent',
     guests: [],
   },
@@ -142,9 +142,9 @@ export const INITIAL_INVITES: Invite[] = [
 
 // Helper para gerenciar dados no localStorage quando sem Firebase ativo
 const LS_KEYS = {
-  INVITES: 'festa_invites_v1',
-  TABLES: 'festa_tables_v1',
-  CONFIG: 'festa_config_v1',
+  INVITES: 'festa_invites_v2', // Versão 2 para purgar cache antigo de Lucas
+  TABLES: 'festa_tables_v2',
+  CONFIG: 'festa_config_v2',
 };
 
 function getLS<T>(key: string, defaultData: T): T {
@@ -167,32 +167,36 @@ function setLS<T>(key: string, data: T): void {
 }
 
 /**
- * Popula o banco de dados do Firestore com os dados iniciais do evento, mesas e convites
+ * Popula o banco de dados do Firestore com os dados reais de Fernanda Seppi
  */
 export async function seedFirestoreData(): Promise<void> {
-  if (!isFirebaseConfigured) {
-    console.warn('Firebase não configurado, salvando seed no LocalStorage.');
+  // Limpa caches antigos do navegador
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.clear();
+    } catch {}
     setLS(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
     setLS(LS_KEYS.TABLES, INITIAL_TABLES);
     setLS(LS_KEYS.INVITES, INITIAL_INVITES);
+  }
+
+  if (!isFirebaseConfigured) {
     return;
   }
 
-  // 1. Salva Configuração do Evento
+  // Sobrescreve Firestore obrigatoriamente com os dados de Fernanda Seppi
   await setDoc(doc(db, 'event_config', 'settings'), INITIAL_EVENT_CONFIG);
 
-  // 2. Salva Mesas
   for (const table of INITIAL_TABLES) {
     await setDoc(doc(db, 'tables', table.id), table);
   }
 
-  // 3. Salva Convites
   for (const invite of INITIAL_INVITES) {
     await setDoc(doc(db, 'invites', invite.id), invite);
   }
 }
 
-// ---- API DO BANCO DE DADOS (Firestore com fallback localStorage) ----
+// ---- API DO BANCO DE DADOS (Firestore com purga de cache antigo) ----
 
 export async function getEventConfig(): Promise<EventConfig> {
   if (isFirebaseConfigured) {
@@ -200,13 +204,25 @@ export async function getEventConfig(): Promise<EventConfig> {
       const docRef = doc(db, 'event_config', 'settings');
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        return snap.data() as EventConfig;
+        const data = snap.data() as EventConfig;
+        // Purga dados antigos do Lucas se ainda existirem no Firestore
+        if (data.birthday_person === 'Lucas Silva' || data.title.includes('Lucas')) {
+          await setDoc(doc(db, 'event_config', 'settings'), INITIAL_EVENT_CONFIG);
+          return INITIAL_EVENT_CONFIG;
+        }
+        return data;
       }
     } catch (err) {
       console.warn('Erro ao ler Firestore event_config, usando fallback:', err);
     }
   }
-  return getLS(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
+
+  const cached = getLS<EventConfig>(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
+  if (!cached || cached.birthday_person === 'Lucas Silva' || (cached.title && cached.title.includes('Lucas'))) {
+    setLS(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
+    return INITIAL_EVENT_CONFIG;
+  }
+  return cached;
 }
 
 export async function saveEventConfig(config: EventConfig): Promise<void> {
