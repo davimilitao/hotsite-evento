@@ -131,7 +131,7 @@ export default function AdminPage() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>📋 Convidados & WhatsApp</span>
+            <span>📋 Dashboard SLA & Convidados</span>
           </button>
 
           <button
@@ -181,7 +181,9 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
-            {activeTab === 'guests' && <GuestList invites={invites} onRefresh={loadAll} />}
+            {activeTab === 'guests' && config && (
+              <GuestList invites={invites} tables={tables} config={config} onRefresh={loadAll} />
+            )}
             {activeTab === 'tables' && <TableManager tables={tables} invites={invites} onRefresh={loadAll} />}
             {activeTab === 'checkin' && <CheckinScanner invites={invites} onRefresh={loadAll} />}
             {activeTab === 'settings' && config && <SettingsForm config={config} onRefresh={loadAll} />}

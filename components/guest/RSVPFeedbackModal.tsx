@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Invite, Table } from '@/types';
-import { Sparkles, CheckCircle2, XCircle, Armchair, Navigation, X } from 'lucide-react';
+import { formatDateShort } from '@/lib/utils';
+import { CheckCircle2, XCircle, Armchair, Navigation, X, CalendarClock } from 'lucide-react';
 
 interface RSVPFeedbackModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export function RSVPFeedbackModal({
   if (!isOpen) return null;
 
   const isConfirmed = invite.status === 'confirmed';
+  const isPendingDate = invite.status === 'pending_date';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
@@ -34,18 +36,30 @@ export function RSVPFeedbackModal({
         </button>
 
         <div className="pt-2">
-          {isConfirmed ? (
+          {isConfirmed && (
             <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner ring-4 ring-emerald-500/10">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-          ) : (
+          )}
+
+          {isPendingDate && (
+            <div className="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner ring-4 ring-purple-500/10">
+              <CalendarClock className="w-10 h-10" />
+            </div>
+          )}
+
+          {!isConfirmed && !isPendingDate && (
             <div className="w-16 h-16 bg-rose-500/20 text-rose-400 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner ring-4 ring-rose-500/10">
               <XCircle className="w-10 h-10" />
             </div>
           )}
 
           <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
-            {isConfirmed ? 'Presença Confirmada! 🎉' : 'Resposta Registrada 😔'}
+            {isConfirmed
+              ? 'Presença Confirmada! 🎉'
+              : isPendingDate
+              ? 'Pedido de Prazo Registrado ⏳'
+              : 'Resposta Registrada 😔'}
           </h3>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -53,6 +67,10 @@ export function RSVPFeedbackModal({
               ? `Que alegria! Registramos ${invite.confirmed_count} ${
                   invite.confirmed_count === 1 ? 'pessoa' : 'pessoas'
                 } para comemorar essa data inesquecível.`
+              : isPendingDate
+              ? `Recebemos sua solicitação! Guardaremos a reserva até dia ${formatDateShort(
+                  invite.requested_date
+                )}.`
               : 'Sua resposta foi salva. Sentiremos sua falta no evento!'}
           </p>
         </div>

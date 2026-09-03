@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos)
@@ -18,6 +18,7 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   age_celebrating: 40,
   date_time: '2026-11-07T17:00:00.000Z',
   deadline_rsvp: '2026-10-25T23:59:59.000Z',
+  buffet_capacity: 100, // Limite de 100 vagas no buffet
   location_name: 'Buffet Espaço Estupendo',
   address: 'São Bernardo do Campo - SP',
   maps_url: 'https://maps.google.com/?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
@@ -82,6 +83,9 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: 'mesa-01',
     checked_in: false,
     updated_at: new Date().toISOString(),
+    sent_at: '2026-09-02T18:00:00.000Z',
+    sent_status: 'sent',
+    individual_deadline: '2026-10-10T23:59:59.000Z',
     guests: [
       { name: 'Carlos Silva', type: 'adult' },
       { name: 'Mariana Silva', type: 'adult', dietary: 'Sem Glúten' },
@@ -98,6 +102,9 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: 'mesa-02',
     checked_in: false,
     updated_at: new Date().toISOString(),
+    sent_at: '2026-09-02T19:30:00.000Z',
+    sent_status: 'sent',
+    individual_deadline: '2026-10-15T23:59:59.000Z',
     guests: [],
   },
   {
@@ -110,6 +117,8 @@ export const INITIAL_INVITES: Invite[] = [
     table_id: null,
     checked_in: false,
     updated_at: new Date().toISOString(),
+    sent_at: '2026-09-01T14:00:00.000Z',
+    sent_status: 'sent',
     guests: [],
   },
 ];
@@ -225,9 +234,47 @@ export async function getInviteByToken(token: string): Promise<Invite | null> {
   return invites.find((i) => i.id === token) || null;
 }
 
+export async function markInviteAsSent(token: string): Promise<void> {
+  const current = await getInviteByToken(token);
+  if (!current) return;
+
+  const nowIso = new Date().toISOString();
+  const updated: Invite = {
+    ...current,
+    sent_at: nowIso,
+    sent_status: 'sent',
+    updated_at: nowIso,
+  };
+
+  if (isFirebaseConfigured) {
+    try {
+      const docRef = doc(db, 'invites', token);
+      await updateDoc(docRef, {
+        sent_at: nowIso,
+        sent_status: 'sent',
+        updated_at: nowIso,
+      });
+    } catch (err) {
+      console.error('Erro ao marcar disparo no Firestore:', err);
+    }
+  }
+
+  const all = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+  const idx = all.findIndex((i) => i.id === token);
+  if (idx !== -1) {
+    all[idx] = updated;
+  }
+  setLS(LS_KEYS.INVITES, all);
+}
+
 export async function updateInviteRSVP(
   token: string,
-  rsvpData: { status: 'confirmed' | 'declined'; guests: Guest[]; notes?: string }
+  rsvpData: {
+    status: InviteStatus;
+    guests: Guest[];
+    notes?: string;
+    requested_date?: string;
+  }
 ): Promise<Invite> {
   const current = await getInviteByToken(token);
   if (!current) throw new Error('Convite não encontrado.');
@@ -237,6 +284,7 @@ export async function updateInviteRSVP(
     status: rsvpData.status,
     guests: rsvpData.guests,
     confirmed_count: rsvpData.status === 'confirmed' ? rsvpData.guests.length : 0,
+    requested_date: rsvpData.requested_date || null,
     notes: rsvpData.notes || '',
     updated_at: new Date().toISOString(),
   };
@@ -248,6 +296,7 @@ export async function updateInviteRSVP(
         status: updated.status,
         guests: updated.guests,
         confirmed_count: updated.confirmed_count,
+        requested_date: updated.requested_date,
         notes: updated.notes,
         updated_at: updated.updated_at,
       });
@@ -283,6 +332,10 @@ export async function saveInvite(inviteData: Partial<Invite>): Promise<Invite> {
     table_id: inviteData.table_id || null,
     checked_in: inviteData.checked_in || false,
     updated_at: new Date().toISOString(),
+    sent_at: inviteData.sent_at || null,
+    sent_status: inviteData.sent_status || 'not_sent',
+    individual_deadline: inviteData.individual_deadline || null,
+    requested_date: inviteData.requested_date || null,
     guests: inviteData.guests || [],
     notes: inviteData.notes || '',
   };
@@ -307,7 +360,7 @@ export async function saveInvite(inviteData: Partial<Invite>): Promise<Invite> {
 }
 
 export async function bulkImportInvites(
-  rows: Array<{ head_name: string; phone: string; max_guests: number }>
+  rows: Array<{ head_name: string; phone: string; max_guests: number; individual_deadline?: string }>
 ): Promise<Invite[]> {
   const currentInvites = await getAllInvites();
   const createdInvites: Invite[] = [];
@@ -324,6 +377,8 @@ export async function bulkImportInvites(
       table_id: null,
       checked_in: false,
       updated_at: new Date().toISOString(),
+      sent_status: 'not_sent',
+      individual_deadline: row.individual_deadline || null,
       guests: [],
     };
 

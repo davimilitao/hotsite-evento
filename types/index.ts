@@ -8,7 +8,7 @@ export interface Guest {
   dietary?: string;
 }
 
-export type InviteStatus = 'pending' | 'confirmed' | 'declined';
+export type InviteStatus = 'pending' | 'confirmed' | 'declined' | 'pending_date' | 'expired';
 
 export interface Invite {
   id: string; // Token (ex: carlos-silva-9x7k)
@@ -24,6 +24,12 @@ export interface Invite {
   updated_at: string;
   guests: Guest[];
   notes?: string;
+  
+  // Recursos de SLA & Rastreamento de Envio
+  sent_at?: string | null;
+  sent_status?: 'not_sent' | 'sent';
+  individual_deadline?: string | null; // ISO Date String
+  requested_date?: string | null;     // Data informada pelo convidado na opção 'pending_date'
 }
 
 export interface Table {
@@ -50,9 +56,9 @@ export interface EventTheme {
   preset: ThemePreset;
   primary_color: string; // ex: #6b4684
   accent_color: string;  // ex: #c5a059
-  bg_color: string;      // ex: #faf6f0 ou #0f172a
+  bg_color: string;      // ex: #faf6f0
   card_bg_color: string; // ex: #ffffff
-  text_color: string;    // ex: #332940
+  text_color: string;    // ex: #2d2138
   font_family: 'playfair' | 'serif' | 'sans';
   banner_image_url?: string;
 }
@@ -62,7 +68,8 @@ export interface EventConfig {
   birthday_person: string;
   age_celebrating?: number;
   date_time: string; // ISO String
-  deadline_rsvp: string; // ISO String
+  deadline_rsvp: string; // ISO String Geral do Buffet
+  buffet_capacity?: number; // Limite de vagas contratadas com o buffet (ex: 100)
   location_name: string;
   address: string;
   maps_url: string;

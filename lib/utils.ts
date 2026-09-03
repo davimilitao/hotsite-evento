@@ -1,3 +1,5 @@
+import { Invite } from '@/types';
+
 /**
  * Normaliza o nome e gera um token único amigável (ex: "Carlos Silva" -> "carlos-silva-k89x")
  */
@@ -56,7 +58,7 @@ export function buildWhatsAppLink(
 
   const inviteUrl = `${siteUrl}/convite/${token}`;
 
-  const defaultMessage = `Olá ${headName}! 🎉 Você está convidado(a) para a minha festa de aniversário!\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você! ❤️`;
+  const defaultMessage = `Olá ${headName}! 🎉 Você está convidado(a) para a festa de aniversário de 40 Anos da Fernanda Seppi!\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você! ❤️`;
   
   const message = customTemplate
     ? customTemplate.replace('{nome}', headName).replace('{link}', inviteUrl)
@@ -81,5 +83,80 @@ export function formatDateExtenso(dateIso: string): string {
     }).format(date);
   } catch {
     return dateIso;
+  }
+}
+
+/**
+ * Formata data curta pt-BR (ex: 25/10/2026)
+ */
+export function formatDateShort(dateIso?: string | null): string {
+  if (!dateIso) return '';
+  try {
+    const date = new Date(dateIso);
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
+  } catch {
+    return dateIso;
+  }
+}
+
+/**
+ * Verifica se o prazo (SLA) do convite expirou
+ */
+export function isInviteExpired(invite: Invite, globalDeadline: string): boolean {
+  if (invite.status === 'confirmed' || invite.status === 'declined') return false;
+  
+  const deadlineStr = invite.individual_deadline || globalDeadline;
+  if (!deadlineStr) return false;
+
+  const deadline = new Date(deadlineStr).getTime();
+  const now = new Date().getTime();
+  return now > deadline;
+}
+
+/**
+ * Retorna o status de SLA amigável em texto e cor
+ */
+export function getSLAInfo(invite: Invite, globalDeadline: string): { label: string; color: string; expired: boolean } {
+  if (invite.status === 'confirmed') {
+    return { label: 'Respondido (Confirmado)', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30', expired: false };
+  }
+  if (invite.status === 'declined') {
+    return { label: 'Respondido (Recusado)', color: 'text-rose-500 bg-rose-500/10 border-rose-500/30', expired: false };
+  }
+  if (invite.status === 'pending_date') {
+    return {
+      label: `Pediu prazo até ${formatDateShort(invite.requested_date)}`,
+      color: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+      expired: false,
+    };
+  }
+
+  const deadlineStr = invite.individual_deadline || globalDeadline;
+  const deadline = new Date(deadlineStr).getTime();
+  const now = new Date().getTime();
+  const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      label: `SLA Expirado há ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'}`,
+      color: 'text-rose-400 bg-rose-500/20 border-rose-500/40 font-black animate-pulse',
+      expired: true,
+    };
+  } else if (diffDays === 0) {
+    return {
+      label: 'SLA Vence Hoje!',
+      color: 'text-amber-400 bg-amber-500/20 border-amber-500/40 font-extrabold',
+      expired: false,
+    };
+  } else {
+    return {
+      label: `SLA: Faltam ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`,
+      color: 'text-amber-300 bg-amber-500/10 border-amber-500/30',
+      expired: false,
+    };
   }
 }

@@ -1,25 +1,41 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite, Guest } from '@/types';
+import { Invite, Guest, EventConfig } from '@/types';
 import { updateInviteRSVP } from '@/lib/db';
-import { UserPlus, Trash2, Utensils, Send, AlertTriangle, Sparkles, HeartHandshake } from 'lucide-react';
+import { isInviteExpired, formatDateShort } from '@/lib/utils';
+import { UserPlus, Trash2, Utensils, Send, AlertTriangle, Sparkles, HeartHandshake, CalendarClock, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RSVPFormProps {
   invite: Invite;
+  config: EventConfig;
   onUpdate: (updated: Invite) => void;
   onSubmittedFeedback?: () => void;
 }
 
-export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProps) {
-  const [willAttend, setWillAttend] = useState<boolean>(invite.status !== 'declined');
+export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVPFormProps) {
+  const isExpired = isInviteExpired(invite, config.deadline_rsvp);
+
+  const [responseMode, setResponseMode] = useState<'confirmed' | 'declined' | 'pending_date'>(() => {
+    if (invite.status === 'declined') return 'declined';
+    if (invite.status === 'pending_date') return 'pending_date';
+    return 'confirmed';
+  });
+
+  const [requestedDate, setRequestedDate] = useState<string>(
+    invite.requested_date ? invite.requested_date.slice(0, 10) : ''
+  );
+
   const [guests, setGuests] = useState<Guest[]>(() => {
     if (invite.guests && invite.guests.length > 0) return invite.guests;
     return [{ name: invite.head_name, type: 'adult', dietary: '' }];
   });
+
   const [notes, setNotes] = useState<string>(invite.notes || '');
   const [loading, setLoading] = useState(false);
+
+  const activeDeadline = invite.individual_deadline || config.deadline_rsvp;
 
   const handleAddGuest = () => {
     if (guests.length >= invite.max_guests) return;
@@ -42,13 +58,19 @@ export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProp
     setLoading(true);
 
     try {
-      const status = willAttend ? 'confirmed' : 'declined';
-      const validGuests = willAttend
+      let status = responseMode;
+      let validGuests = responseMode === 'confirmed'
         ? guests.filter((g) => g.name.trim().length > 0)
         : [];
 
-      if (willAttend && validGuests.length === 0) {
+      if (responseMode === 'confirmed' && validGuests.length === 0) {
         alert('Por favor, informe pelo menos o nome do titular.');
+        setLoading(false);
+        return;
+      }
+
+      if (responseMode === 'pending_date' && !requestedDate) {
+        alert('Por favor, selecione até qual data você precisa para confirmar.');
         setLoading(false);
         return;
       }
@@ -57,6 +79,7 @@ export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProp
         status,
         guests: validGuests,
         notes,
+        requested_date: responseMode === 'pending_date' ? requestedDate : undefined,
       });
 
       if (status === 'confirmed') {
@@ -81,50 +104,108 @@ export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProp
 
   return (
     <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-100 dark:border-slate-700/60 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 rounded-2xl">
-          <HeartHandshake className="w-6 h-6" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Confirmação de Presença (RSVP)</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Convite reservado para até <strong className="text-slate-700 dark:text-slate-200">{invite.max_guests} pessoas</strong>
+      {/* Alerta Modo Urgência quando o SLA Expirou */}
+      {isExpired && (
+        <div className="bg-rose-500/15 border-2 border-rose-500/40 text-rose-300 p-4 rounded-2xl space-y-2 animate-pulse">
+          <div className="flex items-center gap-2 font-extrabold text-sm text-rose-400">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>⚠️ URGENTE: O Prazo Inicial deste Convite Expirou</span>
+          </div>
+          <p className="text-xs text-rose-200 leading-relaxed">
+            O prazo limite era <strong>{formatDateShort(activeDeadline)}</strong>. Para garantirmos seu lugar antes de reatribuir a vaga para a lista de reserva do buffet, confirme urgentemente se <strong>SIM</strong> ou <strong>NÃO</strong>.
           </p>
         </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 rounded-2xl">
+            <HeartHandshake className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Confirmação de Presença (RSVP)</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Convite reservado para até <strong className="text-slate-700 dark:text-slate-200">{invite.max_guests} pessoas</strong>
+            </p>
+          </div>
+        </div>
+
+        {activeDeadline && (
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-xl border border-purple-300 dark:border-purple-800 font-semibold">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Até {formatDateShort(activeDeadline)}</span>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Opção de Presença */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Opção de Presença (3 Opções) */}
+        <div className={`grid ${isExpired ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'} gap-3`}>
           <button
             type="button"
-            onClick={() => setWillAttend(true)}
-            className={`p-4 rounded-2xl border-2 text-left font-semibold text-sm transition-all flex flex-col items-center justify-center gap-2 ${
-              willAttend
+            onClick={() => setResponseMode('confirmed')}
+            className={`p-3.5 rounded-2xl border-2 text-left font-semibold text-xs transition-all flex flex-col items-center justify-center gap-1.5 ${
+              responseMode === 'confirmed'
                 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 shadow-md ring-2 ring-emerald-500/20'
                 : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'
             }`}
           >
-            <span className="text-2xl">🎉</span>
-            <span>Vou Comemorar!</span>
+            <span className="text-xl">🎉</span>
+            <span className="font-bold">Vou Comemorar!</span>
           </button>
+
+          {!isExpired && (
+            <button
+              type="button"
+              onClick={() => setResponseMode('pending_date')}
+              className={`p-3.5 rounded-2xl border-2 text-left font-semibold text-xs transition-all flex flex-col items-center justify-center gap-1.5 ${
+                responseMode === 'pending_date'
+                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 shadow-md ring-2 ring-purple-500/20'
+                  : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'
+              }`}
+            >
+              <span className="text-xl">🤔</span>
+              <span className="font-bold">Preciso de Prazo</span>
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={() => setWillAttend(false)}
-            className={`p-4 rounded-2xl border-2 text-left font-semibold text-sm transition-all flex flex-col items-center justify-center gap-2 ${
-              !willAttend
+            onClick={() => setResponseMode('declined')}
+            className={`p-3.5 rounded-2xl border-2 text-left font-semibold text-xs transition-all flex flex-col items-center justify-center gap-1.5 ${
+              responseMode === 'declined'
                 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 shadow-md ring-2 ring-rose-500/20'
                 : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'
             }`}
           >
-            <span className="text-2xl">😔</span>
-            <span>Não Poderei Ir</span>
+            <span className="text-xl">😔</span>
+            <span className="font-bold">Não Poderei Ir</span>
           </button>
         </div>
 
+        {/* Módulo quando seleciona 'pending_date' (Preciso de Prazo) */}
+        {responseMode === 'pending_date' && (
+          <div className="bg-purple-50 dark:bg-purple-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 space-y-3">
+            <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-bold text-xs">
+              <CalendarClock className="w-4 h-4 text-purple-500" />
+              <span>Até qual data você terá certeza sobre sua presença?</span>
+            </div>
+
+            <input
+              type="date"
+              required
+              value={requestedDate}
+              onChange={(e) => setRequestedDate(e.target.value)}
+              className="w-full p-3 bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+            <p className="text-[11px] text-purple-600 dark:text-purple-300 italic">
+              O anfitrião receberá essa data para guardar sua vaga até lá!
+            </p>
+          </div>
+        )}
+
         {/* Formulário de Acompanhantes se Confirmou */}
-        {willAttend && (
+        {responseMode === 'confirmed' && (
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -202,7 +283,7 @@ export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProp
               ))}
             </div>
 
-            {/* Recado para o Anfitrião */}
+            {/* Recado para a Aniversariante */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Deixe uma mensagem para a aniversariante (opcional):
@@ -218,11 +299,11 @@ export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProp
           </div>
         )}
 
-        {!willAttend && (
+        {responseMode === 'declined' && (
           <div className="bg-rose-50 dark:bg-rose-950/20 p-4 rounded-2xl border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
             <span>
-              Ao informar que não poderá ir, o convite será liberado. Se mudar de ideia, poderá alterar sua resposta antes do término do prazo.
+              Ao informar que não poderá ir, a vaga reservada para seu convite será disponibilizada para a lista de espera.
             </span>
           </div>
         )}
@@ -238,7 +319,13 @@ export function RSVPForm({ invite, onUpdate, onSubmittedFeedback }: RSVPFormProp
           ) : (
             <>
               <Send className="w-5 h-5" />
-              <span>Confirmar Minha Resposta</span>
+              <span>
+                {responseMode === 'confirmed'
+                  ? 'Confirmar Minha Resposta'
+                  : responseMode === 'pending_date'
+                  ? 'Registrar Pedido de Prazo'
+                  : 'Registrar Ausência'}
+              </span>
             </>
           )}
         </button>

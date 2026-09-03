@@ -95,6 +95,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
           <div className={`${activeTab === 'rsvp' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
             <RSVPForm
               invite={invite}
+              config={config}
               onUpdate={(updated) => setInvite(updated)}
               onSubmittedFeedback={() => setShowFeedbackModal(true)}
             />
