@@ -1,4 +1,4 @@
-import { Invite } from '@/types';
+import { Invite, Table } from '@/types';
 
 /**
  * Normaliza o nome e gera um token único amigável (ex: "Carlos Silva" -> "carlos-silva-k89x")
@@ -42,7 +42,7 @@ export function formatPhoneDisplay(phone: string): string {
 }
 
 /**
- * Monta o link wa.me com mensagem codificada para o WhatsApp
+ * Monta o link wa.me com mensagem codificada para o WhatsApp (Convite Normal)
  */
 export function buildWhatsAppLink(
   headName: string,
@@ -63,6 +63,20 @@ export function buildWhatsAppLink(
   const message = customTemplate
     ? customTemplate.replace('{nome}', headName).replace('{link}', inviteUrl)
     : defaultMessage;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Monta o link wa.me para o disparo SECRETO da Homenagem Surpresa
+ */
+export function buildSurpriseWhatsAppLink(
+  headName: string,
+  phone: string,
+  token: string
+): string {
+  const cleanPhone = formatPhoneE164(phone);
+  const message = `Segredo! 🤫 Shhh... Estamos preparando uma Homenagem Surpresa especial para os 40 Anos da Fernanda Seppi!\n\nPor favor, envie aqui neste WhatsApp uma foto marcante ou um recado carinhoso de vocês juntos para colocarmos no Mural/Telão da festa! 📸✨`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
@@ -118,7 +132,7 @@ export function isInviteExpired(invite: Invite, globalDeadline: string): boolean
 }
 
 /**
- * Retorna o status de prazo amigável em texto limpo em português (sem siglas técnicas)
+ * Retorna o status de prazo amigável em texto limpo em português
  */
 export function getDeadlineInfo(invite: Invite, globalDeadline: string): { label: string; color: string; expired: boolean } {
   if (invite.status === 'confirmed') {
@@ -159,4 +173,58 @@ export function getDeadlineInfo(invite: Invite, globalDeadline: string): { label
       expired: false,
     };
   }
+}
+
+/**
+ * Exporta a lista completa de convidados para formato CSV compatível com Excel
+ */
+export function exportInvitesToCSV(invites: Invite[], tables: Table[]): void {
+  const headers = ['Titular', 'Telefone', 'Tipo Lista', 'Status', 'Confirmados', 'Mesa', 'Acompanhantes', 'Alergias'];
+  
+  const rows = invites.map((inv) => {
+    const table = tables.find((t) => t.id === inv.table_id);
+    const guestNames = inv.guests.map((g) => `${g.name} (${g.type === 'child' ? 'Criança' : 'Adulto'})`).join('; ');
+    const dietaries = inv.guests.filter((g) => g.dietary).map((g) => `${g.name}: ${g.dietary}`).join('; ');
+
+    return [
+      `"${inv.head_name}"`,
+      `"${inv.phone}"`,
+      `"${inv.tier === 'reserve' ? 'Lista de Espera' : 'Lista Principal'}"`,
+      `"${inv.status}"`,
+      inv.confirmed_count || 0,
+      `"${table ? table.name : 'Sem Mesa'}"`,
+      `"${guestNames}"`,
+      `"${dietaries}"`,
+    ].join(',');
+  });
+
+  const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `lista_convidados_fernanda_seppi_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Baixa um modelo CSV em branco formatado para preenchimento da aniversariante
+ */
+export function downloadExcelTemplate(): void {
+  const headers = ['Nome do Titular', 'Telefone com DDD', 'Limite de Vagas Reservadas'];
+  const sampleRows = [
+    '"Carlos Silva","11999998888",4',
+    '"Mariana Souza","11988887777",2',
+    '"Rodrigo Alves","11977776666",3',
+  ];
+
+  const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...sampleRows].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `modelo_preenchimento_convidados.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }

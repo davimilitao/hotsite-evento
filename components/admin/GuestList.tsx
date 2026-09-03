@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier } from '@/types';
 import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain } from '@/lib/db';
-import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort } from '@/lib/utils';
+import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
   Users,
@@ -20,14 +20,13 @@ import {
   Check,
   X,
   CalendarClock,
-  AlertTriangle,
-  Armchair,
   Utensils,
   Edit,
   Send,
   Sparkles,
   ArrowUpRight,
-  ShieldAlert,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -282,7 +281,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
         </div>
       </div>
 
-      {/* Barra de Busca, Filtros & Ações CRUD */}
+      {/* Barra de Busca, Exportação Excel & Ações CRUD */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative w-full sm:w-80">
@@ -296,13 +295,30 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              onClick={() => exportInvitesToCSV(invites, tables)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+              title="Baixar lista completa em arquivo Excel/CSV para enviar ao buffet"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Exportar Excel/CSV
+            </button>
+
+            <button
+              onClick={downloadExcelTemplate}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all"
+              title="Baixar modelo em branco para preenchimento da aniversariante"
+            >
+              <Download className="w-4 h-4 text-purple-500" /> Modelo p/ Preencher
+            </button>
+
             <button
               onClick={() => setIsBulkOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 rounded-xl text-xs font-bold transition-all"
             >
-              <Upload className="w-4 h-4 text-purple-500" /> Importar em Lote (100)
+              <Upload className="w-4 h-4 text-purple-500" /> Importar Lote
             </button>
+
             <button
               onClick={handleOpenAdd}
               className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md transition-all"

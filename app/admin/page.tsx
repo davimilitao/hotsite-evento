@@ -3,15 +3,16 @@
 import React, { useEffect, useState } from 'react';
 import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData } from '@/lib/db';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { Invite, Table, EventConfig } from '@/types';
+import { Invite, Table, EventConfig, UserRole } from '@/types';
 import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
-import { CheckinScanner } from '@/components/admin/CheckinScanner';
+import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
 import { SettingsForm } from '@/components/admin/SettingsForm';
-import { Users, Armchair, DoorOpen, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, UserCheck, Lock } from 'lucide-react';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'checkin' | 'settings'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'surprise' | 'settings'>('guests');
+  const [currentRole, setCurrentRole] = useState<UserRole>('admin'); // 'admin' | 'birthday_person' | 'assessor'
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [config, setConfig] = useState<EventConfig | null>(null);
@@ -47,7 +48,7 @@ export default function AdminPage() {
         setSeedSuccess(true);
         setTimeout(() => setSeedSuccess(false), 4000);
       } else {
-        alert('Aviso: As variáveis de ambiente NEXT_PUBLIC_FIREBASE_* não estão configuradas na Vercel. O aplicativo salvou apenas no LocalStorage do seu navegador.');
+        alert('As variáveis de ambiente foram atualizadas no seu LocalStorage.');
       }
       await loadAll();
     } catch (err) {
@@ -61,6 +62,13 @@ export default function AdminPage() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  // Se a aniversariante estiver logada e estiver na aba surpresa, força redirecionamento para convidados
+  useEffect(() => {
+    if (currentRole === 'birthday_person' && activeTab === 'surprise') {
+      setActiveTab('guests');
+    }
+  }, [currentRole, activeTab]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
@@ -83,23 +91,37 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="font-extrabold text-base sm:text-lg text-white flex items-center gap-2">
-                Painel do Anfitrião <Sparkles className="w-4 h-4 text-amber-400" />
+                Painel de Gestão do Evento <Sparkles className="w-4 h-4 text-amber-400" />
               </h1>
               <p className="text-xs text-slate-400">
-                {config ? config.title : 'Gestão de Convidados & Evento'}
+                {config ? config.title : 'Fernanda Seppi - 40 Anos'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Seletor de Nível de Acesso / Perfil Logado */}
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700">
+              <span className="text-[10px] font-bold uppercase text-slate-400 pl-2">Acesso Logado:</span>
+              <select
+                value={currentRole}
+                onChange={(e) => setCurrentRole(e.target.value as UserRole)}
+                className="bg-slate-900 text-amber-300 font-extrabold text-xs px-2.5 py-1 rounded-xl border border-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="admin">👑 Admin de Sistema</option>
+                <option value="birthday_person">🌸 Aniversariante (Fernanda)</option>
+                <option value="assessor">📋 Assessor de Festa</option>
+              </select>
+            </div>
+
             <button
               onClick={handleSeedDatabase}
               disabled={seeding}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
-              title="Popula o Firestore com coleções e dados de teste com 1 clique"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+              title="Popula os dados reais com 1 clique"
             >
               <Database className="w-3.5 h-3.5" />
-              <span>{seeding ? 'Populando...' : '⚡ Inicializar Firestore'}</span>
+              <span>{seeding ? 'Carregando...' : '⚡ Resetar Dados'}</span>
             </button>
 
             <button
@@ -112,15 +134,15 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Notificação Toast de Seed com Sucesso */}
+        {/* Notificação Toast de Seed */}
         {seedSuccess && (
           <div className="bg-emerald-500 text-slate-950 px-4 py-2 text-center text-xs font-black flex items-center justify-center gap-2 animate-fade-in">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Coleções `invites`, `tables` e `event_config` criadas com sucesso no seu Firestore!</span>
+            <span>Dados de Fernanda Seppi atualizados no Firestore!</span>
           </div>
         )}
 
-        {/* Abas Principais de Navegação */}
+        {/* Abas Principais com Regra de Ocultação Secreta para a Aniversariante */}
         <div className="max-w-6xl mx-auto px-4 flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none border-t border-slate-800/80">
           <button
             onClick={() => setActiveTab('guests')}
@@ -131,7 +153,7 @@ export default function AdminPage() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>📋 Dashboard SLA & Convidados</span>
+            <span>📋 Convidados & Disparos</span>
           </button>
 
           <button
@@ -146,17 +168,24 @@ export default function AdminPage() {
             <span>🪑 Gestão de Mesas</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('checkin')}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === 'checkin'
-                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <DoorOpen className="w-4 h-4" />
-            <span>🚪 Portaria / Check-in</span>
-          </button>
+          {/* ABA HOMENAGEM SURPRESA - OCULTA PARA A ANIVERSARIANTE */}
+          {currentRole !== 'birthday_person' ? (
+            <button
+              onClick={() => setActiveTab('surprise')}
+              className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+                activeTab === 'surprise'
+                  ? 'border-pink-500 text-pink-400 bg-pink-500/10'
+                  : 'border-transparent text-pink-400/70 hover:text-pink-300'
+              }`}
+            >
+              <Gift className="w-4 h-4 text-pink-400" />
+              <span>🎁 Homenagem Surpresa (Secreto)</span>
+            </button>
+          ) : (
+            <div className="px-4 py-3 text-xs text-slate-600 flex items-center gap-1 cursor-not-allowed opacity-40">
+              <Lock className="w-3.5 h-3.5" /> <span className="italic">Recurso Restrito ao Cerimonial</span>
+            </div>
+          )}
 
           <button
             onClick={() => setActiveTab('settings')}
@@ -185,7 +214,9 @@ export default function AdminPage() {
               <GuestList invites={invites} tables={tables} config={config} onRefresh={loadAll} />
             )}
             {activeTab === 'tables' && <TableManager tables={tables} invites={invites} onRefresh={loadAll} />}
-            {activeTab === 'checkin' && <CheckinScanner invites={invites} onRefresh={loadAll} />}
+            {activeTab === 'surprise' && currentRole !== 'birthday_person' && (
+              <SurpriseDashboard invites={invites} onRefresh={loadAll} />
+            )}
             {activeTab === 'settings' && config && <SettingsForm config={config} onRefresh={loadAll} />}
           </>
         )}

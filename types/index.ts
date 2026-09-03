@@ -12,6 +12,25 @@ export type InviteStatus = 'pending' | 'confirmed' | 'declined' | 'pending_date'
 
 export type InviteTier = 'main' | 'reserve'; // 'main' = Lista Principal | 'reserve' = Lista de Espera (Reserva)
 
+export type UserRole = 'admin' | 'birthday_person' | 'assessor';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar_url?: string;
+}
+
+export interface SurpriseContribution {
+  invite_id: string;
+  head_name: string;
+  has_sent_photo: boolean;
+  photo_url?: string;
+  message?: string;
+  updated_at?: string;
+}
+
 export interface Invite {
   id: string; // Token (ex: carlos-silva-9x7k)
   head_name: string;
@@ -33,6 +52,10 @@ export interface Invite {
   sent_status?: 'not_sent' | 'sent';
   individual_deadline?: string | null; // ISO Date String
   requested_date?: string | null;     // Data informada pelo convidado na opção 'pending_date'
+  
+  // Homenagem Surpresa
+  surprise_sent?: boolean;            // Se já enviou foto para o mural surpresa
+  surprise_message?: string;          // Recado para o telão
 }
 
 export interface Table {
@@ -84,5 +107,6 @@ export interface EventConfig {
   floorplan_image_url?: string;
   gift_suggestions: GiftSuggestion[];
   custom_message_template?: string;
+  surprise_campaign_template?: string;
   theme?: EventTheme;
 }
