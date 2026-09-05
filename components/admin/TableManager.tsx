@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Table, Invite } from '@/types';
 import { saveTable, deleteTable, saveInvite } from '@/lib/db';
-import { Plus, Trash2, Edit, Users, Armchair, Sparkles, Check, UserPlus, UserCheck, X } from 'lucide-react';
+import { Plus, Trash2, Edit, Users, Armchair, UserPlus, X } from 'lucide-react';
 
 interface TableManagerProps {
   tables: Table[];
@@ -83,7 +83,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
       {/* Topo da Gestão de Mesas */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold mb-2 border border-amber-300 dark:border-amber-800">
             <Armchair className="w-4 h-4 text-amber-500" /> Croqui Visual de Mesas
           </div>
           <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
@@ -96,7 +96,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
 
         <button
           onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 shrink-0"
+          className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 shrink-0"
         >
           <Plus className="w-4 h-4" /> Nova Mesa de Convidados
         </button>
@@ -143,14 +143,14 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleOpenEdit(table)}
-                    className="p-1.5 text-slate-400 hover:text-purple-600 transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                     title="Editar mesa"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteTable(table.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
                     title="Excluir mesa"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -161,8 +161,8 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
               {/* DESENHO GRÁFICO DO CROQUI DE MESAS (8 CADEIRAS REDONDAS) */}
               <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-3">
                 <div className="flex items-center justify-between text-xs font-extrabold">
-                  <span className="text-slate-500 uppercase tracking-wider text-[10px]">Ocupação dos Assentos:</span>
-                  <span className={availableSeats < 0 ? 'text-rose-500' : 'text-amber-600 dark:text-amber-400'}>
+                  <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Ocupação dos Assentos:</span>
+                  <span className={availableSeats < 0 ? 'text-rose-500 font-black' : 'text-amber-600 dark:text-amber-400'}>
                     {allocatedSeats} / {table.capacity} lugares ({occupancyPercent}%)
                   </span>
                 </div>
@@ -204,8 +204,8 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                           key={chairIdx}
                           className={`p-2 rounded-xl text-center border text-[10px] font-bold truncate transition-all ${
                             assignedName
-                              ? 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-400 text-emerald-800 dark:text-emerald-300'
-                              : 'bg-white dark:bg-slate-800 border-dashed border-slate-300 dark:border-slate-700 text-slate-400'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-400 text-emerald-900 dark:text-emerald-300'
+                              : 'bg-white dark:bg-slate-800 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 dark:text-slate-500'
                           }`}
                           title={assignedName || `Cadeira ${chairIdx + 1} Livre`}
                         >
@@ -239,7 +239,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
 
                         <button
                           onClick={() => handleAssignInviteToTable(inv, null)}
-                          className="text-slate-400 hover:text-rose-500 text-[10px] font-semibold"
+                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 text-[10px] font-semibold"
                           title="Remover família da mesa"
                         >
                           Remover
@@ -250,10 +250,10 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                 )}
               </div>
 
-              {/* Botão de Atribuir Convidado nesta Mesa */}
+              {/* Botão de Atribuir Convidado nesta Mesa com ALTO CONTRASTE no Hover */}
               <button
                 onClick={() => setSelectedTableForAssignment(table)}
-                className="w-full py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                className="w-full py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold text-xs rounded-xl border border-amber-500/40 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
               >
                 <UserPlus className="w-4 h-4 text-amber-500" />
                 <span>Atribuir Família a esta Mesa</span>
@@ -273,13 +273,13 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
               </h3>
               <button
                 onClick={() => setSelectedTableForAssignment(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Selecione uma das famílias confirmadas para sentar nesta mesa:
             </p>
 
@@ -296,10 +296,10 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                       await handleAssignInviteToTable(inv, selectedTableForAssignment.id);
                       setSelectedTableForAssignment(null);
                     }}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-slate-200 dark:border-slate-700 rounded-xl text-left flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200 transition-all"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-left flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-100 transition-all"
                   >
                     <span>{inv.head_name}</span>
-                    <span className="text-purple-600 dark:text-purple-400">{inv.confirmed_count} vagas</span>
+                    <span className="text-purple-600 dark:text-purple-400 font-extrabold">{inv.confirmed_count} vagas</span>
                   </button>
                 ))
               )}
@@ -316,7 +316,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
                 {editingTable ? 'Editar Mesa' : 'Nova Mesa do Salão'}
               </h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -332,7 +332,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                   placeholder="Ex: Mesa 01 - Família Seppi"
                   value={tableName}
                   onChange={(e) => setTableName(e.target.value)}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
                 />
               </div>
 
@@ -347,7 +347,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                     max={20}
                     value={capacity}
                     onChange={(e) => setCapacity(parseInt(e.target.value, 10) || 8)}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
                   />
                 </div>
 
@@ -358,7 +358,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                   <select
                     value={shape}
                     onChange={(e) => setShape(e.target.value as any)}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100"
                   >
                     <option value="round">Redonda (Padrão)</option>
                     <option value="square">Quadrada / Retangular</option>
@@ -376,7 +376,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                   placeholder="Ex: Próxima ao palco principal"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
                 />
               </div>
 
@@ -391,7 +391,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl shadow-md"
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-md"
                 >
                   {loading ? 'Salvando...' : editingTable ? 'Salvar Alterações' : 'Criar Mesa'}
                 </button>
