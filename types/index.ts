@@ -117,5 +117,6 @@ export interface EventConfig {
   surprise_video_template?: string;
   surprise_text_template?: string;
   surprise_video_orientation?: 'horizontal' | 'vertical' | 'selfie';
+  show_digital_invite?: boolean; // Feature Toggle: Exibe Módulo Hotsite/Convite Digital (true) ou apenas RSVP Direto (false)
   theme?: EventTheme;
 }

@@ -10,7 +10,7 @@ import { SeatCard } from '@/components/guest/SeatCard';
 import { GiftSection } from '@/components/guest/GiftSection';
 import { MobileBottomNav, ActiveTabType } from '@/components/guest/MobileBottomNav';
 import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
-import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2 } from 'lucide-react';
 
 interface ConvitePageProps {
   params: Promise<{ token: string }>;
@@ -53,7 +53,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     return (
       <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex flex-col items-center justify-center p-4">
         <RefreshCw className="w-8 h-8 text-[#6b4684] animate-spin mb-3" />
-        <p className="text-sm font-semibold text-[#6b4684]">Carregando seu convite especial...</p>
+        <p className="text-sm font-semibold text-[#6b4684]">Carregando página de confirmação...</p>
       </div>
     );
   }
@@ -81,6 +81,8 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   }
 
   const assignedTable = tables.find((t) => t.id === invite.table_id);
+  const isFullDigitalInviteEnabled = config.show_digital_invite !== false;
+
   const theme = config.theme || {
     primary_color: '#6b4684',
     accent_color: '#c5a059',
@@ -100,32 +102,68 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     >
       {/* Container Principal Mobile Centralizado */}
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Header Hero com Arte Floral Aquarelada */}
-        <HeaderHero config={config} invite={invite} />
+        {/* CONDICIONAL: MÓDULO CONVITE DIGITAL ATIVADO (COMPLETO) VS MODO RSVP PURO (DESATIVADO) */}
+        {isFullDigitalInviteEnabled ? (
+          <>
+            {/* Header Hero com Arte Floral Aquarelada */}
+            <HeaderHero config={config} invite={invite} />
 
-        {/* Visualização por Abas no Mobile / Visão Completa no Desktop */}
-        <div className="px-4 space-y-6">
-          {/* ABA 1: RSVP & Formulário */}
-          <div className={`${activeTab === 'rsvp' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+            {/* Visualização por Abas no Mobile / Visão Completa no Desktop */}
+            <div className="px-4 space-y-6">
+              {/* ABA 1: RSVP & Formulário */}
+              <div className={`${activeTab === 'rsvp' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+                <RSVPForm
+                  invite={invite}
+                  config={config}
+                  onUpdate={(updated) => setInvite(updated)}
+                  onSubmittedFeedback={() => setShowFeedbackModal(true)}
+                />
+              </div>
+
+              {/* ABA 2: Assento Reservado & Localização */}
+              <div className={`${activeTab === 'location' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+                <SeatCard invite={invite} tables={tables} />
+                <EventLocationCard config={config} />
+              </div>
+
+              {/* ABA 3: Guia de Presentes & Pix */}
+              <div className={`${activeTab === 'gifts' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+                <GiftSection config={config} />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* MODO RSVP PURO (CONVITE DIGITAL DESATIVADO) - FOCO 100% VELOCIDADE E DIRETO NA CONFIRMAÇÃO */
+          <div className="px-4 pt-8 space-y-6 animate-fade-in">
+            {/* Header Minimalista Direto */}
+            <div className="text-center space-y-2 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-[#c5a059]/30 shadow-lg">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#6b4684]/10 text-[#6b4684] rounded-full text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4 text-[#c5a059]" /> Confirmação Direta de Presença
+              </div>
+
+              <h1 className="text-2xl font-black text-[#6b4684] tracking-tight font-serif">
+                {config.title}
+              </h1>
+
+              <p className="text-xs text-slate-600">
+                Olá, <strong>{invite.head_name}</strong>! Por favor, informe se você e sua família poderão comparecer ao evento.
+              </p>
+            </div>
+
+            {/* FORMULÁRIO DIRETO DE RSVP */}
             <RSVPForm
               invite={invite}
               config={config}
               onUpdate={(updated) => setInvite(updated)}
               onSubmittedFeedback={() => setShowFeedbackModal(true)}
             />
-          </div>
 
-          {/* ABA 2: Assento Reservado & Localização */}
-          <div className={`${activeTab === 'location' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
-            <SeatCard invite={invite} tables={tables} />
-            <EventLocationCard config={config} />
+            {/* Assento Reservado se Já Confirmado */}
+            {invite.status === 'confirmed' && (
+              <SeatCard invite={invite} tables={tables} />
+            )}
           </div>
-
-          {/* ABA 3: Guia de Presentes & Pix */}
-          <div className={`${activeTab === 'gifts' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
-            <GiftSection config={config} />
-          </div>
-        </div>
+        )}
 
         {/* Rodapé Fofo Aquarelado */}
         <footer className="text-center text-xs text-slate-500 pt-8 pb-4 px-4">
@@ -136,12 +174,14 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         </footer>
       </div>
 
-      {/* Barra de Navegação Flutuante Inferior para Mobile */}
-      <MobileBottomNav
-        activeTab={activeTab}
-        onChangeTab={(tab) => setActiveTab(tab)}
-        hasAssignedTable={Boolean(invite.table_id && invite.status === 'confirmed')}
-      />
+      {/* Barra de Navegação Flutuante Inferior para Mobile (Apenas quando Convite Digital estiver Ativado) */}
+      {isFullDigitalInviteEnabled && (
+        <MobileBottomNav
+          activeTab={activeTab}
+          onChangeTab={(tab) => setActiveTab(tab)}
+          hasAssignedTable={Boolean(invite.table_id && invite.status === 'confirmed')}
+        />
+      )}
 
       {/* Modal Pop-up de Feedback Imediato Pós-RSVP */}
       <RSVPFeedbackModal

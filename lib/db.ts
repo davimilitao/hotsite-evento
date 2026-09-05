@@ -27,6 +27,7 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   pix_name: 'Fernanda Seppi (Vaquinha da Comemoração)',
   pix_bank: 'Banco Nubank',
   floorplan_image_url: '',
+  show_digital_invite: true,
   theme: {
     preset: 'lavender_floral',
     primary_color: '#6b4684', // Roxo Lavanda Elegante do Convite Impresso
