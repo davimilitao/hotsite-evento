@@ -16,8 +16,6 @@ import {
   FileSpreadsheet,
   Paintbrush,
   ShieldCheck,
-  CheckCircle2,
-  Users,
   ExternalLink,
   Lock,
 } from 'lucide-react';
@@ -87,7 +85,7 @@ export default function LandingPage() {
 
         <div className="max-w-5xl mx-auto text-center space-y-8 relative">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-500/10 text-purple-300 rounded-full text-xs font-extrabold border border-purple-500/30">
-            <Sparkles className="w-4 h-4 text-amber-400" /> A Plataforma Premium de Hotsites & RSVP Inteligente
+            <Sparkles className="w-4 h-4 text-amber-400" /> A Plataforma Inteligente de Hotsites & Confirmação de Presença
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.1] font-serif">
@@ -98,7 +96,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-base sm:text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed font-normal">
-            Hotsites elegantes no tom exato do seu convite impresso, links de confirmação sem atrito no WhatsApp sem necessidade de app ou login, gestão por lotes de convites, mapa de mesas interativo e homenagens surpresa.
+            Hotsites elegantes no tom do seu convite, confirmações simples e diretas pelo WhatsApp sem necessidade de aplicativo, controle de mesas e homenagens surpresa para encantar seus convidados.
           </p>
 
           {/* CTAs Principais da Hero */}
@@ -124,7 +122,7 @@ export default function LandingPage() {
           {/* Links Rápidos de Demonstração do Hotsite de Convidado */}
           <div className="pt-8 border-t border-slate-800/80 max-w-xl mx-auto space-y-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Experimentar Hotsite do Convidado (Exemplo Real):
+              Veja um Exemplo do Convite Digital no Celular:
             </span>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
@@ -163,9 +161,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center font-bold text-lg">
                 <Paintbrush className="w-6 h-6" />
               </div>
-              <h4 className="text-lg font-bold text-white">1. Crie & Personalize o Tema</h4>
+              <h4 className="text-lg font-bold text-white">1. Personalize o Site com o Estilo da Festa</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Utilize nosso customizador estilo WordPress para configurar as cores exatas do seu convite de papel (lavanda, marfim, dourado) e inserir a aquarela floral do evento.
+                Ajuste as cores, fotos e detalhes do site em um painel simples e intuitivo para combinar perfeitamente com o convite e a decoração do seu evento.
               </p>
             </div>
 
@@ -173,9 +171,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-pink-500/20 text-pink-400 rounded-2xl flex items-center justify-center font-bold text-lg">
                 <MessageCircle className="w-6 h-6" />
               </div>
-              <h4 className="text-lg font-bold text-white">2. Dispare Links pelo WhatsApp</h4>
+              <h4 className="text-lg font-bold text-white">2. Envie Convites Direto pelo WhatsApp</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Envie o link exclusivo de 1-clique para cada família pelo WhatsApp. O convidado clica e responde instantaneamente pelo celular, sem precisar criar conta ou baixar app.
+                Seu convidado abre o link e confirma a presença no celular em segundos, de forma leve e sem precisar baixar aplicativo nem criar senha.
               </p>
             </div>
 
@@ -183,9 +181,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center font-bold text-lg">
                 <Armchair className="w-6 h-6" />
               </div>
-              <h4 className="text-lg font-bold text-white">3. Gerencie Mesas & Exportação</h4>
+              <h4 className="text-lg font-bold text-white">3. Organize Mesas e Gere a Lista Oficial</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Acompanhe confirmações em tempo real, gerencie a alocação visual de mesas e exporte a lista pronta em Excel/CSV diretamente para a equipe do buffet.
+                Tenha o controle total de quem confirmou, defina onde cada família vai sentar e gere a lista oficial para o buffet com apenas um clique.
               </p>
             </div>
           </div>
@@ -197,7 +195,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto space-y-12">
           <div className="text-center space-y-3">
             <h2 className="text-xs font-extrabold uppercase tracking-widest text-amber-400">
-              RECURSOS EXCLUSIVOS
+              DIFERENCIAIS EXCLUSIVOS
             </h2>
             <h3 className="text-3xl font-black text-white font-serif">Tudo o que sua festa precisa em um só lugar</h3>
           </div>
@@ -205,49 +203,49 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-3">
               <Smartphone className="w-6 h-6 text-purple-400" />
-              <h4 className="font-extrabold text-base text-white">RSVP Sem Atrito</h4>
+              <h4 className="font-extrabold text-base text-white">Confirmação Rápida no Celular</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Confirmação de presencia simples e rápida com suporte a restrições alimentares e acompanhantes.
+                Seus convidados respondem com um toque no celular, informando acompanhantes e restrições alimentares de forma simples.
               </p>
             </div>
 
             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-3">
               <Clock className="w-6 h-6 text-amber-400" />
-              <h4 className="font-extrabold text-base text-white">Gestão por Lotes & Prazos</h4>
+              <h4 className="font-extrabold text-base text-white">Prazos & Lista de Espera Inteligente</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Defina prazos por lotes de convidados. Se a vaga expirar, promova a lista de espera em 1-clique.
+                Defina datas limites para respostas e libere vagas automaticamente para novos convidados caso alguém não possa ir.
               </p>
             </div>
 
             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-3">
               <Armchair className="w-6 h-6 text-pink-400" />
-              <h4 className="font-extrabold text-base text-white">Mapa de Mesas Interativo</h4>
+              <h4 className="font-extrabold text-base text-white">Organização Visual de Mesas</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Atribuição visual das famílias às mesas com mapa interativo destacado no celular do convidado.
+                Defina onde cada família vai sentar no salão e mostre a mesa reservada direto no convite digital do convidado.
               </p>
             </div>
 
             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-3">
               <Gift className="w-6 h-6 text-purple-400" />
-              <h4 className="font-extrabold text-base text-white">Homenagem Surpresa</h4>
+              <h4 className="font-extrabold text-base text-white">Mural Secreto de Homenagens</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Dashboard secreto para cerimonialistas coletarem fotos e depoimentos para o telão (oculto da aniversariante).
+                Colete fotos e recados carinhosos dos convidados em segredo para emocionar a aniversariante no telão da festa.
               </p>
             </div>
 
             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-3">
               <FileSpreadsheet className="w-6 h-6 text-emerald-400" />
-              <h4 className="font-extrabold text-base text-white">Exportação para o Buffet</h4>
+              <h4 className="font-extrabold text-base text-white">Relatórios Prontos para o Buffet</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Gere planilhas em Excel/CSV em 1-clique com contagem de adultos, crianças e alergias.
+                Baixe a lista completa de confirmados com a contagem de adultos, crianças e alergias com apenas um clique.
               </p>
             </div>
 
             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-3">
               <Lock className="w-6 h-6 text-sky-400" />
-              <h4 className="font-extrabold text-base text-white">Níveis de Acesso (RBAC)</h4>
+              <h4 className="font-extrabold text-base text-white">Painel Seguro para Toda a Equipe</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Permissões separadas para o Admin de Sistema, Aniversariante e Assessor de Festa.
+                Acessos simplificados para anfitriões, assessores e cerimonialistas acompanharem a organização da festa.
               </p>
             </div>
           </div>
