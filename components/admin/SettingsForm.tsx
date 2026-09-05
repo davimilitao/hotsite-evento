@@ -445,7 +445,7 @@ export function SettingsForm({ config, onRefresh }: SettingsFormProps) {
                   <img
                     src={theme.uploaded_invite_url}
                     alt="Preview Arte Impressa"
-                    className="w-full h-56 object-contain rounded-2xl border-2 border-amber-400 shadow-md bg-white p-1"
+                    className="w-full h-56 object-contain rounded-2xl shadow-xl mx-auto border-0 block"
                   />
                   <span className="text-[10px] font-bold text-amber-600 block">Arte Impressa Carregada</span>
                 </div>

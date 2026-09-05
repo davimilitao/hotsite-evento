@@ -53,6 +53,30 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
 
   const isUploadMode = theme.invite_mode === 'upload' && Boolean(theme.uploaded_invite_url);
 
+  if (isUploadMode) {
+    return (
+      <header className="relative text-center space-y-4 pt-6 px-4">
+        {/* Badge Flutuante de Boas-Vindas */}
+        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/80 backdrop-blur-md text-[#6b4684] rounded-full text-xs font-extrabold border border-[#c5a059]/30 shadow-md">
+          <Sparkles className="w-4 h-4 text-[#c5a059]" /> Convite Exclusivo para {invite.head_name}
+        </div>
+
+        {/* Imagem Pura do Convite Físico - Flutuante com Sombra Direta (Sem fundo branco e sem bordas) */}
+        <div className="max-w-md mx-auto pt-2">
+          <img
+            src={theme.uploaded_invite_url}
+            alt={`Arte do Convite - ${config.title}`}
+            className="w-full h-auto max-h-[600px] object-contain rounded-3xl shadow-2xl mx-auto border-0 block"
+            onError={(e) => {
+              // Fallback de segurança se a imagem falhar ao carregar
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="relative text-center space-y-6 pt-6 px-4">
       {/* Moldura de Boas-Vindas Floral Elegante */}
@@ -66,86 +90,67 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
             <Sparkles className="w-3.5 h-3.5 text-[#c5a059]" /> Convite Exclusivo para {invite.head_name}
           </div>
 
-          {/* SE MODO UPLOAD DA ARTE IMPRESSA FOR SELECIONADO (EXIBIÇÃO PURA E LIMPA DO CONVITE) */}
-          {isUploadMode ? (
-            <div className="my-2">
-              <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-[#c5a059]/40 bg-white p-2">
-                <img
-                  src={theme.uploaded_invite_url}
-                  alt={`Arte do Convite - ${config.title}`}
-                  className="w-full h-auto max-h-[500px] object-contain rounded-2xl mx-auto"
-                  onError={(e) => {
-                    // Fallback de segurança se a imagem falhar ao carregar
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
+          {/* MODO CARD DIGITAL CUSTOMIZADO */}
+          <div className="space-y-1">
+            <span className="text-xs font-extrabold uppercase tracking-widest text-[#c5a059] block">
+              SAVE THE DATE
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] tracking-tight font-serif">
+              {config.birthday_person}
+            </h1>
+            <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider">
+              {config.age_celebrating} Anos 🌸✨
+            </p>
+          </div>
+
+          {/* Banner Secundário (se configurado) */}
+          {theme.banner_image_url && (
+            <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-[#c5a059]/30">
+              <img
+                src={theme.banner_image_url}
+                alt="Arte do Convite"
+                className="w-full h-auto max-h-64 object-cover"
+              />
             </div>
-          ) : (
-            /* MODO CARD DIGITAL CUSTOMIZADO */
-            <>
-              <div className="space-y-1">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#c5a059] block">
-                  SAVE THE DATE
-                </span>
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] tracking-tight font-serif">
-                  {config.birthday_person}
-                </h1>
-                <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider">
-                  {config.age_celebrating} Anos 🌸✨
-                </p>
-              </div>
-
-              {/* Banner Secundário (se configurado) */}
-              {theme.banner_image_url && (
-                <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-[#c5a059]/30">
-                  <img
-                    src={theme.banner_image_url}
-                    alt="Arte do Convite"
-                    className="w-full h-auto max-h-64 object-cover"
-                  />
-                </div>
-              )}
-
-              {/* Data & Localização Detalhada (Apenas no Modo Digital Customizado) */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 text-xs font-bold text-[#2d2138]">
-                <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
-                  <Calendar className="w-4 h-4 text-[#6b4684]" />
-                  <span>Sábado, 07 de Novembro • 17h às 23h</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
-                  <MapPin className="w-4 h-4 text-[#6b4684]" />
-                  <span>{config.location_name}</span>
-                </div>
-              </div>
-
-              {/* Contador Regressivo Dourado (Apenas no Modo Digital Customizado) */}
-              <div className="pt-4 border-t border-[#c5a059]/20">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6b4684] block mb-2">
-                  Contagem Regressiva para a Festa
-                </span>
-                <div className="grid grid-cols-4 gap-2 max-w-xs mx-auto">
-                  {[
-                    { label: 'Dias', value: timeLeft.days },
-                    { label: 'Horas', value: timeLeft.hours },
-                    { label: 'Minutos', value: timeLeft.minutes },
-                    { label: 'Segundos', value: timeLeft.seconds },
-                  ].map((item, index) => (
-                    <div
-                      key={index}
-                      className="bg-gradient-to-b from-[#faf6f0] to-white p-2 rounded-2xl border border-[#c5a059]/40 shadow-sm text-center"
-                    >
-                      <span className="block text-xl font-black text-[#6b4684] font-serif">
-                        {String(item.value).padStart(2, '0')}
-                      </span>
-                      <span className="text-[9px] font-bold text-[#c5a059] uppercase">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
           )}
+
+          {/* Data & Localização Detalhada (Apenas no Modo Digital Customizado) */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 text-xs font-bold text-[#2d2138]">
+            <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
+              <Calendar className="w-4 h-4 text-[#6b4684]" />
+              <span>Sábado, 07 de Novembro • 17h às 23h</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
+              <MapPin className="w-4 h-4 text-[#6b4684]" />
+              <span>{config.location_name}</span>
+            </div>
+          </div>
+
+          {/* Contador Regressivo Dourado (Apenas no Modo Digital Customizado) */}
+          <div className="pt-4 border-t border-[#c5a059]/20">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6b4684] block mb-2">
+              Contagem Regressiva para a Festa
+            </span>
+            <div className="grid grid-cols-4 gap-2 max-w-xs mx-auto">
+              {[
+                { label: 'Dias', value: timeLeft.days },
+                { label: 'Horas', value: timeLeft.hours },
+                { label: 'Minutos', value: timeLeft.minutes },
+                { label: 'Segundos', value: timeLeft.seconds },
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-gradient-to-b from-[#faf6f0] to-white p-2 rounded-2xl border border-[#c5a059]/40 shadow-sm text-center"
+                >
+                  <span className="block text-xl font-black text-[#6b4684] font-serif">
+                    {String(item.value).padStart(2, '0')}
+                  </span>
+                  <span className="text-[9px] font-bold text-[#c5a059] uppercase">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </header>
