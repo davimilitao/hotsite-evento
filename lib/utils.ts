@@ -131,6 +131,25 @@ export function buildSurpriseTextLink(
 }
 
 /**
+ * Exporta os contatos para um arquivo VCF (vCard) para importar no WhatsApp Business / Celular
+ */
+export function exportContactsToVCF(invites: Invite[]): void {
+  const vcards = invites.map((inv) => {
+    const formattedPhone = formatPhoneE164(inv.phone);
+    return `BEGIN:VCARD\nVERSION:3.0\nFN:${inv.head_name} (Festa Fernanda)\nTEL;TYPE=CELL:+${formattedPhone}\nEND:VCARD`;
+  }).join('\n');
+
+  const blob = new Blob([vcards], { type: 'text/vcard;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `agenda_contatos_fernanda_seppi_${new Date().toISOString().slice(0, 10)}.vcf`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
  * Helper para formatação de data por extenso
  */
 export function formatDateExtenso(dateIso: string): string {
