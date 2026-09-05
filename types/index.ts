@@ -88,7 +88,7 @@ export type FontOption = 'playfair' | 'cinzel' | 'script' | 'serif' | 'sans';
 
 export interface EventTheme {
   preset: ThemePreset;
-  invite_mode?: 'upload' | 'custom'; // Modo 1: Upload da Arte Impressa | Modo 2: Customizador de Hotsite
+  invite_mode?: 'off' | 'upload' | 'custom'; // Modo 1: Off (Sem Convite) | Modo 2: Upload da Arte Impressa | Modo 3: Customizador
   uploaded_invite_url?: string;     // URL ou DataURL da imagem do convite físico enviada pelo usuário
   primary_color: string;           // ex: #6b4684
   accent_color: string;            // ex: #c5a059

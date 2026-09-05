@@ -29,7 +29,7 @@ export function CheckinScanner({ invites, onRefresh }: CheckinScannerProps) {
 
   const handleToggleCheckin = async (invite: Invite) => {
     const nextState = !invite.checked_in;
-    await toggleCheckin(invite.id, nextState);
+    await toggleCheckin(invite.id);
 
     if (nextState) {
       confetti({

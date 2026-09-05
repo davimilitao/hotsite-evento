@@ -45,7 +45,7 @@ export function BulkImporter({ isOpen, onClose, onSuccess }: BulkImporterProps) 
       }
 
       const created = await bulkImportInvites(parsedRows);
-      setResultMsg(`🎉 ${created.length} convites importados e tokens gerados com sucesso!`);
+      setResultMsg(`🎉 ${created} convites importados e tokens gerados com sucesso!`);
       setTimeout(() => {
         onSuccess();
         onClose();

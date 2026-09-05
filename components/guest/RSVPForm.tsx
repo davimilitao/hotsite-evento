@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Guest, EventConfig } from '@/types';
-import { updateInviteRSVP } from '@/lib/db';
+import { saveInvite } from '@/lib/db';
 import { isInviteExpired, formatDateShort } from '@/lib/utils';
 import { UserPlus, Trash2, Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -15,31 +15,31 @@ interface RSVPFormProps {
 }
 
 export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVPFormProps) {
-  const isExpired = isInviteExpired(invite, config.deadline_rsvp);
-  const isAlreadyResponded = invite.status !== 'pending';
-
-  // Controla se a pessoa está no modo resumo (Card Fixo) ou modo de edição
-  const [isEditing, setIsEditing] = useState<boolean>(!isAlreadyResponded);
-
-  const [responseMode, setResponseMode] = useState<'confirmed' | 'declined' | 'pending_date'>(() => {
-    if (invite.status === 'declined') return 'declined';
-    if (invite.status === 'pending_date') return 'pending_date';
-    return 'confirmed';
-  });
+  const [responseMode, setResponseMode] = useState<'confirmed' | 'declined' | 'pending_date'>(
+    invite.status === 'declined'
+      ? 'declined'
+      : invite.status === 'pending_date'
+      ? 'pending_date'
+      : 'confirmed'
+  );
 
   const [requestedDate, setRequestedDate] = useState<string>(
     invite.requested_date ? invite.requested_date.slice(0, 10) : ''
   );
 
-  const [guests, setGuests] = useState<Guest[]>(() => {
-    if (invite.guests && invite.guests.length > 0) return invite.guests;
-    return [{ name: invite.head_name, type: 'adult', dietary: '' }];
-  });
+  const [guests, setGuests] = useState<Guest[]>(
+    invite.guests && invite.guests.length > 0
+      ? invite.guests
+      : [{ name: invite.head_name, type: 'adult', dietary: '' }]
+  );
 
   const [notes, setNotes] = useState<string>(invite.notes || '');
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState<boolean>(invite.status === 'pending');
 
+  const isExpired = isInviteExpired(invite, config.deadline_rsvp);
   const activeDeadline = invite.individual_deadline || config.deadline_rsvp;
+  const isAlreadyResponded = invite.status !== 'pending';
 
   const handleAddGuest = () => {
     if (guests.length >= invite.max_guests) return;
@@ -62,13 +62,11 @@ export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVP
     setLoading(true);
 
     try {
-      let status = responseMode;
-      let validGuests = responseMode === 'confirmed'
-        ? guests.filter((g) => g.name.trim().length > 0)
-        : [];
+      const validGuests = responseMode === 'confirmed' ? guests.filter((g) => g.name.trim() !== '') : [];
+      const status = responseMode === 'confirmed' ? 'confirmed' : responseMode === 'declined' ? 'declined' : 'pending_date';
 
       if (responseMode === 'confirmed' && validGuests.length === 0) {
-        alert('Por favor, informe pelo menos o nome do titular.');
+        alert('Por favor, informe ao menos o nome do titular ou de 1 acompanhante.');
         setLoading(false);
         return;
       }
@@ -79,11 +77,13 @@ export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVP
         return;
       }
 
-      const updatedInvite = await updateInviteRSVP(invite.id, {
+      const updatedInvite = await saveInvite({
+        ...invite,
         status,
+        confirmed_count: responseMode === 'confirmed' ? validGuests.length : 0,
         guests: validGuests,
         notes,
-        requested_date: responseMode === 'pending_date' ? requestedDate : undefined,
+        requested_date: responseMode === 'pending_date' ? requestedDate : null,
       });
 
       if (status === 'confirmed') {
@@ -95,7 +95,7 @@ export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVP
       }
 
       onUpdate(updatedInvite);
-      setIsEditing(false); // Colapsa para o modo resumo fixo
+      setIsEditing(false);
       if (onSubmittedFeedback) {
         onSubmittedFeedback();
       }
@@ -109,7 +109,6 @@ export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVP
 
   return (
     <section className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-100 dark:border-slate-700/60 space-y-6">
-      {/* Alerta Modo Urgência quando o Prazo Expirou */}
       {isExpired && (
         <div className="bg-rose-500/15 border-2 border-rose-500/40 text-rose-300 p-4 rounded-2xl space-y-2 animate-pulse">
           <div className="flex items-center gap-2 font-extrabold text-sm text-rose-400">

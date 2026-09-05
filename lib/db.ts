@@ -30,6 +30,8 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   show_digital_invite: true,
   theme: {
     preset: 'lavender_floral',
+    invite_mode: 'custom', // 'off' | 'upload' | 'custom'
+    uploaded_invite_url: '',
     primary_color: '#6b4684', // Roxo Lavanda Elegante do Convite Impresso
     accent_color: '#c5a059',  // Dourado Nobre das Letras
     bg_color: '#faf6f0',      // Creme Suave / Marfim do Papel Aquarelado
@@ -59,94 +61,109 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
     },
     {
       id: 'g4',
-      title: 'Vinhos & Espumantes 🥂',
-      description: 'Vinho Seco (Pinot Noir ou Chardonnay) ou Espumante Brut',
+      title: 'Experiências & Bem-Estar 💆‍♀️',
+      description: 'Vale Day Spa / Jantar Especial',
       category: 'experience',
     },
   ],
 };
 
 export const INITIAL_TABLES: Table[] = [
-  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, allocated_count: 4, shape: 'round', description: 'Próxima ao palco principal' },
-  { id: 'mesa-02', name: 'Mesa 02 - Amigos de Infância', capacity: 8, allocated_count: 6, shape: 'round', description: 'Central' },
-  { id: 'mesa-03', name: 'Mesa 03 - Pessoal do Trabalho', capacity: 10, allocated_count: 3, shape: 'square', description: 'Próxima ao Bar' },
-  { id: 'mesa-04', name: 'Mesa 04 - Amigos Especiais', capacity: 8, allocated_count: 0, shape: 'round', description: 'Próxima à Pista de Dança' },
-  { id: 'lounge-01', name: 'Lounge Estofados', capacity: 12, allocated_count: 0, shape: 'lounge', description: 'Área externa / Descanso' },
+  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, shape: 'round', description: 'Próxima à pista de dança' },
+  { id: 'mesa-02', name: 'Mesa 02 - Amigos de Infância', capacity: 8, shape: 'round', description: 'Setor central do salão' },
+  { id: 'mesa-03', name: 'Mesa 03 - Colegas de Trabalho', capacity: 8, shape: 'round', description: 'Próxima ao buffet' },
+  { id: 'mesa-04', name: 'Mesa 04 - Família Expandida', capacity: 8, shape: 'round', description: 'Ambiente tranquilo' },
+  { id: 'mesa-05', name: 'Mesa 05 - Hóspedes & Viagem', capacity: 8, shape: 'round', description: 'Próxima ao bar de drinks' },
 ];
 
 export const INITIAL_INVITES: Invite[] = [
   {
     id: 'carlos-silva-8a2',
     head_name: 'Carlos Silva',
-    phone: '5511999998888',
+    phone: '11999998888',
     max_guests: 4,
     status: 'confirmed',
-    confirmed_count: 3,
+    confirmed_count: 4,
     table_id: 'mesa-01',
-    checked_in: false,
-    updated_at: new Date().toISOString(),
     tier: 'main',
-    sent_at: '2026-09-02T18:00:00.000Z',
     sent_status: 'sent',
-    individual_deadline: '2026-10-10T23:59:59.000Z',
+    sent_at: '2026-09-01T10:00:00.000Z',
+    checked_in: false,
+    updated_at: '2026-09-01T10:00:00.000Z',
     guests: [
       { name: 'Carlos Silva', type: 'adult' },
-      { name: 'Mariana Silva', type: 'adult', dietary: 'Sem Glúten' },
-      { name: 'Enzo Silva', type: 'child', age: 6 },
+      { name: 'Ana Silva', type: 'adult' },
+      { name: 'Lucas Silva', type: 'child', age: 7 },
+      { name: 'Mariana Silva', type: 'child', age: 10, dietary: 'Sem lactose' },
     ],
   },
   {
     id: 'fernanda-lima-3k9',
     head_name: 'Fernanda Lima',
-    phone: '5511988887777',
+    phone: '11988887777',
     max_guests: 2,
     status: 'pending',
     confirmed_count: 0,
-    table_id: 'mesa-02',
-    checked_in: false,
-    updated_at: new Date().toISOString(),
+    table_id: null,
     tier: 'main',
-    sent_at: '2026-09-02T19:30:00.000Z',
-    sent_status: 'sent',
-    individual_deadline: '2026-10-15T23:59:59.000Z',
+    sent_status: 'not_sent',
+    checked_in: false,
+    updated_at: '2026-09-02T14:30:00.000Z',
     guests: [],
   },
   {
     id: 'rodrigo-alves-5m1',
     head_name: 'Rodrigo Alves',
-    phone: '5511977776666',
+    phone: '11977776666',
     max_guests: 3,
-    status: 'declined',
+    status: 'pending_date',
+    requested_date: '2026-10-18T00:00:00.000Z',
     confirmed_count: 0,
     table_id: null,
-    checked_in: false,
-    updated_at: new Date().toISOString(),
     tier: 'main',
-    sent_at: '2026-09-01T14:00:00.000Z',
     sent_status: 'sent',
+    sent_at: '2026-09-02T15:00:00.000Z',
+    checked_in: false,
+    updated_at: '2026-09-02T15:00:00.000Z',
     guests: [],
   },
   {
-    id: 'patricia-mendes-9x1',
-    head_name: 'Patrícia Mendes',
-    phone: '5511966665555',
+    id: 'patricia-gomes-9p4',
+    head_name: 'Patrícia Gomes',
+    phone: '11966665555',
+    max_guests: 2,
+    status: 'declined',
+    confirmed_count: 0,
+    table_id: null,
+    tier: 'main',
+    sent_status: 'sent',
+    sent_at: '2026-09-02T16:00:00.000Z',
+    checked_in: false,
+    updated_at: '2026-09-02T16:00:00.000Z',
+    guests: [],
+    notes: 'Viagem de trabalho agendada',
+  },
+  {
+    id: 'marcelo-oliveira-2x8',
+    head_name: 'Marcelo Oliveira (Reserva)',
+    phone: '11955554444',
     max_guests: 2,
     status: 'pending',
     confirmed_count: 0,
     table_id: null,
-    checked_in: false,
-    updated_at: new Date().toISOString(),
     tier: 'reserve',
     sent_status: 'not_sent',
+    checked_in: false,
+    updated_at: '2026-09-03T09:00:00.000Z',
     guests: [],
   },
 ];
 
-// Helper para gerenciar dados no localStorage quando sem Firebase ativo
+// Chaves do LocalStorage v4
 const LS_KEYS = {
-  INVITES: 'festa_invites_v3', // Versão 3 para atualizar tema claro de Fernanda Seppi
-  TABLES: 'festa_tables_v3',
-  CONFIG: 'festa_config_v3',
+  CONFIG: 'festa_config_v4',
+  TABLES: 'festa_tables_v4',
+  INVITES: 'festa_invites_v4',
 };
 
 function getLS<T>(key: string, defaultData: T): T {
@@ -172,7 +189,6 @@ function setLS<T>(key: string, data: T): void {
  * Popula o banco de dados do Firestore com os dados reais de Fernanda Seppi
  */
 export async function seedFirestoreData(): Promise<void> {
-  // Limpa caches antigos do navegador
   if (typeof window !== 'undefined') {
     try {
       localStorage.clear();
@@ -186,7 +202,6 @@ export async function seedFirestoreData(): Promise<void> {
     return;
   }
 
-  // Sobrescreve Firestore obrigatoriamente com os dados de Fernanda Seppi
   await setDoc(doc(db, 'event_config', 'settings'), INITIAL_EVENT_CONFIG);
 
   for (const table of INITIAL_TABLES) {
@@ -198,21 +213,49 @@ export async function seedFirestoreData(): Promise<void> {
   }
 }
 
-// ---- API DO BANCO DE DADOS (Firestore com purga de cache antigo) ----
+// ---- API DO BANCO DE DADOS (COM DEEP MERGE PARA GARANTIR 100% PERSISTÊNCIA) ----
 
 export async function getEventConfig(): Promise<EventConfig> {
+  let mergedConfig: EventConfig = { ...INITIAL_EVENT_CONFIG };
+  const defaultTheme = INITIAL_EVENT_CONFIG.theme || {
+    preset: 'lavender_floral',
+    invite_mode: 'custom',
+    uploaded_invite_url: '',
+    primary_color: '#6b4684',
+    accent_color: '#c5a059',
+    bg_color: '#faf6f0',
+    card_bg_color: '#ffffff',
+    text_color: '#2d2138',
+    font_family: 'serif',
+    banner_image_url: '',
+  };
+
   if (isFirebaseConfigured) {
     try {
       const docRef = doc(db, 'event_config', 'settings');
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data() as EventConfig;
-        // Purga dados antigos do Lucas se ainda existirem no Firestore
-        if (data.birthday_person === 'Lucas Silva' || data.title.includes('Lucas')) {
-          await setDoc(doc(db, 'event_config', 'settings'), INITIAL_EVENT_CONFIG);
-          return INITIAL_EVENT_CONFIG;
+        if (data.birthday_person !== 'Lucas Silva') {
+          mergedConfig = {
+            ...INITIAL_EVENT_CONFIG,
+            ...data,
+            theme: {
+              preset: data.theme?.preset || defaultTheme.preset,
+              invite_mode: data.theme?.invite_mode || defaultTheme.invite_mode,
+              uploaded_invite_url: data.theme?.uploaded_invite_url ?? defaultTheme.uploaded_invite_url,
+              primary_color: data.theme?.primary_color || defaultTheme.primary_color,
+              accent_color: data.theme?.accent_color || defaultTheme.accent_color,
+              bg_color: data.theme?.bg_color || defaultTheme.bg_color,
+              card_bg_color: data.theme?.card_bg_color || defaultTheme.card_bg_color,
+              text_color: data.theme?.text_color || defaultTheme.text_color,
+              font_family: data.theme?.font_family || defaultTheme.font_family,
+              banner_image_url: data.theme?.banner_image_url ?? defaultTheme.banner_image_url,
+            },
+          };
+          setLS(LS_KEYS.CONFIG, mergedConfig);
+          return mergedConfig;
         }
-        return data;
       }
     } catch (err) {
       console.warn('Erro ao ler Firestore event_config, usando fallback:', err);
@@ -220,11 +263,39 @@ export async function getEventConfig(): Promise<EventConfig> {
   }
 
   const cached = getLS<EventConfig>(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
-  if (!cached || cached.birthday_person === 'Lucas Silva' || (cached.title && cached.title.includes('Lucas'))) {
+  if (cached && cached.birthday_person !== 'Lucas Silva') {
+    mergedConfig = {
+      ...INITIAL_EVENT_CONFIG,
+      ...cached,
+      theme: {
+        preset: cached.theme?.preset || defaultTheme.preset,
+        invite_mode: cached.theme?.invite_mode || defaultTheme.invite_mode,
+        uploaded_invite_url: cached.theme?.uploaded_invite_url ?? defaultTheme.uploaded_invite_url,
+        primary_color: cached.theme?.primary_color || defaultTheme.primary_color,
+        accent_color: cached.theme?.accent_color || defaultTheme.accent_color,
+        bg_color: cached.theme?.bg_color || defaultTheme.bg_color,
+        card_bg_color: cached.theme?.card_bg_color || defaultTheme.card_bg_color,
+        text_color: cached.theme?.text_color || defaultTheme.text_color,
+        font_family: cached.theme?.font_family || defaultTheme.font_family,
+        banner_image_url: cached.theme?.banner_image_url ?? defaultTheme.banner_image_url,
+      },
+    };
+  } else {
     setLS(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
-    return INITIAL_EVENT_CONFIG;
   }
-  return cached;
+
+  return mergedConfig;
+}
+
+export async function toggleCheckin(id: string): Promise<Invite | null> {
+  const invite = (await getAllInvites()).find((i) => i.id === id);
+  if (!invite) return null;
+
+  return saveInvite({
+    ...invite,
+    checked_in: !invite.checked_in,
+    checked_in_at: !invite.checked_in ? new Date().toISOString() : null,
+  });
 }
 
 export async function saveEventConfig(config: EventConfig): Promise<void> {
@@ -249,7 +320,7 @@ export async function getAllInvites(): Promise<Invite[]> {
       console.warn('Erro ao buscar convites no Firestore:', err);
     }
   }
-  return getLS(LS_KEYS.INVITES, INITIAL_INVITES);
+  return getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
 }
 
 export async function getInviteByToken(token: string): Promise<Invite | null> {
@@ -261,7 +332,7 @@ export async function getInviteByToken(token: string): Promise<Invite | null> {
         return { id: snap.id, ...snap.data() } as Invite;
       }
     } catch (err) {
-      console.warn('Erro ao buscar convite no Firestore:', err);
+      console.warn(`Erro ao buscar token ${token} no Firestore:`, err);
     }
   }
 
@@ -269,236 +340,104 @@ export async function getInviteByToken(token: string): Promise<Invite | null> {
   return invites.find((i) => i.id === token) || null;
 }
 
-export async function markInviteAsSent(token: string): Promise<void> {
-  const current = await getInviteByToken(token);
-  if (!current) return;
+export async function saveInvite(invite: Partial<Invite> & { id?: string }): Promise<Invite> {
+  const invites = await getAllInvites();
+  let fullInvite: Invite;
 
-  const nowIso = new Date().toISOString();
-  const updated: Invite = {
-    ...current,
-    sent_at: nowIso,
-    sent_status: 'sent',
-    updated_at: nowIso,
-  };
-
-  if (isFirebaseConfigured) {
-    try {
-      const docRef = doc(db, 'invites', token);
-      await updateDoc(docRef, {
-        sent_at: nowIso,
-        sent_status: 'sent',
-        updated_at: nowIso,
-      });
-    } catch (err) {
-      console.error('Erro ao marcar disparo no Firestore:', err);
+  if (invite.id) {
+    const existingIndex = invites.findIndex((i) => i.id === invite.id);
+    if (existingIndex >= 0) {
+      fullInvite = {
+        ...invites[existingIndex],
+        ...invite,
+        updated_at: new Date().toISOString(),
+      };
+      invites[existingIndex] = fullInvite;
+    } else {
+      fullInvite = {
+        id: invite.id,
+        head_name: invite.head_name || 'Convidado',
+        phone: invite.phone || '',
+        max_guests: invite.max_guests || 1,
+        status: invite.status || 'pending',
+        confirmed_count: invite.confirmed_count || 0,
+        table_id: invite.table_id || null,
+        tier: invite.tier || 'main',
+        sent_status: invite.sent_status || 'not_sent',
+        checked_in: invite.checked_in || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        guests: invite.guests || [],
+      };
+      invites.push(fullInvite);
     }
-  }
-
-  const all = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
-  const idx = all.findIndex((i) => i.id === token);
-  if (idx !== -1) {
-    all[idx] = updated;
-  }
-  setLS(LS_KEYS.INVITES, all);
-}
-
-export async function promoteInviteToMain(token: string): Promise<void> {
-  const current = await getInviteByToken(token);
-  if (!current) return;
-
-  const nowIso = new Date().toISOString();
-  const updated: Invite = {
-    ...current,
-    tier: 'main',
-    updated_at: nowIso,
-  };
-
-  if (isFirebaseConfigured) {
-    try {
-      const docRef = doc(db, 'invites', token);
-      await updateDoc(docRef, {
-        tier: 'main',
-        updated_at: nowIso,
-      });
-    } catch (err) {
-      console.error('Erro ao promover convite no Firestore:', err);
-    }
-  }
-
-  const all = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
-  const idx = all.findIndex((i) => i.id === token);
-  if (idx !== -1) {
-    all[idx] = updated;
-  }
-  setLS(LS_KEYS.INVITES, all);
-}
-
-export async function updateInviteRSVP(
-  token: string,
-  rsvpData: {
-    status: InviteStatus;
-    guests: Guest[];
-    notes?: string;
-    requested_date?: string;
-  }
-): Promise<Invite> {
-  const current = await getInviteByToken(token);
-  if (!current) throw new Error('Convite não encontrado.');
-
-  const updated: Invite = {
-    ...current,
-    status: rsvpData.status,
-    guests: rsvpData.guests,
-    confirmed_count: rsvpData.status === 'confirmed' ? rsvpData.guests.length : 0,
-    requested_date: rsvpData.requested_date || null,
-    notes: rsvpData.notes || '',
-    updated_at: new Date().toISOString(),
-  };
-
-  if (isFirebaseConfigured) {
-    try {
-      const docRef = doc(db, 'invites', token);
-      await updateDoc(docRef, {
-        status: updated.status,
-        guests: updated.guests,
-        confirmed_count: updated.confirmed_count,
-        requested_date: updated.requested_date,
-        notes: updated.notes,
-        updated_at: updated.updated_at,
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar RSVP no Firestore:', err);
-    }
-  }
-
-  const all = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
-  const idx = all.findIndex((i) => i.id === token);
-  if (idx !== -1) {
-    all[idx] = updated;
   } else {
-    all.push(updated);
+    const newToken = generateInviteToken(invite.head_name || 'Convidado');
+    fullInvite = {
+      id: newToken,
+      head_name: invite.head_name || 'Convidado',
+      phone: invite.phone || '',
+      max_guests: invite.max_guests || 1,
+      status: invite.status || 'pending',
+      confirmed_count: invite.confirmed_count || 0,
+      table_id: invite.table_id || null,
+      tier: invite.tier || 'main',
+      sent_status: invite.sent_status || 'not_sent',
+      checked_in: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      guests: invite.guests || [],
+    };
+    invites.push(fullInvite);
   }
-  setLS(LS_KEYS.INVITES, all);
-
-  return updated;
-}
-
-export async function saveInvite(inviteData: Partial<Invite>): Promise<Invite> {
-  const all = await getAllInvites();
-  
-  const id = inviteData.id || generateInviteToken(inviteData.head_name || 'convidado');
-  
-  const newInvite: Invite = {
-    id,
-    head_name: inviteData.head_name || '',
-    phone: inviteData.phone || '',
-    max_guests: inviteData.max_guests || 1,
-    status: inviteData.status || 'pending',
-    confirmed_count: inviteData.confirmed_count || 0,
-    table_id: inviteData.table_id || null,
-    checked_in: inviteData.checked_in || false,
-    updated_at: new Date().toISOString(),
-    tier: inviteData.tier || 'main',
-    sent_at: inviteData.sent_at || null,
-    sent_status: inviteData.sent_status || 'not_sent',
-    individual_deadline: inviteData.individual_deadline || null,
-    requested_date: inviteData.requested_date || null,
-    guests: inviteData.guests || [],
-    notes: inviteData.notes || '',
-  };
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'invites', id), newInvite);
+      await setDoc(doc(db, 'invites', fullInvite.id), fullInvite);
     } catch (err) {
       console.error('Erro ao salvar convite no Firestore:', err);
     }
   }
 
-  const existingIdx = all.findIndex((i) => i.id === id);
-  if (existingIdx !== -1) {
-    all[existingIdx] = newInvite;
-  } else {
-    all.push(newInvite);
-  }
-  setLS(LS_KEYS.INVITES, all);
-
-  return newInvite;
+  setLS(LS_KEYS.INVITES, invites);
+  return fullInvite;
 }
 
-export async function bulkImportInvites(
-  rows: Array<{ head_name: string; phone: string; max_guests: number; individual_deadline?: string; tier?: InviteTier }>
-): Promise<Invite[]> {
-  const currentInvites = await getAllInvites();
-  const createdInvites: Invite[] = [];
+export async function deleteInvite(id: string): Promise<void> {
+  const invites = await getAllInvites();
+  const filtered = invites.filter((i) => i.id !== id);
 
-  for (const row of rows) {
-    const token = generateInviteToken(row.head_name);
-    const newInvite: Invite = {
-      id: token,
-      head_name: row.head_name,
-      phone: row.phone,
-      max_guests: row.max_guests || 1,
-      status: 'pending',
-      confirmed_count: 0,
-      table_id: null,
-      checked_in: false,
-      updated_at: new Date().toISOString(),
-      tier: row.tier || 'main',
-      sent_status: 'not_sent',
-      individual_deadline: row.individual_deadline || null,
-      guests: [],
-    };
-
-    if (isFirebaseConfigured) {
-      try {
-        await setDoc(doc(db, 'invites', token), newInvite);
-      } catch (err) {
-        console.error('Erro no import Firestore:', err);
-      }
-    }
-    createdInvites.push(newInvite);
-  }
-
-  const updatedAll = [...currentInvites, ...createdInvites];
-  setLS(LS_KEYS.INVITES, updatedAll);
-
-  return createdInvites;
-}
-
-export async function deleteInvite(token: string): Promise<void> {
   if (isFirebaseConfigured) {
     try {
-      await deleteDoc(doc(db, 'invites', token));
+      await deleteDoc(doc(db, 'invites', id));
     } catch (err) {
       console.error('Erro ao deletar convite no Firestore:', err);
     }
   }
-  const all = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
-  const filtered = all.filter((i) => i.id !== token);
+
   setLS(LS_KEYS.INVITES, filtered);
 }
 
-export async function toggleCheckin(token: string, checkedIn: boolean): Promise<void> {
-  const all = await getAllInvites();
-  const invite = all.find((i) => i.id === token);
-  if (!invite) return;
+export async function promoteInviteToMain(id: string): Promise<Invite | null> {
+  const invite = (await getAllInvites()).find((i) => i.id === id);
+  if (!invite) return null;
 
-  invite.checked_in = checkedIn;
-  invite.checked_in_at = checkedIn ? new Date().toISOString() : null;
+  return saveInvite({
+    ...invite,
+    tier: 'main',
+    sent_status: 'not_sent',
+  });
+}
 
-  if (isFirebaseConfigured) {
-    try {
-      await updateDoc(doc(db, 'invites', token), {
-        checked_in: checkedIn,
-        checked_in_at: invite.checked_in_at,
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar checkin no Firestore:', err);
-    }
-  }
+export async function markInviteAsSent(id: string): Promise<Invite | null> {
+  const invite = (await getAllInvites()).find((i) => i.id === id);
+  if (!invite) return null;
 
-  setLS(LS_KEYS.INVITES, all);
+  return saveInvite({
+    ...invite,
+    sent_status: 'sent',
+    sent_at: new Date().toISOString(),
+  });
 }
 
 export async function getAllTables(): Promise<Table[]> {
@@ -512,28 +451,57 @@ export async function getAllTables(): Promise<Table[]> {
       console.warn('Erro ao buscar mesas no Firestore:', err);
     }
   }
-  return getLS(LS_KEYS.TABLES, INITIAL_TABLES);
+
+  return getLS<Table[]>(LS_KEYS.TABLES, INITIAL_TABLES);
 }
 
-export async function saveTable(tableData: Table): Promise<void> {
+export async function saveTable(table: Partial<Table> & { id?: string }): Promise<Table> {
+  const tables = await getAllTables();
+  let fullTable: Table;
+
+  if (table.id) {
+    const existingIndex = tables.findIndex((t) => t.id === table.id);
+    if (existingIndex >= 0) {
+      fullTable = { ...tables[existingIndex], ...table };
+      tables[existingIndex] = fullTable;
+    } else {
+      fullTable = {
+        id: table.id,
+        name: table.name || 'Nova Mesa',
+        capacity: table.capacity || 8,
+        shape: table.shape || 'round',
+        description: table.description || '',
+      };
+      tables.push(fullTable);
+    }
+  } else {
+    const newId = `mesa-${Date.now()}`;
+    fullTable = {
+      id: newId,
+      name: table.name || 'Nova Mesa',
+      capacity: table.capacity || 8,
+      shape: table.shape || 'round',
+      description: table.description || '',
+    };
+    tables.push(fullTable);
+  }
+
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'tables', tableData.id), tableData);
+      await setDoc(doc(db, 'tables', fullTable.id), fullTable);
     } catch (err) {
       console.error('Erro ao salvar mesa no Firestore:', err);
     }
   }
-  const tables = getLS<Table[]>(LS_KEYS.TABLES, INITIAL_TABLES);
-  const idx = tables.findIndex((t) => t.id === tableData.id);
-  if (idx !== -1) {
-    tables[idx] = tableData;
-  } else {
-    tables.push(tableData);
-  }
+
   setLS(LS_KEYS.TABLES, tables);
+  return fullTable;
 }
 
 export async function deleteTable(id: string): Promise<void> {
+  const tables = await getAllTables();
+  const filtered = tables.filter((t) => t.id !== id);
+
   if (isFirebaseConfigured) {
     try {
       await deleteDoc(doc(db, 'tables', id));
@@ -541,7 +509,45 @@ export async function deleteTable(id: string): Promise<void> {
       console.error('Erro ao deletar mesa no Firestore:', err);
     }
   }
-  const tables = getLS<Table[]>(LS_KEYS.TABLES, INITIAL_TABLES);
-  const filtered = tables.filter((t) => t.id !== id);
+
   setLS(LS_KEYS.TABLES, filtered);
 }
+
+export async function updateInviteRSVP(
+  id: string,
+  status: 'confirmed' | 'declined' | 'pending_date',
+  confirmedCount: number,
+  guests: Guest[],
+  requestedDate?: string | null
+): Promise<Invite | null> {
+  const invite = (await getAllInvites()).find((i) => i.id === id);
+  if (!invite) return null;
+
+  return saveInvite({
+    ...invite,
+    status,
+    confirmed_count: confirmedCount,
+    guests,
+    requested_date: requestedDate || null,
+  });
+}
+
+export async function bulkImportInvites(rawInvites: Array<{ head_name: string; phone: string; max_guests?: number }>): Promise<number> {
+  let count = 0;
+  for (const item of rawInvites) {
+    if (item.head_name && item.phone) {
+      await saveInvite({
+        head_name: item.head_name,
+        phone: item.phone,
+        max_guests: item.max_guests || 2,
+        status: 'pending',
+        tier: 'main',
+        sent_status: 'not_sent',
+      });
+      count++;
+    }
+  }
+  return count;
+}
+
+

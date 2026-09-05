@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import { getInviteByToken, getEventConfig, getAllTables } from '@/lib/db';
-import { Invite, EventConfig, Table } from '@/types';
+import { Invite, EventConfig, Table, EventTheme } from '@/types';
 import { HeaderHero } from '@/components/guest/HeaderHero';
 import { EventLocationCard } from '@/components/guest/EventLocationCard';
 import { RSVPForm } from '@/components/guest/RSVPForm';
@@ -53,7 +53,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     return (
       <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex flex-col items-center justify-center p-4">
         <RefreshCw className="w-8 h-8 text-[#6b4684] animate-spin mb-3" />
-        <p className="text-sm font-semibold text-[#6b4684]">Carregando página de confirmação...</p>
+        <p className="text-sm font-semibold text-[#6b4684]">Carregando confirmação de presença...</p>
       </div>
     );
   }
@@ -81,15 +81,19 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   }
 
   const assignedTable = tables.find((t) => t.id === invite.table_id);
-  const isFullDigitalInviteEnabled = config.show_digital_invite !== false;
-
-  const theme = config.theme || {
+  const theme: EventTheme = config.theme || {
+    preset: 'custom',
+    invite_mode: 'custom',
     primary_color: '#6b4684',
     accent_color: '#c5a059',
     bg_color: '#faf6f0',
+    card_bg_color: '#ffffff',
     text_color: '#2d2138',
     font_family: 'serif',
   };
+
+  // Verifica se o Card do Convite está Ativado (ON) ou Desativado (OFF)
+  const isFullDigitalInviteEnabled = config.show_digital_invite !== false && theme.invite_mode !== 'off';
 
   return (
     <main
@@ -97,7 +101,16 @@ export default function ConvitePage({ params }: ConvitePageProps) {
       style={{
         backgroundColor: theme.bg_color || '#faf6f0',
         color: theme.text_color || '#2d2138',
-        fontFamily: theme.font_family === 'serif' ? 'Georgia, serif' : 'sans-serif',
+        fontFamily:
+          theme.font_family === 'playfair'
+            ? 'Playfair Display, serif'
+            : theme.font_family === 'cinzel'
+            ? 'Cinzel, serif'
+            : theme.font_family === 'script'
+            ? 'Great Vibes, cursive'
+            : theme.font_family === 'sans'
+            ? 'Montserrat, sans-serif'
+            : 'Georgia, serif',
       }}
     >
       {/* Container Principal Mobile Centralizado */}
@@ -105,7 +118,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         {/* CONDICIONAL: MÓDULO CONVITE DIGITAL ATIVADO (COMPLETO) VS MODO RSVP PURO (DESATIVADO) */}
         {isFullDigitalInviteEnabled ? (
           <>
-            {/* Header Hero com Arte Floral Aquarelada */}
+            {/* Header Hero com Arte Impressa ou Card Customizado */}
             <HeaderHero config={config} invite={invite} />
 
             {/* Visualização por Abas no Mobile / Visão Completa no Desktop */}
@@ -133,20 +146,20 @@ export default function ConvitePage({ params }: ConvitePageProps) {
             </div>
           </>
         ) : (
-          /* MODO RSVP PURO (CONVITE DIGITAL DESATIVADO) - FOCO 100% VELOCIDADE E DIRETO NA CONFIRMAÇÃO */
+          /* MODO RSVP PURO (CONVITE DESATIVADO) - O CARD DO SAVE THE DATE DESAPARECE TOTALMENTE */
           <div className="px-4 pt-8 space-y-6 animate-fade-in">
             {/* Header Minimalista Direto */}
-            <div className="text-center space-y-2 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-[#c5a059]/30 shadow-lg">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#6b4684]/10 text-[#6b4684] rounded-full text-xs font-bold">
+            <div className="text-center space-y-2 bg-white/90 backdrop-blur-md p-6 rounded-3xl border border-[#c5a059]/40 shadow-xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#6b4684]/10 text-[#6b4684] rounded-full text-xs font-extrabold">
                 <CheckCircle2 className="w-4 h-4 text-[#c5a059]" /> Confirmação Direta de Presença
               </div>
 
-              <h1 className="text-2xl font-black text-[#6b4684] tracking-tight font-serif">
+              <h1 className="text-2xl font-black text-[#6b4684] tracking-tight">
                 {config.title}
               </h1>
 
-              <p className="text-xs text-slate-600">
-                Olá, <strong>{invite.head_name}</strong>! Por favor, informe se você e sua família poderão comparecer ao evento.
+              <p className="text-xs text-slate-600 font-medium">
+                Olá, <strong>{invite.head_name}</strong>! Por favor, informe abaixo se você e sua família poderão comparecer ao evento.
               </p>
             </div>
 
@@ -174,7 +187,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         </footer>
       </div>
 
-      {/* Barra de Navegação Flutuante Inferior para Mobile (Apenas quando Convite Digital estiver Ativado) */}
+      {/* Barra de Navegação Flutuante Inferior para Mobile (Apenas quando Convite estiver Ativado) */}
       {isFullDigitalInviteEnabled && (
         <MobileBottomNav
           activeTab={activeTab}
