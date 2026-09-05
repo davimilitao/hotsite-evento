@@ -8,7 +8,7 @@ import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
 import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
 import { SettingsForm } from '@/components/admin/SettingsForm';
-import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, UserCheck, Lock } from 'lucide-react';
+import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock } from 'lucide-react';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'surprise' | 'settings'>('guests');
@@ -108,9 +108,9 @@ export default function AdminPage() {
                 onChange={(e) => setCurrentRole(e.target.value as UserRole)}
                 className="bg-slate-900 text-amber-300 font-extrabold text-xs px-2.5 py-1 rounded-xl border border-slate-700 focus:outline-none cursor-pointer"
               >
-                <option value="admin">👑 Admin de Sistema</option>
-                <option value="birthday_person">🌸 Aniversariante (Fernanda)</option>
-                <option value="assessor">📋 Assessor de Festa</option>
+                <option value="admin">Admin de Sistema</option>
+                <option value="birthday_person">Aniversariante (Fernanda)</option>
+                <option value="assessor">Assessor de Festa</option>
               </select>
             </div>
 
@@ -121,7 +121,7 @@ export default function AdminPage() {
               title="Popula os dados reais com 1 clique"
             >
               <Database className="w-3.5 h-3.5" />
-              <span>{seeding ? 'Carregando...' : '⚡ Resetar Dados'}</span>
+              <span>{seeding ? 'Carregando...' : 'Resetar Dados'}</span>
             </button>
 
             <button
@@ -142,7 +142,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Abas Principais com Regra de Ocultação Secreta para a Aniversariante */}
+        {/* Abas Principais Limpas (Apenas Ícones Lucide, Sem Emojis Duplicados) */}
         <div className="max-w-6xl mx-auto px-4 flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none border-t border-slate-800/80">
           <button
             onClick={() => setActiveTab('guests')}
@@ -153,7 +153,7 @@ export default function AdminPage() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>📋 Convidados & Disparos</span>
+            <span>Convidados & Disparos</span>
           </button>
 
           <button
@@ -165,7 +165,7 @@ export default function AdminPage() {
             }`}
           >
             <Armchair className="w-4 h-4" />
-            <span>🪑 Gestão de Mesas</span>
+            <span>Gestão de Mesas</span>
           </button>
 
           {/* ABA HOMENAGEM SURPRESA - OCULTA PARA A ANIVERSARIANTE */}
@@ -179,7 +179,7 @@ export default function AdminPage() {
               }`}
             >
               <Gift className="w-4 h-4 text-pink-400" />
-              <span>🎁 Homenagem Surpresa (Secreto)</span>
+              <span>Homenagem Surpresa (Secreto)</span>
             </button>
           ) : (
             <div className="px-4 py-3 text-xs text-slate-600 flex items-center gap-1 cursor-not-allowed opacity-40">
@@ -196,7 +196,7 @@ export default function AdminPage() {
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>⚙️ Configurações</span>
+            <span>Configurações</span>
           </button>
         </div>
       </header>

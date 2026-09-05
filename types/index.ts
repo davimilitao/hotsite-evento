@@ -26,7 +26,10 @@ export interface SurpriseContribution {
   invite_id: string;
   head_name: string;
   has_sent_photo: boolean;
+  has_sent_video: boolean;
+  has_sent_text: boolean;
   photo_url?: string;
+  video_url?: string;
   message?: string;
   updated_at?: string;
 }
@@ -54,8 +57,11 @@ export interface Invite {
   requested_date?: string | null;     // Data informada pelo convidado na opção 'pending_date'
   
   // Homenagem Surpresa
-  surprise_sent?: boolean;            // Se já enviou foto para o mural surpresa
-  surprise_message?: string;          // Recado para o telão
+  surprise_sent?: boolean;            // Status geral de recebimento
+  surprise_photo_sent?: boolean;      // Se enviou foto
+  surprise_video_sent?: boolean;      // Se enviou vídeo
+  surprise_text_sent?: boolean;       // Se enviou recado por escrito
+  surprise_message?: string;          // Recado/Depoimento para o telão
 }
 
 export interface Table {
@@ -107,6 +113,9 @@ export interface EventConfig {
   floorplan_image_url?: string;
   gift_suggestions: GiftSuggestion[];
   custom_message_template?: string;
-  surprise_campaign_template?: string;
+  surprise_photo_template?: string;
+  surprise_video_template?: string;
+  surprise_text_template?: string;
+  surprise_video_orientation?: 'horizontal' | 'vertical' | 'selfie';
   theme?: EventTheme;
 }

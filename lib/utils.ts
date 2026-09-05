@@ -58,7 +58,7 @@ export function buildWhatsAppLink(
 
   const inviteUrl = `${siteUrl}/convite/${token}`;
 
-  const defaultMessage = `Olá ${headName}! 🎉 Você está convidado(a) para a festa de aniversário de 40 Anos da Fernanda Seppi!\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você! ❤️`;
+  const defaultMessage = `Olá ${headName}! You're invited to celebrate Fernanda Seppi's 40th Birthday!\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você!`;
   
   const message = customTemplate
     ? customTemplate.replace('{nome}', headName).replace('{link}', inviteUrl)
@@ -68,15 +68,64 @@ export function buildWhatsAppLink(
 }
 
 /**
- * Monta o link wa.me para o disparo SECRETO da Homenagem Surpresa
+ * Monta o link wa.me para pedir FOTO SURPRESA
  */
-export function buildSurpriseWhatsAppLink(
+export function buildSurprisePhotoLink(
   headName: string,
   phone: string,
-  token: string
+  customMessage?: string
 ): string {
   const cleanPhone = formatPhoneE164(phone);
-  const message = `Segredo! 🤫 Shhh... Estamos preparando uma Homenagem Surpresa especial para os 40 Anos da Fernanda Seppi!\n\nPor favor, envie aqui neste WhatsApp uma foto marcante ou um recado carinhoso de vocês juntos para colocarmos no Mural/Telão da festa! 📸✨`;
+  const defaultMessage = `Segredo! 🤫 Shhh... Estamos preparando uma Homenagem Surpresa especial para os 40 Anos da Fernanda Seppi!\n\nPor favor, envie aqui neste WhatsApp uma foto marcante de vocês juntos para colocarmos no Mural/Telão da festa! 📸✨`;
+
+  const message = customMessage
+    ? customMessage.replace('{nome}', headName)
+    : defaultMessage;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Monta o link wa.me para pedir VÍDEO SURPRESA com recomendações de orientação
+ */
+export function buildSurpriseVideoLink(
+  headName: string,
+  phone: string,
+  orientation: 'horizontal' | 'vertical' | 'selfie' = 'horizontal',
+  customMessage?: string
+): string {
+  const cleanPhone = formatPhoneE164(phone);
+
+  let orientationText = '🖥️ Recomendação: Grave o vídeo com o CELULAR NA HORIZONTAL (deitado)!';
+  if (orientation === 'vertical') {
+    orientationText = '📱 Recomendação: Grave o vídeo com o CELULAR EM PÉ (vertical)!';
+  } else if (orientation === 'selfie') {
+    orientationText = '🤳 Recomendação: Grave o vídeo no formato SELFIE olhando para a câmera!';
+  }
+
+  const defaultMessage = `Segredo! 🤫 Estamos preparando uma Homenagem Surpresa em Vídeo para os 40 Anos da Fernanda Seppi!\n\nEnvie um vídeo curto (15 a 30 segundos) mandando um abraço carinhoso para ela!\n\n${orientationText} 🎥✨`;
+
+  const message = customMessage
+    ? customMessage.replace('{nome}', headName).replace('{orientacao}', orientationText)
+    : defaultMessage;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Monta o link wa.me para pedir RECADO POR ESCRITO
+ */
+export function buildSurpriseTextLink(
+  headName: string,
+  phone: string,
+  customMessage?: string
+): string {
+  const cleanPhone = formatPhoneE164(phone);
+  const defaultMessage = `Segredo! 🤫 Estamos organizando um livro de depoimentos surpresa para os 40 Anos da Fernanda Seppi!\n\nPor favor, responda esta mensagem com um recado ou mensagem carinhosa de aniversário por escrito! ✍️❤️`;
+
+  const message = customMessage
+    ? customMessage.replace('{nome}', headName)
+    : defaultMessage;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
