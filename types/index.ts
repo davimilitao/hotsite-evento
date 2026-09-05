@@ -84,14 +84,18 @@ export interface GiftSuggestion {
 
 export type ThemePreset = 'lavender_floral' | 'midnight_gold' | 'rose_gold' | 'royal_purple' | 'custom';
 
+export type FontOption = 'playfair' | 'cinzel' | 'script' | 'serif' | 'sans';
+
 export interface EventTheme {
   preset: ThemePreset;
-  primary_color: string; // ex: #6b4684
-  accent_color: string;  // ex: #c5a059
-  bg_color: string;      // ex: #faf6f0
-  card_bg_color: string; // ex: #ffffff
-  text_color: string;    // ex: #2d2138
-  font_family: 'playfair' | 'serif' | 'sans';
+  invite_mode?: 'upload' | 'custom'; // Modo 1: Upload da Arte Impressa | Modo 2: Customizador de Hotsite
+  uploaded_invite_url?: string;     // URL ou DataURL da imagem do convite físico enviada pelo usuário
+  primary_color: string;           // ex: #6b4684
+  accent_color: string;            // ex: #c5a059
+  bg_color: string;                // ex: #faf6f0
+  card_bg_color: string;           // ex: #ffffff
+  text_color: string;              // ex: #2d2138
+  font_family: FontOption;         // 'playfair' | 'cinzel' | 'script' | 'serif' | 'sans'
   banner_image_url?: string;
 }
 

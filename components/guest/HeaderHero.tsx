@@ -12,6 +12,7 @@ interface HeaderHeroProps {
 export function HeaderHero({ config, invite }: HeaderHeroProps) {
   const theme: EventTheme = config.theme || {
     preset: 'lavender_floral',
+    invite_mode: 'custom',
     primary_color: '#6b4684',
     accent_color: '#c5a059',
     bg_color: '#faf6f0',
@@ -50,11 +51,13 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
     return () => clearInterval(interval);
   }, [config.date_time]);
 
+  const isUploadMode = theme.invite_mode === 'upload' && Boolean(theme.uploaded_invite_url);
+
   return (
     <header className="relative text-center space-y-6 pt-6 px-4">
       {/* Moldura de Boas-Vindas Floral Elegante */}
       <div className="bg-white/90 rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-[#c5a059]/40 relative overflow-hidden backdrop-blur-sm">
-        {/* Detalhe de Aquarela sutil de fundo */}
+        {/* Detalhe sutil de aquarela de fundo */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
 
@@ -63,20 +66,38 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
             <Sparkles className="w-3.5 h-3.5 text-[#c5a059]" /> Convite Exclusivo para {invite.head_name}
           </div>
 
-          <div className="space-y-1">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-[#c5a059] block">
-              SAVE THE DATE
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] font-serif tracking-tight">
-              {config.birthday_person}
-            </h1>
-            <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider">
-              {config.age_celebrating} Anos 🌸✨
-            </p>
-          </div>
+          {/* SE MODO UPLOAD DA ARTE IMPRESSA FOR SELECIONADO */}
+          {isUploadMode ? (
+            <div className="space-y-4 my-2">
+              <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-[#c5a059]/40 bg-white p-2">
+                <img
+                  src={theme.uploaded_invite_url}
+                  alt={`Arte do Convite - ${config.title}`}
+                  className="w-full h-auto max-h-96 object-contain rounded-2xl"
+                  onError={(e) => {
+                    // Fallback de segurança se a imagem falhar ao carregar
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            /* MODO B: HEADER CUSTOMIZADO DO HOTSITE */
+            <div className="space-y-1">
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#c5a059] block">
+                SAVE THE DATE
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] tracking-tight font-serif">
+                {config.birthday_person}
+              </h1>
+              <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider">
+                {config.age_celebrating} Anos 🌸✨
+              </p>
+            </div>
+          )}
 
-          {/* Banner da Arte do Convite (se cadastrado) */}
-          {theme.banner_image_url && (
+          {/* Banner Secundário (se configurado) */}
+          {!isUploadMode && theme.banner_image_url && (
             <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-[#c5a059]/30">
               <img
                 src={theme.banner_image_url}
