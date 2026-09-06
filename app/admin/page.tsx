@@ -10,15 +10,27 @@ import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock } from 'lucide-react';
 
+import { useAuth } from '@/context/AuthContext';
+import { LoginCard } from '@/components/auth/LoginCard';
+import { AdminUserHeader } from '@/components/admin/AdminUserHeader';
+
 export default function AdminPage() {
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'surprise' | 'settings'>('guests');
-  const [currentRole, setCurrentRole] = useState<UserRole>('admin'); // 'admin' | 'birthday_person' | 'assessor'
+  const [currentRole, setCurrentRole] = useState<UserRole>('admin');
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [seedSuccess, setSeedSuccess] = useState(false);
+
+  // Sincroniza a role do usuário logado
+  useEffect(() => {
+    if (user?.role) {
+      setCurrentRole(user.role);
+    }
+  }, [user]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -70,6 +82,33 @@ export default function AdminPage() {
     }
   }, [currentRole, activeTab]);
 
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
+          <p className="text-sm font-bold text-slate-400">Verificando autenticação Google...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+        {!isFirebaseConfigured && (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 px-4 py-2 text-xs text-center flex items-center justify-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Modo Local (Demo):</strong> Variáveis do Firebase não detectadas. O login funcionará em Modo de Desenvolvimento com expiração de 24h.
+            </span>
+          </div>
+        )}
+        <LoginCard />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
       {/* Banner de Aviso de Configuração do Firebase */}
@@ -82,8 +121,13 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Header do Usuário Logado com Google & Expiração de 24 Horas */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <AdminUserHeader currentRole={currentRole} onRoleChange={(role) => setCurrentRole(role)} />
+      </div>
+
       {/* Topo Admin Header */}
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-md">
+      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-md mt-4">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-tr from-purple-600 to-pink-600 text-white rounded-xl shadow-lg">
@@ -99,25 +143,11 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Seletor de Nível de Acesso / Perfil Logado */}
           <div className="flex items-center gap-3 self-start sm:self-auto">
-            <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700">
-              <span className="text-[10px] font-bold uppercase text-slate-400 pl-2">Acesso Logado:</span>
-              <select
-                value={currentRole}
-                onChange={(e) => setCurrentRole(e.target.value as UserRole)}
-                className="bg-slate-900 text-amber-300 font-extrabold text-xs px-2.5 py-1 rounded-xl border border-slate-700 focus:outline-none cursor-pointer"
-              >
-                <option value="admin">Admin de Sistema</option>
-                <option value="birthday_person">Aniversariante (Fernanda)</option>
-                <option value="assessor">Assessor de Festa</option>
-              </select>
-            </div>
-
             <button
               onClick={handleSeedDatabase}
               disabled={seeding}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               title="Popula os dados reais com 1 clique"
             >
               <Database className="w-3.5 h-3.5" />

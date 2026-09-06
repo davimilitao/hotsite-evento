@@ -20,6 +20,8 @@ export interface AppUser {
   email: string;
   role: UserRole;
   avatar_url?: string;
+  authenticatedAt?: number; // Timestamp (ms) de realização do login
+  expiresAt?: number;       // Timestamp (ms) de expiração da sessão em 24h
 }
 
 export interface SurpriseContribution {
