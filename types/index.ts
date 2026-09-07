@@ -124,5 +124,7 @@ export interface EventConfig {
   surprise_text_template?: string;
   surprise_video_orientation?: 'horizontal' | 'vertical' | 'selfie';
   show_digital_invite?: boolean; // Feature Toggle: Exibe Módulo Hotsite/Convite Digital (true) ou apenas RSVP Direto (false)
+  access_token?: string;        // Código Token de Acesso do Evento (ex: FERNANDA40)
+  allowed_emails?: string[];     // Lista Whitelist de e-mails Google com acesso direto liberado
   theme?: EventTheme;
 }

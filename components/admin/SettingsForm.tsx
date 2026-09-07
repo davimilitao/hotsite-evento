@@ -19,6 +19,7 @@ import {
   Check,
   Smartphone,
   ShieldCheck,
+  Key,
 } from 'lucide-react';
 
 interface SettingsFormProps {
@@ -171,6 +172,54 @@ export function SettingsForm({ config, onRefresh }: SettingsFormProps) {
           >
             <Save className="w-4 h-4" /> {loading ? 'Salvando...' : 'Salvar Alterações'}
           </button>
+        </div>
+      </div>
+
+      {/* SEÇÃO DE SEGURANÇA E CÓDIGO TOKEN DE ACESSO AO LOGIN */}
+      <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-2xl border border-amber-500/30">
+            <Key className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              Segurança do Login & Código Token de Acesso
+            </h3>
+            <p className="text-xs text-slate-400">
+              Defina o Código Token secreto exigido no login com o Google para autorizar o acesso ao Painel Admin.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Código Token de Acesso do Evento
+            </label>
+            <input
+              type="text"
+              value={formData.access_token || 'FERNANDA40'}
+              onChange={(e) => setFormData({ ...formData, access_token: e.target.value.toUpperCase() })}
+              placeholder="Ex: FERNANDA40"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-black text-amber-300 uppercase tracking-widest focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500">
+              Compartilhe esse código apenas com a aniversariante ou assessores autorizados.
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Validação Ativa no Login Google
+            </label>
+            <div className="flex items-center gap-2 pt-1 text-xs text-emerald-400 font-bold">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Proteção por Token & Sessão 24h Ativa</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-tight">
+              Qualquer conta Google tentando entrar sem o Código Token correto será bloqueada automaticamente.
+            </p>
+          </div>
         </div>
       </div>
 

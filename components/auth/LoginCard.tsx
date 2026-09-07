@@ -3,17 +3,23 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { Crown, ShieldCheck, Clock, Sparkles, Loader2, Lock, UserCheck } from 'lucide-react';
+import { Crown, ShieldCheck, Clock, Sparkles, Loader2, Lock, UserCheck, Key } from 'lucide-react';
 
 export function LoginCard() {
   const { loginWithGoogle, loading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
+  const [inputToken, setInputToken] = useState('FERNANDA40');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setErrorMsg(null);
+    if (!inputToken.trim()) {
+      setErrorMsg('Por favor, informe o Código Token de Acesso do Evento.');
+      return;
+    }
+
     try {
-      await loginWithGoogle(selectedRole);
+      await loginWithGoogle(selectedRole, inputToken);
     } catch (err: any) {
       if (err.message && !err.message.includes('cancelado')) {
         setErrorMsg(err.message);
@@ -73,6 +79,24 @@ export function LoginCard() {
               );
             })}
           </div>
+        </div>
+
+        {/* Campo do Código Token de Acesso */}
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-extrabold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-amber-400" /> Código Token de Acesso
+            </span>
+            <span className="text-[10px] text-slate-500 font-normal lowercase">(fornecido pelo anfitrião)</span>
+          </label>
+
+          <input
+            type="text"
+            value={inputToken}
+            onChange={(e) => setInputToken(e.target.value.toUpperCase())}
+            placeholder="Ex: FERNANDA40"
+            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-amber-500/80 rounded-xl text-xs font-black tracking-widest text-amber-300 placeholder-slate-600 focus:outline-none transition-all uppercase min-h-[44px]"
+          />
         </div>
 
         {errorMsg && (

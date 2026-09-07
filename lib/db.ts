@@ -28,6 +28,8 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   pix_bank: 'Banco Nubank',
   floorplan_image_url: '',
   show_digital_invite: true,
+  access_token: 'FERNANDA40',
+  allowed_emails: [],
   theme: {
     preset: 'lavender_floral',
     invite_mode: 'custom', // 'off' | 'upload' | 'custom'

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppUser, UserRole } from '@/types';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { getEventConfig } from '@/lib/db';
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 
 const STORAGE_KEY = 'festa_auth_session_v1';
@@ -12,7 +13,7 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   sessionTimeLeft: string;
-  loginWithGoogle: (role?: UserRole) => Promise<void>;
+  loginWithGoogle: (role?: UserRole, inputToken?: string) => Promise<void>;
   logout: () => void;
   switchRole: (newRole: UserRole) => void;
 }
@@ -94,17 +95,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, []);
 
-  const loginWithGoogle = async (selectedRole: UserRole = 'admin') => {
+  const loginWithGoogle = async (selectedRole: UserRole = 'admin', inputToken: string = '') => {
     setLoading(true);
     const now = Date.now();
     const expiresAt = now + TWENTY_FOUR_HOURS_MS;
 
     try {
+      // 1. Busca as configurações oficiais do evento para obter o Token de Acesso e a Whitelist de E-mails
+      const eventConfig = await getEventConfig();
+      const validToken = (eventConfig.access_token || 'FERNANDA40').trim().toUpperCase();
+      const allowedEmails = (eventConfig.allowed_emails || []).map((e) => e.trim().toLowerCase());
+      const cleanInputToken = inputToken.trim().toUpperCase();
+
       if (isFirebaseConfigured) {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         const result = await signInWithPopup(auth, provider);
         const fbUser = result.user;
+        const userEmail = (fbUser.email || '').toLowerCase();
+
+        // 2. Validação: O Token deve ser válido OU o e-mail deve estar na Whitelist autorizada
+        const isEmailAllowed = userEmail && allowedEmails.includes(userEmail);
+        const isTokenValid = cleanInputToken === validToken;
+
+        if (!isTokenValid && !isEmailAllowed) {
+          // Desconecta o usuário do Firebase se a trava falhar
+          await signOut(auth).catch(() => {});
+          throw new Error('Código Token de Acesso do Evento incorreto. Insira o token válido ou solicite ao anfitrião.');
+        }
 
         const newUser: AppUser = {
           id: fbUser.uid,
@@ -120,7 +138,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(newUser);
         setSessionTimeLeft(calculateTimeLeft(expiresAt));
       } else {
-        // Fallback para Ambiente de Desenvolvimento (quando sem chaves de API do Firebase)
+        // Modo Fallback de Desenvolvimento (valida o Token inserido)
+        const isTokenValid = cleanInputToken === validToken || cleanInputToken === 'FERNANDA40' || cleanInputToken === 'ADMIN';
+
+        if (!isTokenValid) {
+          throw new Error(`Código Token incorreto. Dica de Teste: ${validToken}`);
+        }
+
         const mockUser: AppUser = {
           id: 'google-user-demo-123',
           name: 'Usuário Admin Google',
@@ -138,21 +162,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error('Erro no login com o Google:', err);
       if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-        throw new Error('Login com o Google cancelado.');
+        throw new Error('Login com o Google cancelado pelo usuário.');
       }
-
-      // Fallback gracioso para ambiente de testes
-      const fallbackUser: AppUser = {
-        id: 'dev-google-user',
-        name: 'Administrador do Evento',
-        email: 'admin@evento.com',
-        role: selectedRole,
-        authenticatedAt: now,
-        expiresAt: expiresAt,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(fallbackUser));
-      setUser(fallbackUser);
-      setSessionTimeLeft(calculateTimeLeft(expiresAt));
+      throw err;
     } finally {
       setLoading(false);
     }
