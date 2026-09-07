@@ -534,16 +534,19 @@ export async function updateInviteRSVP(
   });
 }
 
-export async function bulkImportInvites(rawInvites: Array<{ head_name: string; phone: string; max_guests?: number }>): Promise<number> {
+export async function bulkImportInvites(
+  rawInvites: Array<{ head_name: string; phone?: string; max_guests?: number; tier?: InviteTier }>
+): Promise<number> {
   let count = 0;
   for (const item of rawInvites) {
-    if (item.head_name && item.phone) {
+    const cleanName = item.head_name ? item.head_name.trim() : '';
+    if (cleanName) {
       await saveInvite({
-        head_name: item.head_name,
-        phone: item.phone,
+        head_name: cleanName,
+        phone: item.phone ? item.phone.trim() : '',
         max_guests: item.max_guests || 2,
         status: 'pending',
-        tier: 'main',
+        tier: item.tier || 'main',
         sent_status: 'not_sent',
       });
       count++;
