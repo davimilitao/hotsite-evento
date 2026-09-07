@@ -281,56 +281,58 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
         </div>
       </div>
 
-      {/* Barra de Busca, Exportação pro Buffet & Ações CRUD */}
+      {/* Barra de Busca, Exportação pro Buffet & Ações CRUD Responsivas */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Campo de Busca Ampliado */}
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar convidado, acompanhante ou fone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 min-h-[44px]"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Botões de Ação em Grid 2x2 no Mobile / Row no Desktop */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
             <button
               onClick={() => exportInvitesToCSV(invites, tables)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
               title="Baixar lista completa formatada para enviar ao buffet"
             >
-              <FileSpreadsheet className="w-4 h-4" /> Exportar Lista Oficial para o Buffet
+              <FileSpreadsheet className="w-4 h-4" /> <span>Exportar Buffet</span>
             </button>
 
             <button
               onClick={downloadExcelTemplate}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-extrabold transition-all border border-slate-300 dark:border-slate-700"
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
               title="Baixar modelo em branco para a aniversariante preencher"
             >
-              <Download className="w-4 h-4 text-purple-500" /> Modelo p/ Preencher
+              <Download className="w-4 h-4 text-purple-500" /> <span>Modelo Excel</span>
             </button>
 
             <button
               onClick={() => setIsBulkOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900 border border-purple-300 dark:border-purple-800 rounded-xl text-xs font-bold transition-all"
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900 border border-purple-300 dark:border-purple-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              <Upload className="w-4 h-4 text-purple-500" /> Importar Lista
+              <Upload className="w-4 h-4 text-purple-500" /> <span>Importar Lista</span>
             </button>
 
             <button
               onClick={handleOpenAdd}
-              className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
+              className="min-h-[44px] col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> Novo Convite
+              <Plus className="w-4 h-4" /> <span>Novo Convite</span>
             </button>
           </div>
         </div>
 
-        {/* Filtros Limpos de Navegação */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-700/60 pt-3">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtrar:</span>
+        {/* Filtros Limpos de Navegação com Scroll Horizontal Suave */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-700/60 pt-3 pb-1">
+          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtrar:</span>
           {[
             { id: 'all', label: 'Todos' },
             { id: 'main', label: 'Lista Principal' },
@@ -345,7 +347,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
             <button
               key={item.id}
               onClick={() => setStatusFilter(item.id as any)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+              className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 statusFilter === item.id
                   ? 'bg-purple-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-800'
@@ -357,8 +359,169 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
         </div>
       </div>
 
-      {/* Tabela CRUD Master Mestre com Status Humanos */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      {/* 📱 VISÃO MOBILE: CARDS RESPONSIVOS (EXIBIDO APENAS EM TELAS MENORES QUE MD) */}
+      <div className="block md:hidden space-y-3">
+        {filteredInvites.length === 0 ? (
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 text-center text-slate-400 font-medium text-xs">
+            Nenhum convite encontrado para os filtros selecionados.
+          </div>
+        ) : (
+          filteredInvites.map((invite) => {
+            const deadlineInfo = getDeadlineInfo(invite, config.deadline_rsvp);
+            const isSent = invite.sent_status === 'sent';
+            const isReserve = invite.tier === 'reserve';
+
+            return (
+              <div
+                key={invite.id}
+                className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3 transition-all"
+              >
+                {/* Cabeçalho do Card Mobile */}
+                <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                        {invite.head_name}
+                      </h4>
+                      {isReserve && (
+                        <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-md border border-amber-500/30">
+                          Reserva
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-400 block">{formatPhoneDisplay(invite.phone)}</span>
+                  </div>
+
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border shrink-0 ${deadlineInfo.color}`}>
+                    {deadlineInfo.label}
+                  </span>
+                </div>
+
+                {/* Detalhes de Acompanhantes & Mesa */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Vagas & Pessoas</span>
+                    <span className="font-extrabold text-slate-700 dark:text-slate-200">
+                      {invite.status === 'confirmed' ? (
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          {invite.confirmed_count} / {invite.max_guests} confirmados
+                        </span>
+                      ) : (
+                        <span>Até {invite.max_guests} vagas</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Mesa Atribuída</span>
+                    <select
+                      value={invite.table_id || ''}
+                      onChange={(e) => handleInlineTableChange(invite, e.target.value || null)}
+                      className="w-full bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+                    >
+                      <option value="">-- Sem Mesa --</option>
+                      {tables.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Lista de Acompanhantes e Restrições */}
+                {invite.guests && invite.guests.length > 0 && (
+                  <div className="bg-slate-50/50 dark:bg-slate-900/40 p-2.5 rounded-xl text-xs space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Acompanhantes:</span>
+                    {invite.guests.map((g, idx) => (
+                      <div key={idx} className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between">
+                        <span>• {g.name} ({g.type === 'child' ? 'Criança' : 'Adulto'})</span>
+                        {g.dietary && (
+                          <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-300">
+                            {g.dietary}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Botão de Ação Principal (WhatsApp / Promover) */}
+                <div>
+                  {isReserve ? (
+                    <button
+                      onClick={() => handlePromoteToMain(invite)}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                      <span>Promover para Lista Principal</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleWhatsAppDispatch(invite)}
+                      className={`w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-95 cursor-pointer ${
+                        isSent
+                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      }`}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>{isSent ? 'Re-enviar Convite no WhatsApp' : 'Enviar Convite no WhatsApp'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Rodapé de Ações Secundárias (Touch Targets Mínimo 44px) */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                  <span className="text-[10px] font-mono text-purple-400 truncate max-w-[150px]">
+                    /{invite.id}
+                  </span>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleCopyLink(invite.id)}
+                      className="min-h-[40px] px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 rounded-lg font-bold flex items-center gap-1 active:scale-95 cursor-pointer"
+                      title="Copiar Link"
+                    >
+                      {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      <span>Link</span>
+                    </button>
+
+                    <a
+                      href={`/convite/${invite.id}`}
+                      target="_blank"
+                      className="min-h-[40px] px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 rounded-lg font-bold flex items-center gap-1 active:scale-95 cursor-pointer"
+                      title="Ver Hotsite"
+                    >
+                      <ExternalLink className="w-4 h-4 text-blue-400" />
+                      <span>Ver</span>
+                    </a>
+
+                    <button
+                      onClick={() => handleOpenEdit(invite)}
+                      className="min-h-[40px] p-2 bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 rounded-lg font-bold active:scale-95 cursor-pointer"
+                      title="Editar Convite"
+                    >
+                      <Edit className="w-4 h-4 text-purple-400" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(invite.id)}
+                      className="min-h-[40px] p-2 bg-rose-500/10 text-rose-500 rounded-lg font-bold active:scale-95 cursor-pointer"
+                      title="Excluir Convite"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* 💻 VISÃO DESKTOP: TABELA COMPLETA (EXIBIDO APENAS EM TELAS MD E ACIMA) */}
+      <div className="hidden md:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -473,7 +636,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                         {isReserve ? (
                           <button
                             onClick={() => handlePromoteToMain(invite)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
                             title="Promover este convite para a Lista Principal"
                           >
                             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -482,7 +645,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                         ) : (
                           <button
                             onClick={() => handleWhatsAppDispatch(invite)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer ${
                               isSent
                                 ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700'
                                 : 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -499,7 +662,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                       <td className="py-3.5 px-4 text-right space-x-1">
                         <button
                           onClick={() => handleOpenEdit(invite)}
-                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
                           title="Editar convite completo"
                         >
                           <Edit className="w-4 h-4" />
@@ -507,7 +670,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
 
                         <button
                           onClick={() => handleCopyLink(invite.id)}
-                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
                           title="Copiar link do convite"
                         >
                           {copiedToken === invite.id ? (
@@ -528,7 +691,7 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
 
                         <button
                           onClick={() => handleDelete(invite.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                           title="Excluir convite"
                         >
                           <Trash2 className="w-4 h-4" />
