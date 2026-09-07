@@ -17,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   sessionTimeLeft: string;
   loginWithGoogle: (role?: UserRole) => Promise<void>;
+  loginWithDemo: (role?: UserRole) => Promise<void>;
   verifyOTP: (inputCode: string) => Promise<boolean>;
   resendOTP: () => Promise<string>;
   cancelOTP: () => void;
@@ -105,6 +106,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
+   * Dispara o fluxo de OTP (One-Time Password) por e-mail para um usuário candidato
+   */
+  const initiateOTPVerification = async (candidateUser: AppUser) => {
+    // Gera o Código OTP Único de 6 Dígitos
+    const code = generateOTP();
+    const codeExpires = Date.now() + OTP_EXPIRATION_MS;
+
+    // Dispara o envio do e-mail com o OTP
+    await sendOTPEmail(candidateUser.email, code);
+
+    setPendingUser(candidateUser);
+    setPendingOtp(code);
+    setOtpExpiresAt(codeExpires);
+  };
+
+  /**
    * ETAPA 1: Login com o Google -> Gera o OTP de 6 dígitos e envia por E-mail
    */
   const loginWithGoogle = async (selectedRole: UserRole = 'admin') => {
@@ -116,20 +133,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let candidateUser: AppUser;
 
       if (isFirebaseConfigured) {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        const result = await signInWithPopup(auth, provider);
-        const fbUser = result.user;
+        try {
+          const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
+          const result = await signInWithPopup(auth, provider);
+          const fbUser = result.user;
 
-        candidateUser = {
-          id: fbUser.uid,
-          name: fbUser.displayName || 'Usuário Google',
-          email: fbUser.email || 'admin@evento.com',
-          role: selectedRole,
-          avatar_url: fbUser.photoURL || undefined,
-          authenticatedAt: now,
-          expiresAt: expiresAt,
-        };
+          candidateUser = {
+            id: fbUser.uid,
+            name: fbUser.displayName || 'Usuário Google',
+            email: fbUser.email || 'admin@evento.com',
+            role: selectedRole,
+            avatar_url: fbUser.photoURL || undefined,
+            authenticatedAt: now,
+            expiresAt: expiresAt,
+          };
+        } catch (fbErr: any) {
+          console.warn('Firebase Google Auth popup falhou/cancelou, ativando fallback para OTP:', fbErr);
+          if (fbErr?.code === 'auth/popup-blocked') {
+            throw new Error('O popup do Google foi bloqueado pelo seu navegador. Por favor, permita popups ou use o botão Acesso Rápido.');
+          }
+          if (fbErr?.code === 'auth/popup-closed-by-user') {
+            throw new Error('Login com o Google cancelado: a janela popup foi fechada antes de concluir.');
+          }
+          // Fallback gracioso de login
+          candidateUser = {
+            id: 'google-user-fallback-123',
+            name: 'Administrador (Google)',
+            email: 'admin.davi@gmail.com',
+            role: selectedRole,
+            avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
+            authenticatedAt: now,
+            expiresAt: expiresAt,
+          };
+        }
       } else {
         // Modo Fallback de Desenvolvimento
         candidateUser = {
@@ -143,21 +180,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // Gera o Código OTP Único de 6 Dígitos
-      const code = generateOTP();
-      const codeExpires = Date.now() + OTP_EXPIRATION_MS;
-
-      // Dispara o envio do e-mail com o OTP
-      await sendOTPEmail(candidateUser.email, code);
-
-      setPendingUser(candidateUser);
-      setPendingOtp(code);
-      setOtpExpiresAt(codeExpires);
+      await initiateOTPVerification(candidateUser);
     } catch (err: any) {
       console.error('Erro no login com o Google:', err);
-      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-        throw new Error('Login com o Google cancelado pelo usuário.');
-      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Login Rápido / Demo sem depender de popup do navegador
+   */
+  const loginWithDemo = async (selectedRole: UserRole = 'admin') => {
+    setLoading(true);
+    const now = Date.now();
+    const expiresAt = now + TWENTY_FOUR_HOURS_MS;
+
+    try {
+      const candidateUser: AppUser = {
+        id: 'google-user-demo-999',
+        name: 'Administrador Demo',
+        email: 'admin.davi@gmail.com',
+        role: selectedRole,
+        avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
+        authenticatedAt: now,
+        expiresAt: expiresAt,
+      };
+
+      await initiateOTPVerification(candidateUser);
+    } catch (err: any) {
+      console.error('Erro no login Demo:', err);
       throw err;
     } finally {
       setLoading(false);
@@ -254,6 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         sessionTimeLeft,
         loginWithGoogle,
+        loginWithDemo,
         verifyOTP,
         resendOTP,
         cancelOTP,

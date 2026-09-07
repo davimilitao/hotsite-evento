@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
 import { OTPVerifyCard } from './OTPVerifyCard';
-import { Crown, ShieldCheck, Clock, Sparkles, Loader2, Lock, UserCheck } from 'lucide-react';
+import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Zap } from 'lucide-react';
 
 export function LoginCard() {
-  const { loginWithGoogle, pendingUser, loading } = useAuth();
+  const { loginWithGoogle, loginWithDemo, pendingUser, loading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -20,9 +20,16 @@ export function LoginCard() {
     try {
       await loginWithGoogle(selectedRole);
     } catch (err: any) {
-      if (err.message && !err.message.includes('cancelado')) {
-        setErrorMsg(err.message);
-      }
+      setErrorMsg(err.message || 'Erro ao iniciar autenticação com o Google.');
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setErrorMsg(null);
+    try {
+      await loginWithDemo(selectedRole);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao iniciar sessão de teste.');
     }
   };
 
@@ -81,13 +88,21 @@ export function LoginCard() {
         </div>
 
         {errorMsg && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs text-center font-medium">
-            {errorMsg}
+          <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-300 text-xs text-center font-medium leading-relaxed space-y-2 animate-fade-in">
+            <p>{errorMsg}</p>
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-xs font-bold rounded-xl border border-rose-500/40 transition-all inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Usar Acesso Rápido / Demo (Sem Popup)</span>
+            </button>
           </div>
         )}
 
-        {/* Botão Oficial de Login com Google */}
-        <div className="space-y-4">
+        {/* Botão Oficial de Login com Google & Botão Fallback */}
+        <div className="space-y-3">
           <button
             type="button"
             onClick={handleLogin}
@@ -118,6 +133,16 @@ export function LoginCard() {
               </svg>
             )}
             <span>{loading ? 'Autenticando...' : 'Entrar com o Google'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+          >
+            <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Acesso Rápido / Demo (Sem Popup do Navegador)</span>
           </button>
         </div>
 
