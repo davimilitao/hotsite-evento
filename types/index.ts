@@ -5,6 +5,7 @@ export interface Guest {
   name: string;
   type: GuestType;
   age?: number;
+  phone?: string;
   dietary?: string;
 }
 
@@ -108,6 +109,8 @@ export interface EventConfig {
   date_time: string; // ISO String
   deadline_rsvp: string; // ISO String Geral do Buffet
   buffet_capacity?: number; // Limite de vagas contratadas com o buffet (ex: 100)
+  child_free_max_age?: number; // Idade máxima para criança ser ISENTA no buffet (ex: 5 anos)
+  child_half_max_age?: number; // Idade máxima para criança ser MEIA-ENTRADA (ex: 11 anos)
   location_name: string;
   address: string;
   maps_url: string;

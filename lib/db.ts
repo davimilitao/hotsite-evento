@@ -19,6 +19,8 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   date_time: '2026-11-07T17:00:00.000Z',
   deadline_rsvp: '2026-10-25T23:59:59.000Z',
   buffet_capacity: 100, // Limite de 100 vagas no buffet
+  child_free_max_age: 5, // Crianças de 0 a 5 anos são isentas no buffet
+  child_half_max_age: 11, // Crianças de 6 a 11 anos pagam meia-entrada
   location_name: 'Buffet Espaço Estupendo',
   address: 'São Bernardo do Campo - SP',
   maps_url: 'https://maps.google.com/?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',

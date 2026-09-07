@@ -159,6 +159,13 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
   };
 
   const handleWhatsAppDispatch = async (invite: Invite) => {
+    const cleanDigits = invite.phone ? invite.phone.replace(/\D/g, '') : '';
+    if (!cleanDigits || cleanDigits.length < 8) {
+      alert(`Por favor, cadastre o telefone com DDD do titular "${invite.head_name}" para disparar o convite pelo WhatsApp.`);
+      handleOpenEdit(invite);
+      return;
+    }
+
     await markInviteAsSent(invite.id);
     onRefresh();
     const waUrl = buildWhatsAppLink(invite.head_name, invite.phone, invite.id);
@@ -460,13 +467,21 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                     <button
                       onClick={() => handleWhatsAppDispatch(invite)}
                       className={`w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-95 cursor-pointer ${
-                        isSent
+                        !invite.phone
+                          ? 'bg-slate-900 text-amber-300 border border-amber-500/40 hover:bg-slate-800'
+                          : isSent
                           ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600'
                           : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                       }`}
                     >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>{isSent ? 'Re-enviar Convite no WhatsApp' : 'Enviar Convite no WhatsApp'}</span>
+                      <MessageCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>
+                        {!invite.phone
+                          ? '+ Adicionar Fone p/ WhatsApp'
+                          : isSent
+                          ? 'Re-enviar Convite no WhatsApp'
+                          : 'Enviar Convite no WhatsApp'}
+                      </span>
                     </button>
                   )}
                 </div>
@@ -646,14 +661,22 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
                           <button
                             onClick={() => handleWhatsAppDispatch(invite)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer ${
-                              isSent
+                              !invite.phone
+                                ? 'bg-slate-900 text-amber-300 border border-amber-500/40 hover:bg-slate-800'
+                                : isSent
                                 ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700'
                                 : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                             }`}
-                            title="Enviar link no WhatsApp do convidado"
+                            title={!invite.phone ? 'Clique para cadastrar o telefone com DDD' : 'Enviar link no WhatsApp do convidado'}
                           >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>{isSent ? 'Re-enviar WhatsApp' : 'Enviar no WhatsApp'}</span>
+                            <MessageCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>
+                              {!invite.phone
+                                ? '+ Adicionar Fone'
+                                : isSent
+                                ? 'Re-enviar WhatsApp'
+                                : 'Enviar no WhatsApp'}
+                            </span>
                           </button>
                         )}
                       </td>
