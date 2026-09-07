@@ -3,23 +3,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { Crown, ShieldCheck, Clock, Sparkles, Loader2, Lock, UserCheck, Key } from 'lucide-react';
+import { OTPVerifyCard } from './OTPVerifyCard';
+import { Crown, ShieldCheck, Clock, Sparkles, Loader2, Lock, UserCheck } from 'lucide-react';
 
 export function LoginCard() {
-  const { loginWithGoogle, loading } = useAuth();
+  const { loginWithGoogle, pendingUser, loading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
-  const [inputToken, setInputToken] = useState('FERNANDA40');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  if (pendingUser) {
+    return <OTPVerifyCard />;
+  }
 
   const handleLogin = async () => {
     setErrorMsg(null);
-    if (!inputToken.trim()) {
-      setErrorMsg('Por favor, informe o Código Token de Acesso do Evento.');
-      return;
-    }
-
     try {
-      await loginWithGoogle(selectedRole, inputToken);
+      await loginWithGoogle(selectedRole);
     } catch (err: any) {
       if (err.message && !err.message.includes('cancelado')) {
         setErrorMsg(err.message);
@@ -42,7 +41,7 @@ export function LoginCard() {
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-white tracking-tight">Painel Administrativo</h2>
             <p className="text-xs font-medium text-slate-400">
-              Faça login com a sua Conta Google para acessar o sistema.
+              Faça login com a sua Conta Google. Você receberá um <strong className="text-amber-300">Código de Verificação de 6 dígitos (OTP)</strong> no seu e-mail.
             </p>
           </div>
         </div>
@@ -66,7 +65,7 @@ export function LoginCard() {
                   key={role.id}
                   type="button"
                   onClick={() => setSelectedRole(role.id as UserRole)}
-                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1 ${
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1 cursor-pointer ${
                     isSelected
                       ? 'bg-purple-600/20 border-purple-500 text-white shadow-md'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -79,24 +78,6 @@ export function LoginCard() {
               );
             })}
           </div>
-        </div>
-
-        {/* Campo do Código Token de Acesso */}
-        <div className="space-y-1.5">
-          <label className="block text-[11px] font-extrabold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-amber-400" /> Código Token de Acesso
-            </span>
-            <span className="text-[10px] text-slate-500 font-normal lowercase">(fornecido pelo anfitrião)</span>
-          </label>
-
-          <input
-            type="text"
-            value={inputToken}
-            onChange={(e) => setInputToken(e.target.value.toUpperCase())}
-            placeholder="Ex: FERNANDA40"
-            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-amber-500/80 rounded-xl text-xs font-black tracking-widest text-amber-300 placeholder-slate-600 focus:outline-none transition-all uppercase min-h-[44px]"
-          />
         </div>
 
         {errorMsg && (
@@ -140,11 +121,11 @@ export function LoginCard() {
           </button>
         </div>
 
-        {/* Aviso da Regra de Expiração de 24 Horas */}
+        {/* Aviso da Regra de Expiração de 24 Horas & 2FA */}
         <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2.5 text-slate-400 text-xs">
           <Clock className="w-4 h-4 text-amber-400 shrink-0" />
           <p className="text-[11px] leading-tight">
-            <strong className="text-slate-300">Expiração em 24h:</strong> Sua sessão é válida por 24 horas continuas de segurança.
+            <strong className="text-slate-300">Segurança 2FA & Sessão 24h:</strong> Autenticação por e-mail com código temporário de 6 dígitos.
           </p>
         </div>
       </div>

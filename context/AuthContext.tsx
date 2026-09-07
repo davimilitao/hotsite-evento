@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppUser, UserRole } from '@/types';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
-import { getEventConfig } from '@/lib/db';
+import { generateOTP, sendOTPEmail, OTP_EXPIRATION_MS } from '@/lib/otp';
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 
 const STORAGE_KEY = 'festa_auth_session_v1';
@@ -11,9 +11,15 @@ const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000; // 24 Horas em ms
 
 interface AuthContextType {
   user: AppUser | null;
+  pendingUser: AppUser | null;
+  pendingOtp: string | null;
+  otpExpiresAt: number | null;
   loading: boolean;
   sessionTimeLeft: string;
-  loginWithGoogle: (role?: UserRole, inputToken?: string) => Promise<void>;
+  loginWithGoogle: (role?: UserRole) => Promise<void>;
+  verifyOTP: (inputCode: string) => Promise<boolean>;
+  resendOTP: () => Promise<string>;
+  cancelOTP: () => void;
   logout: () => void;
   switchRole: (newRole: UserRole) => void;
 }
@@ -22,6 +28,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [pendingUser, setPendingUser] = useState<AppUser | null>(null);
+  const [pendingOtp, setPendingOtp] = useState<string | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [sessionTimeLeft, setSessionTimeLeft] = useState<string>('');
 
@@ -95,36 +104,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, []);
 
-  const loginWithGoogle = async (selectedRole: UserRole = 'admin', inputToken: string = '') => {
+  /**
+   * ETAPA 1: Login com o Google -> Gera o OTP de 6 dígitos e envia por E-mail
+   */
+  const loginWithGoogle = async (selectedRole: UserRole = 'admin') => {
     setLoading(true);
     const now = Date.now();
     const expiresAt = now + TWENTY_FOUR_HOURS_MS;
 
     try {
-      // 1. Busca as configurações oficiais do evento para obter o Token de Acesso e a Whitelist de E-mails
-      const eventConfig = await getEventConfig();
-      const validToken = (eventConfig.access_token || 'FERNANDA40').trim().toUpperCase();
-      const allowedEmails = (eventConfig.allowed_emails || []).map((e) => e.trim().toLowerCase());
-      const cleanInputToken = inputToken.trim().toUpperCase();
+      let candidateUser: AppUser;
 
       if (isFirebaseConfigured) {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         const result = await signInWithPopup(auth, provider);
         const fbUser = result.user;
-        const userEmail = (fbUser.email || '').toLowerCase();
 
-        // 2. Validação: O Token deve ser válido OU o e-mail deve estar na Whitelist autorizada
-        const isEmailAllowed = userEmail && allowedEmails.includes(userEmail);
-        const isTokenValid = cleanInputToken === validToken;
-
-        if (!isTokenValid && !isEmailAllowed) {
-          // Desconecta o usuário do Firebase se a trava falhar
-          await signOut(auth).catch(() => {});
-          throw new Error('Código Token de Acesso do Evento incorreto. Insira o token válido ou solicite ao anfitrião.');
-        }
-
-        const newUser: AppUser = {
+        candidateUser = {
           id: fbUser.uid,
           name: fbUser.displayName || 'Usuário Google',
           email: fbUser.email || 'admin@evento.com',
@@ -133,32 +130,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           authenticatedAt: now,
           expiresAt: expiresAt,
         };
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-        setUser(newUser);
-        setSessionTimeLeft(calculateTimeLeft(expiresAt));
       } else {
-        // Modo Fallback de Desenvolvimento (valida o Token inserido)
-        const isTokenValid = cleanInputToken === validToken || cleanInputToken === 'FERNANDA40' || cleanInputToken === 'ADMIN';
-
-        if (!isTokenValid) {
-          throw new Error(`Código Token incorreto. Dica de Teste: ${validToken}`);
-        }
-
-        const mockUser: AppUser = {
+        // Modo Fallback de Desenvolvimento
+        candidateUser = {
           id: 'google-user-demo-123',
-          name: 'Usuário Admin Google',
+          name: 'Administrador Evento',
           email: 'admin.davi@gmail.com',
           role: selectedRole,
           avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
           authenticatedAt: now,
           expiresAt: expiresAt,
         };
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
-        setUser(mockUser);
-        setSessionTimeLeft(calculateTimeLeft(expiresAt));
       }
+
+      // Gera o Código OTP Único de 6 Dígitos
+      const code = generateOTP();
+      const codeExpires = Date.now() + OTP_EXPIRATION_MS;
+
+      // Dispara o envio do e-mail com o OTP
+      await sendOTPEmail(candidateUser.email, code);
+
+      setPendingUser(candidateUser);
+      setPendingOtp(code);
+      setOtpExpiresAt(codeExpires);
     } catch (err: any) {
       console.error('Erro no login com o Google:', err);
       if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
@@ -170,12 +164,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * ETAPA 2: Valida o Código OTP de 6 Dígitos digitado pelo usuário
+   */
+  const verifyOTP = async (inputCode: string): Promise<boolean> => {
+    if (!pendingUser || !pendingOtp || !otpExpiresAt) {
+      throw new Error('Sessão de verificação não encontrada. Por favor, faça login com o Google novamente.');
+    }
+
+    if (Date.now() > otpExpiresAt) {
+      throw new Error('O código de verificação expirou (validade de 10 minutos). Clique em "Reenviar Código".');
+    }
+
+    const cleanInput = inputCode.trim();
+    if (cleanInput !== pendingOtp) {
+      throw new Error('Código de verificação incorreto. Confira a caixa de entrada do seu e-mail.');
+    }
+
+    // OTP Válido! Salva a sessão no LocalStorage e autoriza a entrada de 24 horas
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingUser));
+    setUser(pendingUser);
+    setSessionTimeLeft(calculateTimeLeft(pendingUser.expiresAt || Date.now() + TWENTY_FOUR_HOURS_MS));
+
+    // Limpa a pendência
+    setPendingUser(null);
+    setPendingOtp(null);
+    setOtpExpiresAt(null);
+
+    return true;
+  };
+
+  /**
+   * Reenvia um novo Código OTP de 6 Dígitos para o e-mail do usuário
+   */
+  const resendOTP = async (): Promise<string> => {
+    if (!pendingUser) {
+      throw new Error('Nenhum login pendente para reenvio de e-mail.');
+    }
+
+    const newCode = generateOTP();
+    const newExpires = Date.now() + OTP_EXPIRATION_MS;
+
+    await sendOTPEmail(pendingUser.email, newCode);
+
+    setPendingOtp(newCode);
+    setOtpExpiresAt(newExpires);
+
+    return newCode;
+  };
+
+  /**
+   * Cancela a etapa do OTP e retorna para a tela de Login
+   */
+  const cancelOTP = () => {
+    setPendingUser(null);
+    setPendingOtp(null);
+    setOtpExpiresAt(null);
+    if (isFirebaseConfigured) {
+      signOut(auth).catch(() => {});
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     if (isFirebaseConfigured) {
       signOut(auth).catch(() => {});
     }
     setUser(null);
+    setPendingUser(null);
+    setPendingOtp(null);
+    setOtpExpiresAt(null);
     setSessionTimeLeft('');
   };
 
@@ -190,9 +248,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        pendingUser,
+        pendingOtp,
+        otpExpiresAt,
         loading,
         sessionTimeLeft,
         loginWithGoogle,
+        verifyOTP,
+        resendOTP,
+        cancelOTP,
         logout,
         switchRole,
       }}
