@@ -17,7 +17,7 @@ interface AuthContextType {
   loading: boolean;
   sessionTimeLeft: string;
   loginWithGoogle: (role?: UserRole) => Promise<void>;
-  loginWithDemo: (role?: UserRole) => Promise<void>;
+  loginWithDemo: (role?: UserRole, customEmail?: string) => Promise<void>;
   verifyOTP: (inputCode: string) => Promise<boolean>;
   resendOTP: () => Promise<string>;
   cancelOTP: () => void;
@@ -192,16 +192,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Login Rápido / Demo sem depender de popup do navegador
    */
-  const loginWithDemo = async (selectedRole: UserRole = 'admin') => {
+  const loginWithDemo = async (selectedRole: UserRole = 'admin', customEmail?: string) => {
     setLoading(true);
     const now = Date.now();
     const expiresAt = now + TWENTY_FOUR_HOURS_MS;
 
     try {
+      const emailToUse = customEmail && customEmail.includes('@') ? customEmail.trim() : 'militao46@gmail.com';
       const candidateUser: AppUser = {
         id: 'google-user-demo-999',
         name: 'Administrador Demo',
-        email: 'admin.davi@gmail.com',
+        email: emailToUse,
         role: selectedRole,
         avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
         authenticatedAt: now,
