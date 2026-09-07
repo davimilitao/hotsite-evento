@@ -227,11 +227,11 @@ export const INITIAL_INVITES: Invite[] = RAW_GUEST_NAMES.map((name, index) => {
   };
 });
 
-// Chaves do LocalStorage v4
+// Chaves do LocalStorage v6 (119 convidados)
 const LS_KEYS = {
-  CONFIG: 'festa_config_v4',
-  TABLES: 'festa_tables_v4',
-  INVITES: 'festa_invites_v4',
+  CONFIG: 'festa_config_v6',
+  TABLES: 'festa_tables_v6',
+  INVITES: 'festa_invites_v6_119_guests',
 };
 
 function getLS<T>(key: string, defaultData: T): T {
@@ -381,14 +381,28 @@ export async function getAllInvites(): Promise<Invite[]> {
   if (isFirebaseConfigured) {
     try {
       const snap = await getDocs(collection(db, 'invites'));
-      if (!snap.empty) {
+      if (!snap.empty && snap.docs.length >= 50) {
         return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Invite));
+      } else {
+        console.log('Populando Firestore com a lista dos 119 convidados...');
+        for (const invite of INITIAL_INVITES) {
+          await setDoc(doc(db, 'invites', invite.id), invite);
+        }
+        setLS(LS_KEYS.INVITES, INITIAL_INVITES);
+        return INITIAL_INVITES;
       }
     } catch (err) {
       console.warn('Erro ao buscar convites no Firestore:', err);
     }
   }
-  return getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+
+  const cached = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+  if (!cached || cached.length < 50) {
+    setLS(LS_KEYS.INVITES, INITIAL_INVITES);
+    return INITIAL_INVITES;
+  }
+
+  return cached;
 }
 
 export async function getInviteByToken(token: string): Promise<Invite | null> {
