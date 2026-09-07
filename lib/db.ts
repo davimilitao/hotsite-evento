@@ -214,7 +214,7 @@ export const INITIAL_INVITES: Invite[] = RAW_GUEST_NAMES.map((name, index) => {
     id,
     head_name: name,
     phone: '',
-    max_guests: 2,
+    max_guests: 1,
     status: 'pending' as const,
     confirmed_count: 0,
     table_id: null,
@@ -227,11 +227,11 @@ export const INITIAL_INVITES: Invite[] = RAW_GUEST_NAMES.map((name, index) => {
   };
 });
 
-// Chaves do LocalStorage v6 (119 convidados)
+// Chaves do LocalStorage v7 (119 convidados - 1 vaga por padrão)
 const LS_KEYS = {
-  CONFIG: 'festa_config_v6',
-  TABLES: 'festa_tables_v6',
-  INVITES: 'festa_invites_v6_119_guests',
+  CONFIG: 'festa_config_v7',
+  TABLES: 'festa_tables_v7',
+  INVITES: 'festa_invites_v7_1vaga',
 };
 
 function getLS<T>(key: string, defaultData: T): T {

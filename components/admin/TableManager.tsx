@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Table, Invite } from '@/types';
 import { saveTable, deleteTable, saveInvite } from '@/lib/db';
-import { Plus, Trash2, Edit, Users, Armchair, UserPlus, X } from 'lucide-react';
+import { Plus, Trash2, Edit, Users, Armchair, UserPlus, X, Search } from 'lucide-react';
 
 interface TableManagerProps {
   tables: Table[];
@@ -22,6 +22,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
 
   // Modal para alocar convidado visualmente na mesa
   const [selectedTableForAssignment, setSelectedTableForAssignment] = useState<Table | null>(null);
+  const [assignSearchTerm, setAssignSearchTerm] = useState('');
 
   // Todas as famílias/convidados que ainda não possuem mesa atribuída (confirmados ou pendentes)
   const unassignedInvites = invites.filter((i) => !i.table_id);
@@ -252,7 +253,10 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
 
               {/* Botão de Atribuir Convidado nesta Mesa */}
               <button
-                onClick={() => setSelectedTableForAssignment(table)}
+                onClick={() => {
+                  setAssignSearchTerm('');
+                  setSelectedTableForAssignment(table);
+                }}
                 className="w-full py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold text-xs rounded-xl border border-amber-500/40 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
               >
                 <UserPlus className="w-4 h-4 text-amber-500" />
@@ -280,16 +284,45 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Selecione um dos convidados da sua lista para sentar nesta mesa:
+              Digite o nome do convidado para buscar e atribuir a esta mesa:
             </p>
 
+            {/* Campo de Busca por Digitação */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Digite o nome (ex: Ana, Carlos, Barreto)..."
+                value={assignSearchTerm}
+                onChange={(e) => setAssignSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
+              />
+            </div>
+
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {unassignedInvites.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400">
-                  Todos os convidados da lista já possuem mesa atribuída!
-                </div>
-              ) : (
-                unassignedInvites.map((inv) => (
+              {(() => {
+                const filtered = unassignedInvites.filter((inv) =>
+                  inv.head_name.toLowerCase().includes(assignSearchTerm.toLowerCase().trim())
+                );
+
+                if (unassignedInvites.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-xs text-slate-400">
+                      Todos os convidados da lista já possuem mesa atribuída!
+                    </div>
+                  );
+                }
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-xs text-slate-400">
+                      Nenhum convidado encontrado para &quot;<strong className="text-white">{assignSearchTerm}</strong>&quot;.
+                    </div>
+                  );
+                }
+
+                return filtered.map((inv) => (
                   <button
                     key={inv.id}
                     onClick={async () => {
@@ -300,11 +333,11 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                   >
                     <span>{inv.head_name}</span>
                     <span className="text-purple-600 dark:text-purple-400 font-extrabold">
-                      {inv.confirmed_count || inv.max_guests || 1} vagas
+                      {inv.confirmed_count || inv.max_guests || 1} {inv.max_guests === 1 ? 'vaga' : 'vagas'}
                     </span>
                   </button>
-                ))
-              )}
+                ));
+              })()}
             </div>
           </div>
         </div>

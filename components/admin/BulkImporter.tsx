@@ -16,7 +16,7 @@ export function BulkImporter({ isOpen, onClose, onSuccess }: BulkImporterProps) 
     'Ana Paula Seppi\nCarlos Eduardo\nMariana Souza\nRodrigo Alves, 11977776666, 3'
   );
   const [defaultTier, setDefaultTier] = useState<InviteTier>('main');
-  const [defaultMaxGuests, setDefaultMaxGuests] = useState<number>(2);
+  const [defaultMaxGuests, setDefaultMaxGuests] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [resultMsg, setResultMsg] = useState<string | null>(null);
 
