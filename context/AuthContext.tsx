@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           candidateUser = {
             id: 'google-user-fallback-123',
             name: 'Administrador (Google)',
-            email: 'admin.davi@gmail.com',
+            email: 'militao46@gmail.com',
             role: selectedRole,
             avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
             authenticatedAt: now,
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         candidateUser = {
           id: 'google-user-demo-123',
           name: 'Administrador Evento',
-          email: 'admin.davi@gmail.com',
+          email: 'militao46@gmail.com',
           role: selectedRole,
           avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
           authenticatedAt: now,
