@@ -21,12 +21,28 @@ export function generateOTP(): string {
   return code;
 }
 
-/**
- * Simula/Dispara o envio do e-mail com o código OTP de 6 dígitos
- */
 export async function sendOTPEmail(email: string, otpCode: string): Promise<boolean> {
-  console.log(`✉️ [OTP SENT] Código de verificação ${otpCode} enviado para ${email}`);
-  
-  // Em produção, isso se conecta com a API de Envio de E-mail (ex: SendGrid, Resend, Firebase Auth Mailer)
+  console.log(`✉️ [OTP PROCESS] Disparando código de verificação ${otpCode} para ${email}`);
+
+  try {
+    const res = await fetch('/api/send-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, code: otpCode }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.warn('⚠️ [OTP API WARNING] Resposta da API /api/send-otp:', errData);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      console.log('✅ [OTP SENT] Resposta da API:', data);
+    }
+  } catch (err) {
+    console.error('❌ [OTP API ERROR] Erro na requisição para /api/send-otp:', err);
+  }
+
   return true;
 }

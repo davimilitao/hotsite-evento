@@ -135,15 +135,13 @@ export function OTPVerifyCard() {
           </div>
         </div>
 
-        {/* Dica de Teste Rápido no Ambiente Dev */}
-        {pendingOtp && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-300 text-xs text-center font-mono flex items-center justify-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              [Dica de Teste]: Código enviado por e-mail: <strong className="text-white bg-slate-950 px-2 py-0.5 rounded tracking-widest">{pendingOtp}</strong>
-            </span>
-          </div>
-        )}
+        {/* Notificação de envio para a caixa de entrada */}
+        <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-2xl text-purple-300 text-xs text-center font-medium flex items-center justify-center gap-2">
+          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>
+            Código enviado! Confira a caixa de entrada (ou pasta de Spam) do e-mail <strong>{pendingUser.email}</strong>.
+          </span>
+        </div>
 
         {/* Formulário dos 6 Caixinhas do OTP */}
         <form onSubmit={handleSubmitOTP} className="space-y-6">
