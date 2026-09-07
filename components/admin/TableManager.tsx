@@ -23,8 +23,8 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
   // Modal para alocar convidado visualmente na mesa
   const [selectedTableForAssignment, setSelectedTableForAssignment] = useState<Table | null>(null);
 
-  const confirmedInvites = invites.filter((i) => i.status === 'confirmed');
-  const unassignedInvites = confirmedInvites.filter((i) => !i.table_id);
+  // Todas as famílias/convidados que ainda não possuem mesa atribuída (confirmados ou pendentes)
+  const unassignedInvites = invites.filter((i) => !i.table_id);
 
   const handleOpenAdd = () => {
     setEditingTable(null);
@@ -117,10 +117,10 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
       {/* GRID DO CROQUI VISUAL DE MESAS (SEATING CHART) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tables.map((table) => {
-          // Convites atrelados a esta mesa
-          const tableInvites = confirmedInvites.filter((i) => i.table_id === table.id);
+          // Convites atrelados a esta mesa (confirmados ou pendentes)
+          const tableInvites = invites.filter((i) => i.table_id === table.id);
           const allocatedSeats = tableInvites.reduce(
-            (sum, i) => sum + (i.confirmed_count || i.guests.length || 1),
+            (sum, i) => sum + (i.confirmed_count || i.max_guests || i.guests.length || 1),
             0
           );
           const availableSeats = table.capacity - allocatedSeats;
@@ -190,7 +190,7 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                       let currentSeatCounter = 0;
 
                       for (const inv of tableInvites) {
-                        const count = inv.confirmed_count || inv.guests.length || 1;
+                        const count = inv.confirmed_count || inv.max_guests || inv.guests.length || 1;
                         if (chairIdx >= currentSeatCounter && chairIdx < currentSeatCounter + count) {
                           const guestIndex = chairIdx - currentSeatCounter;
                           assignedName = inv.guests[guestIndex]?.name || inv.head_name;
@@ -234,12 +234,12 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                         className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700"
                       >
                         <span className="font-bold text-slate-800 dark:text-slate-200">
-                          {inv.head_name} ({inv.confirmed_count} pes)
+                          {inv.head_name} ({inv.confirmed_count || inv.max_guests || 1} vagas)
                         </span>
 
                         <button
                           onClick={() => handleAssignInviteToTable(inv, null)}
-                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 text-[10px] font-semibold"
+                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 text-[10px] font-semibold cursor-pointer"
                           title="Remover família da mesa"
                         >
                           Remover
@@ -250,13 +250,13 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                 )}
               </div>
 
-              {/* Botão de Atribuir Convidado nesta Mesa com ALTO CONTRASTE no Hover */}
+              {/* Botão de Atribuir Convidado nesta Mesa */}
               <button
                 onClick={() => setSelectedTableForAssignment(table)}
-                className="w-full py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold text-xs rounded-xl border border-amber-500/40 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+                className="w-full py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold text-xs rounded-xl border border-amber-500/40 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
               >
                 <UserPlus className="w-4 h-4 text-amber-500" />
-                <span>Atribuir Família a esta Mesa</span>
+                <span>Atribuir Convidados a esta Mesa</span>
               </button>
             </div>
           );
@@ -273,20 +273,20 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
               </h3>
               <button
                 onClick={() => setSelectedTableForAssignment(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Selecione uma das famílias confirmadas para sentar nesta mesa:
+              Selecione um dos convidados da sua lista para sentar nesta mesa:
             </p>
 
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {unassignedInvites.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-400">
-                  Todas as famílias confirmadas já possuem mesa atribuída!
+                  Todos os convidados da lista já possuem mesa atribuída!
                 </div>
               ) : (
                 unassignedInvites.map((inv) => (
@@ -296,10 +296,12 @@ export function TableManager({ tables, invites, onRefresh }: TableManagerProps) 
                       await handleAssignInviteToTable(inv, selectedTableForAssignment.id);
                       setSelectedTableForAssignment(null);
                     }}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-left flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-100 transition-all"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-left flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
                   >
                     <span>{inv.head_name}</span>
-                    <span className="text-purple-600 dark:text-purple-400 font-extrabold">{inv.confirmed_count} vagas</span>
+                    <span className="text-purple-600 dark:text-purple-400 font-extrabold">
+                      {inv.confirmed_count || inv.max_guests || 1} vagas
+                    </span>
                   </button>
                 ))
               )}

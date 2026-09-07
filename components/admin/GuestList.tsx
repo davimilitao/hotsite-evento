@@ -736,12 +736,11 @@ export function GuestList({ invites, tables, config, onRefresh }: GuestListProps
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Telefone / WhatsApp (DDD + Número) *
+                  Telefone / WhatsApp (Opcional)
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="Ex: 11999998888"
+                  placeholder="Ex: 11999998888 (pode adicionar depois)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
