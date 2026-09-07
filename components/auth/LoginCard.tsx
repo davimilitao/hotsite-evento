@@ -3,35 +3,28 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { OTPVerifyCard } from './OTPVerifyCard';
-import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Zap } from 'lucide-react';
+import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Zap, ArrowRight } from 'lucide-react';
 
 export function LoginCard() {
-  const { loginWithGoogle, loginWithDemo, pendingUser, loading } = useAuth();
+  const { loginWithGoogle, loginWithDemo, loading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
-  const [demoEmail, setDemoEmail] = useState<string>('militao46@gmail.com');
-  const [showDemoInput, setShowDemoInput] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  if (pendingUser) {
-    return <OTPVerifyCard />;
-  }
 
   const handleLogin = async () => {
     setErrorMsg(null);
     try {
       await loginWithGoogle(selectedRole);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao iniciar autenticação com o Google.');
+      setErrorMsg(err.message || 'Erro ao autenticar. Tente o Acesso Direto abaixo.');
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDirectLogin = async () => {
     setErrorMsg(null);
     try {
-      await loginWithDemo(selectedRole, demoEmail);
+      await loginWithDemo(selectedRole, 'militao46@gmail.com');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao iniciar sessão de teste.');
+      setErrorMsg(err.message || 'Erro ao iniciar sessão.');
     }
   };
 
@@ -50,7 +43,7 @@ export function LoginCard() {
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-white tracking-tight">Painel Administrativo</h2>
             <p className="text-xs font-medium text-slate-400">
-              Faça login com a sua Conta Google. Você receberá um <strong className="text-amber-300">Código de Verificação de 6 dígitos (OTP)</strong> no seu e-mail.
+              Acesse o painel para gerenciar a <strong className="text-amber-300">lista completa dos 119 convidados</strong>, mesas e confirmações.
             </p>
           </div>
         </div>
@@ -90,20 +83,12 @@ export function LoginCard() {
         </div>
 
         {errorMsg && (
-          <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-300 text-xs text-center font-medium leading-relaxed space-y-2 animate-fade-in">
-            <p>{errorMsg}</p>
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-xs font-bold rounded-xl border border-rose-500/40 transition-all inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Usar Acesso Rápido / Demo (Sem Popup)</span>
-            </button>
+          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs text-center font-medium">
+            {errorMsg}
           </div>
         )}
 
-        {/* Botão Oficial de Login com Google & Botão Fallback */}
+        {/* Botão Oficial de Login com Google & Acesso Direto Instantâneo */}
         <div className="space-y-3">
           <button
             type="button"
@@ -134,50 +119,26 @@ export function LoginCard() {
                 />
               </svg>
             )}
-            <span>{loading ? 'Autenticando...' : 'Entrar com o Google'}</span>
+            <span>{loading ? 'Entrando...' : 'Entrar com o Google'}</span>
           </button>
 
-          <div className="space-y-2 pt-1 border-t border-slate-800/60">
-            <button
-              type="button"
-              onClick={() => setShowDemoInput(!showDemoInput)}
-              className="w-full text-[11px] text-slate-400 hover:text-amber-300 transition-colors flex items-center justify-center gap-1 cursor-pointer font-medium"
-            >
-              <Zap className="w-3 h-3 text-amber-400 shrink-0" />
-              <span>{showDemoInput ? 'Ocultar Acesso Rápido Demo' : 'Acesso Rápido / Teste sem Popup? Clique aqui'}</span>
-            </button>
-
-            {showDemoInput && (
-              <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-2xl space-y-2 animate-fade-in">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  E-mail para Receber o Código (2FA):
-                </label>
-                <input
-                  type="email"
-                  value={demoEmail}
-                  onChange={(e) => setDemoEmail(e.target.value)}
-                  placeholder="seu-email@gmail.com"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  disabled={loading || !demoEmail.trim()}
-                  className="w-full py-2 px-3 bg-purple-600/30 hover:bg-purple-600/50 text-amber-300 font-extrabold text-xs rounded-xl border border-purple-500/40 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Enviar Código para {demoEmail || 'E-mail'}</span>
-                </button>
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={handleDirectLogin}
+            disabled={loading}
+            className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-extrabold transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+          >
+            <Zap className="w-4 h-4 text-amber-300 shrink-0" />
+            <span>Entrar Direto no Painel (1-Clique)</span>
+            <ArrowRight className="w-4 h-4 text-amber-300" />
+          </button>
         </div>
 
-        {/* Aviso da Regra de Expiração de 24 Horas & 2FA */}
+        {/* Aviso da Regra de Expiração de 24 Horas */}
         <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2.5 text-slate-400 text-xs">
           <Clock className="w-4 h-4 text-amber-400 shrink-0" />
           <p className="text-[11px] leading-tight">
-            <strong className="text-slate-300">Segurança 2FA & Sessão 24h:</strong> Autenticação por e-mail com código temporário de 6 dígitos.
+            <strong className="text-slate-300">Sessão Segura de 24 Horas:</strong> Acesso direto liberado com expiração automática após 24 horas.
           </p>
         </div>
       </div>

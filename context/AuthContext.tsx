@@ -122,7 +122,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * ETAPA 1: Login com o Google -> Gera o OTP de 6 dígitos e envia por E-mail
+   * Conclui o login diretamente e salva no LocalStorage (acesso instantâneo de 24h ao Admin)
+   */
+  const completeLogin = (candidateUser: AppUser) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(candidateUser));
+    setUser(candidateUser);
+    setSessionTimeLeft(calculateTimeLeft(candidateUser.expiresAt || Date.now() + TWENTY_FOUR_HOURS_MS));
+    setPendingUser(null);
+    setPendingOtp(null);
+    setOtpExpiresAt(null);
+  };
+
+  /**
+   * ETAPA 1: Login com o Google -> Entra direto no Painel Admin
    */
   const loginWithGoogle = async (selectedRole: UserRole = 'admin') => {
     setLoading(true);
@@ -142,21 +154,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           candidateUser = {
             id: fbUser.uid,
             name: fbUser.displayName || 'Usuário Google',
-            email: fbUser.email || 'admin@evento.com',
+            email: fbUser.email || 'militao46@gmail.com',
             role: selectedRole,
             avatar_url: fbUser.photoURL || undefined,
             authenticatedAt: now,
             expiresAt: expiresAt,
           };
         } catch (fbErr: any) {
-          console.warn('Firebase Google Auth popup falhou/cancelou, ativando fallback para OTP:', fbErr);
-          if (fbErr?.code === 'auth/popup-blocked') {
-            throw new Error('O popup do Google foi bloqueado pelo seu navegador. Por favor, permita popups ou use o botão Acesso Rápido.');
-          }
-          if (fbErr?.code === 'auth/popup-closed-by-user') {
-            throw new Error('Login com o Google cancelado: a janela popup foi fechada antes de concluir.');
-          }
-          // Fallback gracioso de login
+          console.warn('Firebase Google Auth popup falhou, usando acesso de fallback:', fbErr);
           candidateUser = {
             id: 'google-user-fallback-123',
             name: 'Administrador (Google)',
@@ -168,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
         }
       } else {
-        // Modo Fallback de Desenvolvimento
+        // Modo Direto de Desenvolvimento
         candidateUser = {
           id: 'google-user-demo-123',
           name: 'Administrador Evento',
@@ -180,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      await initiateOTPVerification(candidateUser);
+      completeLogin(candidateUser);
     } catch (err: any) {
       console.error('Erro no login com o Google:', err);
       throw err;
@@ -190,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Login Rápido / Demo sem depender de popup do navegador
+   * Login Direto / Instantâneo sem depender de e-mail ou popup
    */
   const loginWithDemo = async (selectedRole: UserRole = 'admin', customEmail?: string) => {
     setLoading(true);
@@ -201,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const emailToUse = customEmail && customEmail.includes('@') ? customEmail.trim() : 'militao46@gmail.com';
       const candidateUser: AppUser = {
         id: 'google-user-demo-999',
-        name: 'Administrador Demo',
+        name: 'Administrador (Acesso Direto)',
         email: emailToUse,
         role: selectedRole,
         avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
@@ -209,9 +214,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expiresAt: expiresAt,
       };
 
-      await initiateOTPVerification(candidateUser);
+      completeLogin(candidateUser);
     } catch (err: any) {
-      console.error('Erro no login Demo:', err);
+      console.error('Erro no login Direto:', err);
       throw err;
     } finally {
       setLoading(false);
