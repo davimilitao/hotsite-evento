@@ -510,30 +510,47 @@ export function deduplicateInvitesList(invites: Invite[]): Invite[] {
       if (cachedPersons) persons = JSON.parse(cachedPersons);
     } catch {}
   }
+  if (!persons || persons.length === 0) {
+    persons = INITIAL_PERSONS;
+  }
 
-  // 1. Identifica IDs de pessoas que atuam como acompanhantes em algum convite
-  const companionSet = new Set<string>();
+  // Helper para resolver a pessoa física (Person.id) a partir do head_person_id ou head_name
+  const resolvePersonId = (inv: Invite): string => {
+    if (inv.head_person_id) {
+      const p = persons.find((person) => person.id === inv.head_person_id);
+      if (p) return p.id;
+    }
+    if (inv.head_name) {
+      const norm = inv.head_name.trim().toLowerCase();
+      const p = persons.find((person) => person.name.trim().toLowerCase() === norm);
+      if (p) return p.id;
+      return `name:${norm}`;
+    }
+    return `id:${inv.id}`;
+  };
+
+  // 1. Identifica IDs de pessoas que atuam como acompanhantes em algum convite de família
+  const companionPersonIds = new Set<string>();
   for (const inv of invites) {
     if (inv.companion_person_ids && inv.companion_person_ids.length > 0) {
-      inv.companion_person_ids.forEach((id) => companionSet.add(id));
+      inv.companion_person_ids.forEach((id) => companionPersonIds.add(id));
     }
   }
 
   // 2. Filtra convites cujos titulares sejam na verdade acompanhantes em outro convite ativo de família
   const activeInvites = invites.filter((inv) => {
-    if (inv.head_person_id && companionSet.has(inv.head_person_id)) {
+    const pId = resolvePersonId(inv);
+    if (pId && !pId.startsWith('name:') && !pId.startsWith('id:') && companionPersonIds.has(pId)) {
       return false;
     }
     return true;
   });
 
-  // 3. Agrupa por head_person_id ou head_name normalizado
+  // 3. Agrupa por Person.id resolvido
   const groupMap = new Map<string, Invite[]>();
 
   for (const inv of activeInvites) {
-    let key = inv.head_person_id ? `person:${inv.head_person_id}` : `name:${(inv.head_name || '').trim().toLowerCase()}`;
-    if (!key || key === 'name:') key = `id:${inv.id}`;
-
+    const key = resolvePersonId(inv);
     const existing = groupMap.get(key) || [];
     existing.push(inv);
     groupMap.set(key, existing);
@@ -543,7 +560,12 @@ export function deduplicateInvitesList(invites: Invite[]): Invite[] {
 
   for (const [, group] of groupMap.entries()) {
     if (group.length === 1) {
-      result.push(group[0]);
+      const single = { ...group[0] };
+      const pId = resolvePersonId(single);
+      if (pId && !pId.startsWith('name:') && !pId.startsWith('id:')) {
+        single.head_person_id = pId;
+      }
+      result.push(single);
     } else {
       const scored = group.map((inv) => {
         let score = 0;
@@ -552,19 +574,19 @@ export function deduplicateInvitesList(invites: Invite[]): Invite[] {
           score += 100;
         }
         if (inv.sent_status === 'sent') {
-          score += 20;
+          score += 50;
         }
         if (inv.status && inv.status !== 'pending') {
-          score += 20;
+          score += 30;
         }
         if (inv.phone && inv.phone.trim().length >= 8) {
-          score += 10;
+          score += 20;
         }
         if (inv.table_id) {
           score += 10;
         }
         if (inv.companion_person_ids && inv.companion_person_ids.length > 0) {
-          score += 5;
+          score += 10;
         }
         const time = inv.updated_at ? new Date(inv.updated_at).getTime() : inv.created_at ? new Date(inv.created_at).getTime() : 0;
 
@@ -576,7 +598,12 @@ export function deduplicateInvitesList(invites: Invite[]): Invite[] {
         return b.time - a.time;
       });
 
-      result.push(scored[0].inv);
+      const bestInvite = { ...scored[0].inv };
+      const pId = resolvePersonId(bestInvite);
+      if (pId && !pId.startsWith('name:') && !pId.startsWith('id:')) {
+        bestInvite.head_person_id = pId;
+      }
+      result.push(bestInvite);
     }
   }
 
