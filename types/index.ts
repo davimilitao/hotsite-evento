@@ -39,6 +39,8 @@ export interface SurpriseContribution {
   updated_at?: string;
 }
 
+export type SpecialRole = 'guest' | 'birthday_person' | 'ceremonialist' | 'musician' | 'staff';
+
 export interface Person {
   id: string;
   name: string;
@@ -49,6 +51,9 @@ export interface Person {
   seat_number?: number | null;
   invite_id?: string | null;
   role_in_invite?: 'head' | 'companion' | null;
+  special_role?: SpecialRole;
+  counts_towards_buffet?: boolean;
+  special_arrival_time?: string;
   notes?: string;
 }
 
@@ -69,6 +74,12 @@ export interface Invite {
   updated_at: string;
   guests: Guest[];
   notes?: string;
+  
+  // Funções Especiais & Isenção de Cota
+  special_role?: SpecialRole;
+  counts_towards_buffet?: boolean;
+  special_arrival_time?: string;
+  custom_whatsapp_message?: string;
   
   // Controle de Lista de Espera & Rastreamento de Envio
   tier?: InviteTier;                  // 'main' ou 'reserve'

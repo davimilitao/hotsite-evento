@@ -324,6 +324,9 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
         seat_number: person.seat_number ?? null,
         invite_id: person.invite_id || null,
         role_in_invite: person.role_in_invite || null,
+        special_role: person.special_role || 'guest',
+        counts_towards_buffet: person.counts_towards_buffet ?? (person.special_role ? person.special_role === 'guest' : true),
+        special_arrival_time: person.special_arrival_time || '',
         notes: person.notes || '',
       };
       persons.push(fullPerson);
@@ -339,6 +342,9 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
       seat_number: person.seat_number ?? null,
       invite_id: person.invite_id || null,
       role_in_invite: person.role_in_invite || null,
+      special_role: person.special_role || 'guest',
+      counts_towards_buffet: person.counts_towards_buffet ?? (person.special_role ? person.special_role === 'guest' : true),
+      special_arrival_time: person.special_arrival_time || '',
       notes: person.notes || '',
     };
     persons.push(fullPerson);
@@ -551,6 +557,10 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         guests: invite.guests || [],
+        special_role: invite.special_role || 'guest',
+        counts_towards_buffet: invite.counts_towards_buffet ?? (invite.special_role ? invite.special_role === 'guest' : true),
+        special_arrival_time: invite.special_arrival_time || '',
+        custom_whatsapp_message: invite.custom_whatsapp_message || '',
       };
       invites.push(fullInvite);
     }
@@ -573,6 +583,10 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       guests: invite.guests || [],
+      special_role: invite.special_role || 'guest',
+      counts_towards_buffet: invite.counts_towards_buffet ?? (invite.special_role ? invite.special_role === 'guest' : true),
+      special_arrival_time: invite.special_arrival_time || '',
+      custom_whatsapp_message: invite.custom_whatsapp_message || '',
     };
     invites.push(fullInvite);
   }
@@ -592,12 +606,17 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
         invite_id: fullInvite.id,
         role_in_invite: 'head',
         phone: fullInvite.phone || person.phone,
+        special_role: fullInvite.special_role,
+        counts_towards_buffet: fullInvite.counts_towards_buffet,
+        special_arrival_time: fullInvite.special_arrival_time,
       });
     } else if (fullInvite.companion_person_ids?.includes(person.id)) {
       await savePerson({
         ...person,
         invite_id: fullInvite.id,
         role_in_invite: 'companion',
+        special_role: fullInvite.special_role,
+        counts_towards_buffet: fullInvite.counts_towards_buffet,
       });
     } else if (person.invite_id === fullInvite.id && !allInvolvedIds.has(person.id)) {
       // Pessoa foi removida deste convite

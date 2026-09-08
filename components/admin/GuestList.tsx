@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite, Table, EventConfig, InviteTier, Person } from '@/types';
+import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole } from '@/types';
 import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson } from '@/lib/db';
-import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate } from '@/lib/utils';
+import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
   Users,
@@ -34,6 +34,11 @@ import {
   ChevronLeft,
   CheckCircle2,
   ChevronDown,
+  Star,
+  Music,
+  Crown,
+  Briefcase,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -68,10 +73,25 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   const [searchPersonQuery, setSearchPersonQuery] = useState<string>('');
   const [loadingForm, setLoadingForm] = useState(false);
 
+  // Estados do Wizard Curto para Convites Especiais (Funções / Staff)
+  const [isSpecialOpen, setIsSpecialOpen] = useState(false);
+  const [specialStep, setSpecialStep] = useState<number>(1);
+  const [specialRole, setSpecialRole] = useState<SpecialRole>('ceremonialist');
+  const [specialHeadPersonId, setSpecialHeadPersonId] = useState('');
+  const [specialHeadName, setSpecialHeadName] = useState('');
+  const [specialPhone, setSpecialPhone] = useState('');
+  const [specialArrivalTime, setSpecialArrivalTime] = useState('16:00');
+  const [specialCustomMessage, setSpecialCustomMessage] = useState('');
+
   // Métricas 1:1 de Pessoas & Assentos
   const buffetCapacity = config.buffet_capacity || 100;
   const totalPersons = persons.length;
+  // Pessoas alocadas em assentos
   const seatedPersons = persons.filter((p) => p.table_id);
+  // Apenas pessoas que consomem cota do buffet (exclui convidados especiais isentos: Cerimonialista, Músicos, Staff, Aniversariante)
+  const seatedBuffetPersons = persons.filter(
+    (p) => p.table_id && p.counts_towards_buffet !== false && (p.special_role === 'guest' || !p.special_role)
+  );
   const unseatedPersons = persons.filter((p) => !p.table_id);
 
   const mainInvites = invites.filter((i) => !i.tier || i.tier === 'main');
@@ -86,7 +106,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   );
 
   const buffetOccupancyPercent = Math.min(
-    Math.round((seatedPersons.length / buffetCapacity) * 100),
+    Math.round((seatedBuffetPersons.length / buffetCapacity) * 100),
     100
   );
 
@@ -302,6 +322,85 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     onRefresh();
   };
 
+  // Helper para gerar mensagem padrão para convites de função especial
+  const getDefaultSpecialMessage = (role: SpecialRole, name: string, time: string, token: string) => {
+    const siteUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : '';
+    const link = token ? `${siteUrl}/convite/${token}` : `${siteUrl}/convite/[link]`;
+
+    if (role === 'ceremonialist') {
+      return `Olá ${name || 'Cerimonialista'}! Você é a Cerimonialista/Assessora oficial da Festa de 40 Anos da Fernanda Seppi ✨.\n\nSeu horário recomendado de chegada é às ${time || '16:00'}.\n\nAcesse todos os detalhes do evento pelo link:\n👉 ${link}\n\nContamos com você!`;
+    }
+    if (role === 'musician') {
+      return `Olá ${name || 'Músico'}! Confirmamos sua apresentação na Festa de 40 Anos da Fernanda Seppi ✨.\n\nO horário recomendado para montagem e passagem de som é às ${time || '15:30'}.\n\nAcesse o link exclusivo do evento:\n👉 ${link}\n\nNos vemos lá!`;
+    }
+    if (role === 'staff') {
+      return `Olá ${name || 'Equipe'}! Convite de equipe/colaborador para a Festa de 40 Anos da Fernanda Seppi ✨.\n\nHorário de chegada: ${time || '16:00'}.\n\nAcesse os detalhes pelo link:\n👉 ${link}`;
+    }
+    if (role === 'birthday_person') {
+      return `Fernanda! Seu convite oficial de Aniversariante para a sua Festa de 40 Anos ✨.\n\nAcesse seu hotsite e painel exclusivo:\n👉 ${link}`;
+    }
+    return `Olá ${name}! Você tem um convite especial para a Festa de 40 Anos da Fernanda Seppi ✨.\n\nAcesse: ${link}`;
+  };
+
+  const handleOpenSpecialModal = () => {
+    setIsSpecialOpen(true);
+    setSpecialStep(1);
+    setSpecialRole('ceremonialist');
+    setSpecialHeadPersonId('');
+    setSpecialHeadName('');
+    setSpecialPhone('');
+    setSpecialArrivalTime('16:00');
+    setSpecialCustomMessage(getDefaultSpecialMessage('ceremonialist', 'Cerimonialista', '16:00', ''));
+  };
+
+  const handleSaveSpecialForm = async (dispatchWhatsApp: boolean = false) => {
+    if (!specialHeadName.trim()) {
+      alert('Informe o nome da pessoa ou selecione na lista!');
+      return;
+    }
+
+    const cleanDigits = specialPhone.replace(/\D/g, '');
+    if (cleanDigits.length < 8) {
+      alert('Informe o telefone WhatsApp com DDD para continuar.');
+      return;
+    }
+
+    setLoadingForm(true);
+
+    try {
+      const saved = await saveInvite({
+        invite_type: 'individual',
+        head_person_id: specialHeadPersonId || undefined,
+        head_name: specialHeadName.trim(),
+        phone: specialPhone,
+        max_guests: 1,
+        tier: 'main',
+        special_role: specialRole,
+        counts_towards_buffet: false, // ISENTO DO BUFFET (Não consome as 100 vagas)
+        special_arrival_time: specialArrivalTime,
+        custom_whatsapp_message: specialCustomMessage,
+      });
+
+      setIsSpecialOpen(false);
+      onRefresh();
+
+      if (dispatchWhatsApp && saved) {
+        await markInviteAsSent(saved.id);
+        onRefresh();
+        const siteUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : '';
+        const inviteUrl = `${siteUrl}/convite/${saved.id}`;
+        const finalMsg = specialCustomMessage.replace('{link}', inviteUrl).replace('[link]', inviteUrl);
+        const cleanPhone = formatPhoneE164(saved.phone);
+        const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(finalMsg)}`;
+        window.open(waUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar convite especial:', err);
+    } finally {
+      setLoadingForm(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Dashboard de Métricas Solicitado (Print 1, 2, 3, 4) */}
@@ -399,6 +498,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
             >
               <Download className="w-4 h-4 text-purple-500" /> <span>Modelo Excel</span>
+            </button>
+
+            <button
+              onClick={handleOpenSpecialModal}
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+            >
+              <Star className="w-4 h-4 text-amber-100" /> <span>Convite Especial (Função)</span>
             </button>
 
             <button
@@ -510,6 +616,26 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                               {invite.head_name}
                             </span>
                             <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {invite.special_role === 'ceremonialist' && (
+                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5">
+                                <Star className="w-3 h-3 text-amber-500" /> Cerimonialista
+                              </span>
+                            )}
+                            {invite.special_role === 'musician' && (
+                              <span className="bg-sky-500/20 text-sky-600 dark:text-sky-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-0.5">
+                                <Music className="w-3 h-3 text-sky-500" /> Músico
+                              </span>
+                            )}
+                            {invite.special_role === 'staff' && (
+                              <span className="bg-slate-500/20 text-slate-600 dark:text-slate-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-slate-500/30 flex items-center gap-0.5">
+                                <Briefcase className="w-3 h-3 text-slate-500" /> Staff
+                              </span>
+                            )}
+                            {invite.special_role === 'birthday_person' && (
+                              <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-0.5">
+                                <Crown className="w-3 h-3 text-amber-400" /> Aniversariante
+                              </span>
+                            )}
                             {isReserve && (
                               <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30">
                                 Reserva
@@ -1031,6 +1157,256 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
       {/* Modal Importador em Massa */}
       <BulkImporter isOpen={isBulkOpen} onClose={() => setIsBulkOpen(false)} onSuccess={onRefresh} />
+
+      {/* MODAL WIZARD CURTO DE CONVITES ESPECIAIS (FUNÇÃO / STAFF) */}
+      {isSpecialOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-amber-500/30 transition-all">
+            {/* Header */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 bg-amber-500 text-white rounded-full flex items-center justify-center font-black text-xs">
+                    {specialStep}
+                  </span>
+                  <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                    <span>Convite Especial (Função / Staff)</span>
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsSpecialOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Indicador de Passos */}
+              <div className="flex items-center justify-between gap-1 text-[10px] font-extrabold text-slate-400">
+                <span className={specialStep >= 1 ? 'text-amber-500 font-black' : ''}>1. Função</span>
+                <span className="text-slate-600">•</span>
+                <span className={specialStep >= 2 ? 'text-amber-500 font-black' : ''}>2. Nome & Contato</span>
+                <span className="text-slate-600">•</span>
+                <span className={specialStep === 3 ? 'text-amber-500 font-black' : ''}>3. Horário & Mensagem</span>
+              </div>
+            </div>
+
+            {/* CORPO DOS PASSOS */}
+
+            {/* PASSO 1: Seleção da Função Especial */}
+            {specialStep === 1 && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Selecione o papel especial (Convites de função não consomem cota do buffet):
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpecialRole('ceremonialist');
+                      setSpecialCustomMessage(getDefaultSpecialMessage('ceremonialist', specialHeadName, specialArrivalTime, ''));
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left space-y-1.5 transition-all cursor-pointer ${
+                      specialRole === 'ceremonialist'
+                        ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                    }`}
+                  >
+                    <Star className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Cerimonialista / Assessora</h4>
+                      <p className="text-[10px] text-slate-400">Organização da festa (ex: Irmã)</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpecialRole('musician');
+                      setSpecialCustomMessage(getDefaultSpecialMessage('musician', specialHeadName, '15:30', ''));
+                      setSpecialArrivalTime('15:30');
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left space-y-1.5 transition-all cursor-pointer ${
+                      specialRole === 'musician'
+                        ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                    }`}
+                  >
+                    <Music className="w-5 h-5 text-sky-500" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Músico / Banda</h4>
+                      <p className="text-[10px] text-slate-400">Passagem de som e show</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpecialRole('staff');
+                      setSpecialCustomMessage(getDefaultSpecialMessage('staff', specialHeadName, specialArrivalTime, ''));
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left space-y-1.5 transition-all cursor-pointer ${
+                      specialRole === 'staff'
+                        ? 'border-slate-500 bg-slate-500/10 text-slate-300'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                    }`}
+                  >
+                    <Briefcase className="w-5 h-5 text-slate-400" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Equipe / Staff</h4>
+                      <p className="text-[10px] text-slate-400">Fotografia, DJ ou apoio</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpecialRole('birthday_person');
+                      setSpecialCustomMessage(getDefaultSpecialMessage('birthday_person', 'Fernanda Seppi', specialArrivalTime, ''));
+                      setSpecialHeadName('Fernanda Seppi');
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left space-y-1.5 transition-all cursor-pointer ${
+                      specialRole === 'birthday_person'
+                        ? 'border-purple-500 bg-purple-500/10 text-purple-300'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                    }`}
+                  >
+                    <Crown className="w-5 h-5 text-purple-400" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Aniversariante</h4>
+                      <p className="text-[10px] text-slate-400">Fernanda Seppi (Anfitriã)</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 2: Nome e Telefone WhatsApp */}
+            {specialStep === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Nome Completo do Profissional / Convidado Especial:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Patricia Domingos ou Músico Roberto"
+                    value={specialHeadName}
+                    onChange={(e) => {
+                      setSpecialHeadName(e.target.value);
+                      setSpecialCustomMessage(getDefaultSpecialMessage(specialRole, e.target.value, specialArrivalTime, ''));
+                    }}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Telefone WhatsApp (com DDD): *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: 11999998888"
+                    value={specialPhone}
+                    onChange={(e) => setSpecialPhone(e.target.value)}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 3: Horário Especial & Mensagem Editável */}
+            {specialStep === 3 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Horário Recomendado de Chegada:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 15:30 para passagem de som"
+                    value={specialArrivalTime}
+                    onChange={(e) => {
+                      setSpecialArrivalTime(e.target.value);
+                      setSpecialCustomMessage(getDefaultSpecialMessage(specialRole, specialHeadName, e.target.value, ''));
+                    }}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Mensagem do WhatsApp (Totalmente Editável):
+                    </label>
+                    <span className="text-[10px] text-amber-500 font-bold">Editável</span>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={specialCustomMessage}
+                    onChange={(e) => setSpecialCustomMessage(e.target.value)}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-amber-500/40 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-slate-800 dark:text-slate-100 leading-relaxed"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* NAVEGAÇÃO DO WIZARD ESPECIAIS */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+              {specialStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setSpecialStep(specialStep - 1)}
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Voltar
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                {specialStep < 3 ? (
+                  <button
+                    type="button"
+                    disabled={specialStep === 2 && (!specialHeadName.trim() || specialPhone.replace(/\D/g, '').length < 8)}
+                    onClick={() => setSpecialStep(specialStep + 1)}
+                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Avançar</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={loadingForm}
+                      onClick={() => handleSaveSpecialForm(false)}
+                      className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
+                    >
+                      Salvar Apenas
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loadingForm}
+                      onClick={() => handleSaveSpecialForm(true)}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4 text-amber-300" />
+                      <span>Salvar & Enviar WhatsApp</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
