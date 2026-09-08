@@ -834,12 +834,17 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
 
 export async function deleteInvite(id: string): Promise<void> {
   const invites = await getAllInvites();
+  const targetInvite = invites.find((i) => i.id === id);
   const filtered = invites.filter((i) => i.id !== id);
 
   // Desvincula as pessoas associadas a este convite
   const persons = await getAllPersons();
   for (const person of persons) {
-    if (person.invite_id === id) {
+    if (
+      person.invite_id === id ||
+      targetInvite?.head_person_id === person.id ||
+      (targetInvite?.companion_person_ids && targetInvite.companion_person_ids.includes(person.id))
+    ) {
       await savePerson({
         ...person,
         invite_id: null,

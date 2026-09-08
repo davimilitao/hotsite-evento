@@ -171,6 +171,20 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     setIsAddOpen(true);
   };
 
+  const handleOpenAddForPerson = (person: Person) => {
+    setEditingInvite(null);
+    setWizardStep(1);
+    setInviteType('family');
+    setHeadPersonId(person.id);
+    setCompanionPersonIds([]);
+    setFamilySlotsCount(2);
+    setPhone(person.phone || '');
+    setTier('main');
+    setIndividualDeadline('');
+    setSearchPersonQuery('');
+    setIsAddOpen(true);
+  };
+
   const handleOpenEdit = (invite: Invite) => {
     setEditingInvite(invite);
     setWizardStep(1);
@@ -802,12 +816,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           </button>
                         ) : (
                           <button
-                            onClick={() => {
-                              setHeadPersonId(person.id);
-                              setEditingInvite(null);
-                              setPhone(person.phone || '');
-                              setIsAddOpen(true);
-                            }}
+                            onClick={() => handleOpenAddForPerson(person)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5 text-white" />
@@ -1047,18 +1056,23 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                             );
                             if (existingInvite) {
                               setEditingInvite(existingInvite);
-                              setInviteType(
-                                existingInvite.invite_type ||
-                                  (existingInvite.companion_person_ids && existingInvite.companion_person_ids.length > 0 ? 'family' : 'individual')
-                              );
+                              if (inviteType !== 'family') {
+                                setInviteType(
+                                  existingInvite.invite_type ||
+                                    (existingInvite.companion_person_ids && existingInvite.companion_person_ids.length > 0 ? 'family' : 'individual')
+                                );
+                              }
                               setCompanionPersonIds(existingInvite.companion_person_ids || []);
-                              setFamilySlotsCount(1 + (existingInvite.companion_person_ids?.length || 0));
+                              setFamilySlotsCount(Math.max(2, 1 + (existingInvite.companion_person_ids?.length || 0)));
                               setPhone(existingInvite.phone || p.phone || '');
                               setTier(existingInvite.tier || 'main');
                               setIndividualDeadline(existingInvite.individual_deadline ? existingInvite.individual_deadline.slice(0, 10) : '');
                             } else {
                               setEditingInvite(null);
                               setPhone(p.phone || '');
+                              if (inviteType === 'family') {
+                                setFamilySlotsCount((prev) => Math.max(2, prev));
+                              }
                             }
                           }}
                           className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
@@ -1204,7 +1218,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         if (p.id === headPersonId) return false;
                         if (p.id === currentSelectedId) return true;
                         if (companionPersonIds.includes(p.id)) return false;
-                        return !p.invite_id || p.invite_id === editingInvite?.id;
+                        return p.role_in_invite !== 'companion' || p.invite_id === editingInvite?.id;
                       });
 
                       return (
