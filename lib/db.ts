@@ -668,14 +668,27 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
 
   // Se ID não foi fornecido, buscar se já existe convite para esta pessoa (head_person_id ou head_name)
   if (!targetId) {
+    const persons = await getAllPersons();
     if (invite.head_person_id) {
-      const existing = invites.find((i) => i.head_person_id === invite.head_person_id);
-      if (existing) targetId = existing.id;
+      const personObj = persons.find((p) => p.id === invite.head_person_id);
+      if (personObj && personObj.invite_id) {
+        targetId = personObj.invite_id;
+      }
+      if (!targetId) {
+        const existing = invites.find((i) => i.head_person_id === invite.head_person_id);
+        if (existing) targetId = existing.id;
+      }
     }
     if (!targetId && invite.head_name) {
       const normName = invite.head_name.trim().toLowerCase();
-      const existing = invites.find((i) => i.head_name.trim().toLowerCase() === normName);
-      if (existing) targetId = existing.id;
+      const personObj = persons.find((p) => p.name.trim().toLowerCase() === normName);
+      if (personObj && personObj.invite_id) {
+        targetId = personObj.invite_id;
+      }
+      if (!targetId) {
+        const existing = invites.find((i) => i.head_name.trim().toLowerCase() === normName);
+        if (existing) targetId = existing.id;
+      }
     }
   }
 

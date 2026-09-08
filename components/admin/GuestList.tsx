@@ -368,9 +368,14 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     setLoadingForm(true);
 
     try {
+      const targetPerson = persons.find(
+        (p) => (specialHeadPersonId && p.id === specialHeadPersonId) || p.name.trim().toLowerCase() === specialHeadName.trim().toLowerCase()
+      );
+
       const saved = await saveInvite({
+        id: targetPerson?.invite_id || undefined,
         invite_type: 'individual',
-        head_person_id: specialHeadPersonId || undefined,
+        head_person_id: targetPerson?.id || specialHeadPersonId || undefined,
         head_name: specialHeadName.trim(),
         phone: specialPhone,
         max_guests: 1,
@@ -945,7 +950,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {(() => {
                     const availablePersons = persons.filter(
-                      (p) => !p.invite_id || p.invite_id === editingInvite?.id
+                      (p) => p.role_in_invite !== 'companion'
                     );
                     const filtered = availablePersons.filter((p) =>
                       p.name.toLowerCase().includes(searchPersonQuery.toLowerCase().trim())
@@ -961,13 +966,32 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
                     return filtered.map((p) => {
                       const table = tables.find((t) => t.id === p.table_id);
+                      const hasExistingInvite = invites.some((inv) => inv.id === p.invite_id || inv.head_person_id === p.id);
+
                       return (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => {
                             setHeadPersonId(p.id);
-                            if (p.phone) setPhone(p.phone);
+                            const existingInvite = invites.find(
+                              (inv) => inv.id === p.invite_id || inv.head_person_id === p.id
+                            );
+                            if (existingInvite) {
+                              setEditingInvite(existingInvite);
+                              setInviteType(
+                                existingInvite.invite_type ||
+                                  (existingInvite.companion_person_ids && existingInvite.companion_person_ids.length > 0 ? 'family' : 'individual')
+                              );
+                              setCompanionPersonIds(existingInvite.companion_person_ids || []);
+                              setFamilySlotsCount(1 + (existingInvite.companion_person_ids?.length || 0));
+                              setPhone(existingInvite.phone || p.phone || '');
+                              setTier(existingInvite.tier || 'main');
+                              setIndividualDeadline(existingInvite.individual_deadline ? existingInvite.individual_deadline.slice(0, 10) : '');
+                            } else {
+                              setEditingInvite(null);
+                              setPhone(p.phone || '');
+                            }
                           }}
                           className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
                             headPersonId === p.id
@@ -983,6 +1007,11 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                               </span>
                             ) : (
                               <span className="text-[10px] text-amber-400 font-medium">-- Sem Mesa --</span>
+                            )}
+                            {hasExistingInvite && (
+                              <span className="text-[9px] bg-purple-400/20 text-purple-300 px-1.5 py-0.5 rounded font-black border border-purple-400/30">
+                                Convite Gerado
+                              </span>
                             )}
                           </div>
                           {headPersonId === p.id && <Check className="w-4 h-4 text-white" />}
