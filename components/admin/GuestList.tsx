@@ -925,7 +925,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               <div className="space-y-4">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {inviteType === 'individual'
-                    ? 'Selecione o convidado na lista (com assento livre na mesa):'
+                    ? 'Selecione o convidado na lista:'
                     : 'Quem irá confirmar a presença dos outros convidados? (Responsável/Mandante):'}
                 </label>
 
@@ -942,40 +942,98 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   />
                 </div>
 
-                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {(() => {
-                    const filtered = seatedPersonsEligibleForInvite.filter((p) =>
+                    const availablePersons = persons.filter(
+                      (p) => !p.invite_id || p.invite_id === editingInvite?.id
+                    );
+                    const filtered = availablePersons.filter((p) =>
                       p.name.toLowerCase().includes(searchPersonQuery.toLowerCase().trim())
                     );
 
                     if (filtered.length === 0) {
                       return (
                         <div className="text-center py-6 text-xs text-slate-400">
-                          Nenhum convidado com assento livre encontrado para &quot;<strong className="text-white">{searchPersonQuery}</strong>&quot;.
+                          Nenhum convidado encontrado para &quot;<strong className="text-white">{searchPersonQuery}</strong>&quot;.
                         </div>
                       );
                     }
 
-                    return filtered.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setHeadPersonId(p.id);
-                          if (p.phone) setPhone(p.phone);
-                        }}
-                        className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
-                          headPersonId === p.id
-                            ? 'bg-purple-600 text-white border-purple-500 shadow-md'
-                            : 'bg-slate-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-950/40 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100'
-                        }`}
-                      >
-                        <span>{p.name}</span>
-                        {headPersonId === p.id && <Check className="w-4 h-4 text-white" />}
-                      </button>
-                    ));
+                    return filtered.map((p) => {
+                      const table = tables.find((t) => t.id === p.table_id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setHeadPersonId(p.id);
+                            if (p.phone) setPhone(p.phone);
+                          }}
+                          className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+                            headPersonId === p.id
+                              ? 'bg-purple-600 text-white border-purple-500 shadow-md'
+                              : 'bg-slate-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-950/40 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{p.name}</span>
+                            {table ? (
+                              <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-medium">
+                                {table.name}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-amber-400 font-medium">-- Sem Mesa --</span>
+                            )}
+                          </div>
+                          {headPersonId === p.id && <Check className="w-4 h-4 text-white" />}
+                        </button>
+                      );
+                    });
                   })()}
                 </div>
+
+                {/* Seleção Dinâmica de Mesa caso o Mandante escolhido não tenha mesa ainda */}
+                {headPersonId && (() => {
+                  const selectedHeadP = persons.find((p) => p.id === headPersonId);
+                  const selectedHeadTable = tables.find((t) => t.id === selectedHeadP?.table_id);
+
+                  if (!selectedHeadP?.table_id) {
+                    return (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-2">
+                        <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <span>⚠️ Este convidado não tem mesa atribuída. Selecione a mesa para continuar:</span>
+                        </div>
+                        <select
+                          required
+                          value=""
+                          onChange={async (e) => {
+                            const newTId = e.target.value;
+                            if (newTId) {
+                              await savePerson({ ...selectedHeadP, table_id: newTId });
+                              onRefresh();
+                            }
+                          }}
+                          className="w-full p-2.5 bg-slate-900 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-200 focus:outline-none cursor-pointer"
+                        >
+                          <option value="">-- Selecionar Mesa para {selectedHeadP?.name} --</option>
+                          {tables.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.capacity} lugares)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-400 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Mesa Atribuída: {selectedHeadTable?.name}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -1008,7 +1066,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               </div>
             )}
 
-            {/* PASSO 4 (Família): Definir Qtd de Membros e Selecionar Integrantes */}
+            {/* PASSO 4 (Família): SLOTS EM BRANCO PARA CADA ACOMPANHANTE & VALIDAÇÃO LISTA COMPLETA */}
             {wizardStep === 4 && inviteType === 'family' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -1020,47 +1078,118 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                     min={2}
                     max={10}
                     value={familySlotsCount}
-                    onChange={(e) => setFamilySlotsCount(Math.max(2, parseInt(e.target.value, 10) || 2))}
+                    onChange={(e) => {
+                      const newCount = Math.max(2, parseInt(e.target.value, 10) || 2);
+                      setFamilySlotsCount(newCount);
+                      // Ajusta array de acompanhantes
+                      const reqCompanions = newCount - 1;
+                      if (companionPersonIds.length > reqCompanions) {
+                        setCompanionPersonIds(companionPersonIds.slice(0, reqCompanions));
+                      }
+                    }}
                     className="w-20 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-center text-slate-800 dark:text-slate-100"
                   />
                 </div>
 
-                <div className="space-y-2">
+                {/* Slots Individuais para Acompanhantes */}
+                <div className="space-y-3">
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Selecione os outros {familySlotsCount - 1} convidado(s) da lista:
+                    Selecione os outros {familySlotsCount - 1} convidado(s) para os slots da família:
                   </label>
 
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {seatedPersonsEligibleForInvite
-                      .filter((p) => p.id !== headPersonId)
-                      .map((p) => {
-                        const isSelected = companionPersonIds.includes(p.id);
-                        return (
-                          <label
-                            key={p.id}
-                            className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-                              isSelected
-                                ? 'bg-purple-100 dark:bg-purple-950/80 border-purple-400 text-purple-900 dark:text-purple-200'
-                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                    {Array.from({ length: familySlotsCount - 1 }).map((_, slotIndex) => {
+                      const currentSelectedId = companionPersonIds[slotIndex] || '';
+                      const selectedPerson = persons.find((p) => p.id === currentSelectedId);
+
+                      // Lista de pessoas disponíveis para esta vaga (exclui o mandante e acompanhantes já escolhidos em outros slots)
+                      const availableForThisSlot = persons.filter((p) => {
+                        if (p.id === headPersonId) return false;
+                        if (p.id === currentSelectedId) return true;
+                        if (companionPersonIds.includes(p.id)) return false;
+                        return !p.invite_id || p.invite_id === editingInvite?.id;
+                      });
+
+                      return (
+                        <div
+                          key={slotIndex}
+                          className={`p-3 rounded-2xl border transition-all space-y-2 ${
+                            selectedPerson
+                              ? 'bg-purple-950/40 border-purple-500/60 text-purple-200'
+                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="text-slate-400 uppercase text-[10px]">
+                              Acompanhante #{slotIndex + 1} da Família
+                            </span>
+                            {selectedPerson ? (
+                              <span className="text-emerald-400 flex items-center gap-1 font-extrabold text-[11px]">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> ✓ Completo
+                              </span>
+                            ) : (
+                              <span className="text-amber-400 text-[10px] italic">Em branco (pendente)</span>
+                            )}
+                          </div>
+
+                          <select
+                            value={currentSelectedId}
+                            onChange={async (e) => {
+                              const chosenId = e.target.value;
+                              const updatedCompanions = [...companionPersonIds];
+                              updatedCompanions[slotIndex] = chosenId;
+                              setCompanionPersonIds(updatedCompanions);
+
+                              // Se a pessoa escolhida não tiver mesa, herda a mesa do mandante
+                              if (chosenId) {
+                                const chosenP = persons.find((p) => p.id === chosenId);
+                                const headP = persons.find((p) => p.id === headPersonId);
+                                if (chosenP && headP?.table_id && !chosenP.table_id) {
+                                  await savePerson({ ...chosenP, table_id: headP.table_id });
+                                  onRefresh();
+                                }
+                              }
+                            }}
+                            className={`w-full p-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
+                              selectedPerson
+                                ? 'bg-purple-900/60 text-white border-purple-400'
+                                : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-300 dark:border-slate-700'
                             }`}
                           >
-                            <span>{p.name}</span>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setCompanionPersonIds([...companionPersonIds, p.id]);
-                                } else {
-                                  setCompanionPersonIds(companionPersonIds.filter((id) => id !== p.id));
-                                }
-                              }}
-                              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                            />
-                          </label>
-                        );
-                      })}
+                            <option value="">-- Selecionar Convidado para o Slot #{slotIndex + 1} --</option>
+                            {availableForThisSlot.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} {p.table_id ? `(Mesa: ${tables.find((t) => t.id === p.table_id)?.name})` : '(Sem Mesa)'}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
+
+                  {/* Banner de Validação da Lista Completa */}
+                  {(() => {
+                    const reqCompanions = familySlotsCount - 1;
+                    const filledCount = companionPersonIds.filter(Boolean).length;
+                    const isFullyComplete = filledCount === reqCompanions;
+
+                    if (isFullyComplete) {
+                      return (
+                        <div className="p-3 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>✓ Lista da Família Completa! Todos os {familySlotsCount} integrantes foram definidos com sucesso.</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-medium flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>Preencha os {reqCompanions - filledCount} slot(s) em branco restantes para avançar.</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1118,8 +1247,9 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   <button
                     type="button"
                     disabled={
-                      (wizardStep === 2 && !headPersonId) ||
-                      (wizardStep === 3 && phone.replace(/\D/g, '').length < 8)
+                      (wizardStep === 2 && (!headPersonId || !persons.find((p) => p.id === headPersonId)?.table_id)) ||
+                      (wizardStep === 3 && phone.replace(/\D/g, '').length < 8) ||
+                      (wizardStep === 4 && inviteType === 'family' && companionPersonIds.filter(Boolean).length < (familySlotsCount - 1))
                     }
                     onClick={() => setWizardStep(wizardStep + 1)}
                     className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
