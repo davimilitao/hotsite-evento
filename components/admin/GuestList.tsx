@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
@@ -110,31 +110,39 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     100
   );
 
-  // Filtro de Convites no Painel
-  const filteredInvites = invites.filter((invite) => {
-    const headPerson = persons.find((p) => p.id === invite.head_person_id);
-    const companionPersons = persons.filter((p) => invite.companion_person_ids?.includes(p.id));
+  // Filtro de Pessoas Físicas (1:1 com a Master List de 119 Convidados)
+  const filteredPersons = persons.filter((person) => {
+    const invite = invites.find(
+      (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
+    );
+    const headPerson = invite?.head_person_id ? persons.find((p) => p.id === invite.head_person_id) : null;
 
     const matchesSearch =
-      invite.head_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invite.phone.includes(searchTerm) ||
-      invite.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (headPerson && headPerson.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      companionPersons.some((cp) => cp.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (person.phone || '').includes(searchTerm) ||
+      person.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (invite && invite.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (headPerson && headPerson.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (!matchesSearch) return false;
 
     if (statusFilter === 'all') return true;
-    if (statusFilter === 'main') return !invite.tier || invite.tier === 'main';
-    if (statusFilter === 'reserve') return invite.tier === 'reserve';
-    if (statusFilter === 'sent') return invite.sent_status === 'sent';
-    if (statusFilter === 'not_sent') return !invite.sent_status || invite.sent_status === 'not_sent';
-    if (statusFilter === 'confirmed') return invite.status === 'confirmed';
-    if (statusFilter === 'declined') return invite.status === 'declined';
-    if (statusFilter === 'pending') return invite.status === 'pending';
-    if (statusFilter === 'pending_date') return invite.status === 'pending_date';
+    if (statusFilter === 'main') return !invite?.tier || invite.tier === 'main';
+    if (statusFilter === 'reserve') return invite?.tier === 'reserve' || !person.table_id;
+    if (statusFilter === 'sent') return invite?.sent_status === 'sent';
+    if (statusFilter === 'not_sent') return !invite?.sent_status || invite.sent_status === 'not_sent';
+
+    const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
+    const isConfirmed = (guestObj && guestObj.status === 'confirmed') || (invite && invite.status === 'confirmed');
+    const isDeclined = (guestObj && guestObj.status === 'declined') || (invite && invite.status === 'declined');
+    const isPendingDate = (guestObj && guestObj.status === 'pending_date') || (invite && invite.status === 'pending_date');
+
+    if (statusFilter === 'confirmed') return isConfirmed;
+    if (statusFilter === 'declined') return isDeclined;
+    if (statusFilter === 'pending') return !isConfirmed && !isDeclined && !isPendingDate;
+    if (statusFilter === 'pending_date') return isPendingDate;
     if (statusFilter === 'expired') {
-      const deadlineInfo = getDeadlineInfo(invite, config.deadline_rsvp);
+      const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : { expired: false, label: 'Pendente', color: '' };
       return deadlineInfo.expired;
     }
 
@@ -260,8 +268,8 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     setTimeout(() => setCopiedToken(null), 2500);
   };
 
-  // Handlers para Edição Inline (DataTable 360º)
-  const handleSaveInlineCell = async (invite: Invite) => {
+  // Handlers para Edição Inline (DataTable por Pessoa Física 1:1)
+  const handleSavePersonInlineCell = async (person: Person) => {
     if (!editingCell) return;
     const { field, value } = editingCell;
 
@@ -271,29 +279,29 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         setEditingCell(null);
         return;
       }
-      await saveInvite({
-        ...invite,
-        head_name: cleanName,
+      await savePerson({
+        ...person,
+        name: cleanName,
       });
-      if (invite.head_person_id) {
-        const headP = persons.find((p) => p.id === invite.head_person_id);
-        if (headP) {
-          await savePerson({
-            ...headP,
-            name: cleanName,
+      if (person.invite_id) {
+        const invite = invites.find((i) => i.id === person.invite_id);
+        if (invite && invite.head_person_id === person.id) {
+          await saveInvite({
+            ...invite,
+            head_name: cleanName,
           });
         }
       }
     } else if (field === 'phone') {
-      await saveInvite({
-        ...invite,
+      await savePerson({
+        ...person,
         phone: value,
       });
-      if (invite.head_person_id) {
-        const headP = persons.find((p) => p.id === invite.head_person_id);
-        if (headP) {
-          await savePerson({
-            ...headP,
+      if (person.invite_id) {
+        const invite = invites.find((i) => i.id === person.invite_id);
+        if (invite && invite.head_person_id === person.id) {
+          await saveInvite({
+            ...invite,
             phone: value,
           });
         }
@@ -304,17 +312,18 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     onRefresh();
   };
 
-  const handleTableChangeInline = async (invite: Invite, newTableId: string) => {
+  const handleTableChangeForPerson = async (person: Person, newTableId: string) => {
     const tableIdToSave = newTableId === '' ? null : newTableId;
-    await saveInvite({
-      ...invite,
+    await savePerson({
+      ...person,
       table_id: tableIdToSave,
+      seat_number: tableIdToSave ? person.seat_number : null,
     });
-    if (invite.head_person_id) {
-      const headP = persons.find((p) => p.id === invite.head_person_id);
-      if (headP) {
-        await savePerson({
-          ...headP,
+    if (person.invite_id) {
+      const invite = invites.find((i) => i.id === person.invite_id);
+      if (invite && invite.head_person_id === person.id) {
+        await saveInvite({
+          ...invite,
           table_id: tableIdToSave,
         });
       }
@@ -566,29 +575,35 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
-              {filteredInvites.length === 0 ? (
+              {filteredPersons.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
-                    Nenhum convite cadastrado ainda. Clique em &quot;Novo Convite (Wizard)&quot; para criar!
+                    Nenhum convidado encontrado na busca ou filtro selecionado.
                   </td>
                 </tr>
               ) : (
-                filteredInvites.map((invite) => {
-                  const deadlineInfo = getDeadlineInfo(invite, config.deadline_rsvp);
-                  const isSent = invite.sent_status === 'sent';
-                  const isReserve = invite.tier === 'reserve';
-                  const isFamily = invite.invite_type === 'family' || (invite.companion_person_ids && invite.companion_person_ids.length > 0);
+                filteredPersons.map((person) => {
+                  const invite = invites.find(
+                    (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
+                  );
+                  const headPerson = invite?.head_person_id ? persons.find((p) => p.id === invite.head_person_id) : null;
+                  const isHead = invite ? (invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase())) : false;
+                  const isCompanion = !isHead && invite?.companion_person_ids?.includes(person.id);
 
-                  const headPerson = persons.find((p) => p.id === invite.head_person_id);
-                  const companionPersons = persons.filter((p) => invite.companion_person_ids?.includes(p.id));
-                  const currentTableId = invite.table_id || headPerson?.table_id || '';
+                  const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : { expired: false, label: 'Pendente', color: 'bg-slate-100 text-slate-700 border-slate-300' };
+                  const isSent = invite?.sent_status === 'sent';
+                  const currentTableId = person.table_id || '';
 
-                  const isEditingName = editingCell?.inviteId === invite.id && editingCell?.field === 'name';
-                  const isEditingPhone = editingCell?.inviteId === invite.id && editingCell?.field === 'phone';
+                  const isEditingName = editingCell?.inviteId === person.id && editingCell?.field === 'name';
+                  const isEditingPhone = editingCell?.inviteId === person.id && editingCell?.field === 'phone';
+
+                  // Status individual do convidado no RSVP
+                  const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
+                  const rsvpStatus = guestObj?.status || invite?.status || 'pending';
 
                   return (
-                    <tr key={invite.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                      {/* COLUNA 1: NOME (Edição Inline) */}
+                    <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                      {/* COLUNA 1: NOME (Edição Inline por Pessoa Física 1:1) */}
                       <td className="py-3.5 px-4 min-w-[180px]">
                         {isEditingName ? (
                           <div className="flex items-center gap-1">
@@ -598,13 +613,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                               value={editingCell.value}
                               onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveInlineCell(invite);
+                                if (e.key === 'Enter') handleSavePersonInlineCell(person);
                                 if (e.key === 'Escape') setEditingCell(null);
                               }}
                               className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
                             />
                             <button
-                              onClick={() => handleSaveInlineCell(invite)}
+                              onClick={() => handleSavePersonInlineCell(person)}
                               className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
                               title="Salvar Nome"
                             >
@@ -613,45 +628,45 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           </div>
                         ) : (
                           <div
-                            onClick={() => setEditingCell({ inviteId: invite.id, field: 'name', value: invite.head_name })}
+                            onClick={() => setEditingCell({ inviteId: person.id, field: 'name', value: person.name })}
                             className="group flex items-center gap-1.5 cursor-pointer py-1"
                             title="Clique para editar o nome diretamente na tabela"
                           >
                             <span className="font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
-                              {invite.head_name}
+                              {person.name}
                             </span>
                             <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            {invite.special_role === 'ceremonialist' && (
+                            {person.special_role === 'ceremonialist' && (
                               <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5">
                                 <Star className="w-3 h-3 text-amber-500" /> Cerimonialista
                               </span>
                             )}
-                            {invite.special_role === 'musician' && (
+                            {person.special_role === 'musician' && (
                               <span className="bg-sky-500/20 text-sky-600 dark:text-sky-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-0.5">
                                 <Music className="w-3 h-3 text-sky-500" /> Músico
                               </span>
                             )}
-                            {invite.special_role === 'staff' && (
+                            {person.special_role === 'staff' && (
                               <span className="bg-slate-500/20 text-slate-600 dark:text-slate-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-slate-500/30 flex items-center gap-0.5">
                                 <Briefcase className="w-3 h-3 text-slate-500" /> Staff
                               </span>
                             )}
-                            {invite.special_role === 'birthday_person' && (
+                            {person.special_role === 'birthday_person' && (
                               <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-0.5">
                                 <Crown className="w-3 h-3 text-amber-400" /> Aniversariante
                               </span>
                             )}
-                            {isReserve && (
+                            {!person.table_id && (
                               <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30">
                                 Reserva
                               </span>
                             )}
                           </div>
                         )}
-                        <div className="text-[10px] font-mono text-purple-500 mt-0.5">/convite/{invite.id}</div>
+                        {invite && <div className="text-[10px] font-mono text-purple-500 mt-0.5">/convite/{invite.id}</div>}
                       </td>
 
-                      {/* COLUNA 2: TELEFONE (Nova Coluna Separada com Edição Inline) */}
+                      {/* COLUNA 2: TELEFONE */}
                       <td className="py-3.5 px-4 min-w-[140px]">
                         {isEditingPhone ? (
                           <div className="flex items-center gap-1">
@@ -662,13 +677,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                               value={editingCell.value}
                               onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveInlineCell(invite);
+                                if (e.key === 'Enter') handleSavePersonInlineCell(person);
                                 if (e.key === 'Escape') setEditingCell(null);
                               }}
                               className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-medium focus:outline-none"
                             />
                             <button
-                              onClick={() => handleSaveInlineCell(invite)}
+                              onClick={() => handleSavePersonInlineCell(person)}
                               className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
                               title="Salvar Telefone"
                             >
@@ -677,33 +692,42 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           </div>
                         ) : (
                           <div
-                            onClick={() => setEditingCell({ inviteId: invite.id, field: 'phone', value: invite.phone || '' })}
+                            onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || invite?.phone || '' })}
                             className="group flex items-center gap-1.5 cursor-pointer py-1 text-slate-600 dark:text-slate-300 font-medium"
                             title="Clique para editar o telefone"
                           >
-                            <span>{formatPhoneDisplay(invite.phone) || <em className="text-amber-500 text-[11px]">Sem fone (adicionar)</em>}</span>
+                            <span>
+                              {formatPhoneDisplay(person.phone || invite?.phone || '') || (
+                                <em className="text-amber-500 text-[11px]">Sem fone (adicionar)</em>
+                              )}
+                            </span>
                             <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         )}
                       </td>
 
-                      {/* COLUNA 3: TIPO & PESSOAS (1:1) */}
+                      {/* COLUNA 3: TIPO & VÍNCULO */}
                       <td className="py-3.5 px-4 space-y-1">
-                        <div className="flex items-center gap-1.5">
+                        {isHead && (
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
-                            isFamily
+                            invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
                               ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300'
                               : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300'
                           }`}>
-                            {isFamily ? `Família (${1 + companionPersons.length} pes)` : 'Individual (1:1)'}
+                            {invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
+                              ? `Mandante (Família - ${1 + (invite?.companion_person_ids?.length || 0)} pes)`
+                              : 'Individual (1:1)'}
                           </span>
-                        </div>
-                        {isFamily && companionPersons.length > 0 && (
-                          <div className="space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                            {companionPersons.map((cp) => (
-                              <div key={cp.id}>• {cp.name}</div>
-                            ))}
-                          </div>
+                        )}
+                        {isCompanion && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase border bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-300">
+                            Acompanhante (Família: {headPerson?.name || 'Titular'})
+                          </span>
+                        )}
+                        {!invite && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-medium uppercase border bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-300">
+                            Sem Convite Gerado
+                          </span>
                         )}
                       </td>
 
@@ -711,7 +735,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       <td className="py-3.5 px-4 min-w-[150px]">
                         <select
                           value={currentTableId}
-                          onChange={(e) => handleTableChangeInline(invite, e.target.value)}
+                          onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
                           className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
                             currentTableId
                               ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800'
@@ -729,13 +753,30 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
                       {/* COLUNA 5: STATUS DA CONFIRMAÇÃO */}
                       <td className="py-3.5 px-4 space-y-1">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo.color}`}>
-                          {deadlineInfo.label}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {rsvpStatus === 'confirmed' ? (
+                            <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                              🟢 Confirmado {isCompanion ? '(via Família)' : ''}
+                            </span>
+                          ) : rsvpStatus === 'declined' ? (
+                            <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                              🔴 Não Poderá Ir
+                            </span>
+                          ) : rsvpStatus === 'pending_date' ? (
+                            <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                              🟡 Pediu Prazo {guestObj?.requested_date ? `(${guestObj.requested_date})` : ''}
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                              {deadlineInfo?.label || 'Pendente'}
+                            </span>
+                          )}
+                        </div>
+
                         <div className="text-[10px] text-slate-400 flex items-center gap-1">
                           {isSent ? (
                             <span className="text-emerald-500 flex items-center gap-1 font-semibold">
-                              <Send className="w-3 h-3" /> Enviado {invite.sent_at ? `(${formatDateShort(invite.sent_at)})` : ''}
+                              <Send className="w-3 h-3" /> Enviado {invite?.sent_at ? `(${formatDateShort(invite.sent_at)})` : ''}
                             </span>
                           ) : (
                             <span className="text-slate-400 flex items-center gap-1">
@@ -747,7 +788,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
                       {/* COLUNA 6: CONVIDAR (Disparo WhatsApp) */}
                       <td className="py-3.5 px-4 text-center">
-                        {invite.phone && invite.phone.replace(/\D/g, '').length >= 8 ? (
+                        {invite ? (
                           <button
                             onClick={() => handleWhatsAppDispatch(invite)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer ${
@@ -761,70 +802,97 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           </button>
                         ) : (
                           <button
-                            onClick={() => setEditingCell({ inviteId: invite.id, field: 'phone', value: invite.phone || '' })}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-amber-300 hover:bg-slate-800 border border-amber-500/40 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+                            onClick={() => {
+                              setHeadPersonId(person.id);
+                              setEditingInvite(null);
+                              setPhone(person.phone || '');
+                              setIsAddOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
                           >
-                            <Plus className="w-3.5 h-3.5 text-amber-400" />
-                            <span>+ Adicionar Fone</span>
+                            <Plus className="w-3.5 h-3.5 text-white" />
+                            <span>+ Gerar Convite</span>
                           </button>
                         )}
                       </td>
 
-                      {/* COLUNA 7: AÇÕES (Dropdown Popover) */}
+                      {/* COLUNA 7: AÇÕES */}
                       <td className="py-3.5 px-4 text-right relative">
                         <div className="relative inline-block text-left">
                           <button
-                            onClick={() => setOpenDropdownId(openDropdownId === invite.id ? null : invite.id)}
+                            onClick={() => setOpenDropdownId(openDropdownId === person.id ? null : person.id)}
                             className="px-3 py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                           >
                             <span>Ações</span>
                             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                           </button>
 
-                          {openDropdownId === invite.id && (
-                            <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-30 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in">
-                              <button
-                                onClick={() => {
-                                  setOpenDropdownId(null);
-                                  handleOpenEdit(invite);
-                                }}
-                                className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
-                              >
-                                <Edit className="w-4 h-4 text-purple-500" />
-                                <span>Editar (Wizard)</span>
-                              </button>
+                          {openDropdownId === person.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-30 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in">
+                              {invite && (
+                                <button
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleOpenEdit(invite);
+                                  }}
+                                  className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Edit className="w-4 h-4 text-purple-500" />
+                                  <span>Editar Convite (Wizard)</span>
+                                </button>
+                              )}
+
+                              {invite && (
+                                <button
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleCopyLink(invite.id);
+                                  }}
+                                  className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                                >
+                                  {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-purple-500" />}
+                                  <span>{copiedToken === invite.id ? 'Link Copiado!' : 'Copiar Link Hotsite'}</span>
+                                </button>
+                              )}
+
+                              {invite && (
+                                <a
+                                  href={`/convite/${invite.id}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={() => setOpenDropdownId(null)}
+                                  className="w-full text-left px-3.5 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
+                                >
+                                  <ExternalLink className="w-4 h-4 text-blue-500" />
+                                  <span>Acessar Hotsite</span>
+                                </a>
+                              )}
+
+                              {person.table_id && (
+                                <button
+                                  onClick={async () => {
+                                    setOpenDropdownId(null);
+                                    await unassignPersonSeat(person.id);
+                                    onRefresh();
+                                  }}
+                                  className="w-full text-left px-3.5 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Armchair className="w-4 h-4 text-amber-500" />
+                                  <span>Desalocar da Mesa</span>
+                                </button>
+                              )}
 
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   setOpenDropdownId(null);
-                                  handleCopyLink(invite.id);
-                                }}
-                                className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
-                              >
-                                {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-purple-500" />}
-                                <span>{copiedToken === invite.id ? 'Link Copiado!' : 'Copiar Link'}</span>
-                              </button>
-
-                              <a
-                                href={`/convite/${invite.id}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={() => setOpenDropdownId(null)}
-                                className="w-full text-left px-3.5 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
-                              >
-                                <ExternalLink className="w-4 h-4 text-blue-500" />
-                                <span>Acessar Hotsite</span>
-                              </a>
-
-                              <button
-                                onClick={() => {
-                                  setOpenDropdownId(null);
-                                  handleDelete(invite.id);
+                                  if (!confirm(`Tem certeza que deseja excluir "${person.name}" do evento? O assento será libertado, a vaga do buffet devolvida e a pessoa removida do sistema.`)) return;
+                                  await deletePerson(person.id);
+                                  onRefresh();
                                 }}
                                 className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4 text-rose-500" />
-                                <span>Excluir Convite</span>
+                                <span>Excluir Convidado</span>
                               </button>
                             </div>
                           )}

@@ -366,6 +366,20 @@ export async function deletePerson(id: string): Promise<void> {
   const persons = await getAllPersons();
   const filtered = persons.filter((p) => p.id !== id);
 
+  const invites = await getAllInvites();
+  for (const inv of invites) {
+    if (inv.head_person_id === id) {
+      await deleteInvite(inv.id);
+    } else if (inv.companion_person_ids?.includes(id)) {
+      const updatedCompanions = inv.companion_person_ids.filter((cId) => cId !== id);
+      await saveInvite({
+        ...inv,
+        companion_person_ids: updatedCompanions,
+        max_guests: 1 + updatedCompanions.length,
+      });
+    }
+  }
+
   if (isFirebaseConfigured) {
     try {
       await deleteDoc(doc(db, 'persons', id));

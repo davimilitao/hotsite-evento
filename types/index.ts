@@ -9,6 +9,7 @@ export interface Guest {
   phone?: string;
   dietary?: string;
   status?: InviteStatus;
+  requested_date?: string;
 }
 
 export type InviteStatus = 'pending' | 'confirmed' | 'declined' | 'pending_date' | 'expired';
