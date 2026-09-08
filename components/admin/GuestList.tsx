@@ -29,6 +29,10 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   Armchair,
+  User,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -47,12 +51,16 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
-  // Form State para Criar/Editar Convite Agrupado
+  // Estados do Wizard Step-by-Step
+  const [wizardStep, setWizardStep] = useState<number>(1);
+  const [inviteType, setInviteType] = useState<'individual' | 'family'>('family');
   const [headPersonId, setHeadPersonId] = useState('');
   const [companionPersonIds, setCompanionPersonIds] = useState<string[]>([]);
   const [phone, setPhone] = useState('');
   const [tier, setTier] = useState<InviteTier>('main');
   const [individualDeadline, setIndividualDeadline] = useState('');
+  const [familySlotsCount, setFamilySlotsCount] = useState<number>(2);
+  const [searchPersonQuery, setSearchPersonQuery] = useState<string>('');
   const [loadingForm, setLoadingForm] = useState(false);
 
   // Métricas 1:1 de Pessoas & Assentos
@@ -63,9 +71,11 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
   const mainInvites = invites.filter((i) => !i.tier || i.tier === 'main');
   const reserveInvites = invites.filter((i) => i.tier === 'reserve');
+  const confirmedInvites = invites.filter((i) => i.status === 'confirmed');
+  const declinedInvites = invites.filter((i) => i.status === 'declined');
   const sentInvites = invites.filter((i) => i.sent_status === 'sent');
 
-  // Pessoas elegíveis para convite (Devam POSSUIR mesa atribuída)
+  // Pessoas elegíveis para convite (Com mesa atribuída)
   const seatedPersonsEligibleForInvite = persons.filter(
     (p) => p.table_id && (!p.invite_id || p.invite_id === editingInvite?.id)
   );
@@ -75,7 +85,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     100
   );
 
-  // Filtro de Convites
+  // Filtro de Convites no Painel
   const filteredInvites = invites.filter((invite) => {
     const headPerson = persons.find((p) => p.id === invite.head_person_id);
     const companionPersons = persons.filter((p) => invite.companion_person_ids?.includes(p.id));
@@ -115,42 +125,57 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     }
 
     setEditingInvite(null);
+    setWizardStep(1);
+    setInviteType('family');
     const firstEligible = seatedPersonsEligibleForInvite[0];
     setHeadPersonId(firstEligible ? firstEligible.id : '');
     setCompanionPersonIds([]);
+    setFamilySlotsCount(2);
     setPhone(firstEligible ? firstEligible.phone || '' : '');
     setTier('main');
     setIndividualDeadline('');
+    setSearchPersonQuery('');
     setIsAddOpen(true);
   };
 
   const handleOpenEdit = (invite: Invite) => {
     setEditingInvite(invite);
+    setWizardStep(1);
+    setInviteType(invite.invite_type || (invite.companion_person_ids && invite.companion_person_ids.length > 0 ? 'family' : 'individual'));
     setHeadPersonId(invite.head_person_id || '');
     setCompanionPersonIds(invite.companion_person_ids || []);
+    setFamilySlotsCount(1 + (invite.companion_person_ids?.length || 0));
     setPhone(invite.phone || '');
     setTier(invite.tier || 'main');
     setIndividualDeadline(invite.individual_deadline ? invite.individual_deadline.slice(0, 10) : '');
+    setSearchPersonQuery('');
     setIsAddOpen(true);
   };
 
-  const handleSaveInviteForm = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveInviteForm = async (dispatchWhatsApp: boolean = false) => {
     if (!headPersonId) {
       alert('Selecione o Mandante (titular) do convite entre as pessoas com assento na mesa!');
+      return;
+    }
+
+    const cleanDigits = phone.replace(/\D/g, '');
+    if (cleanDigits.length < 8) {
+      alert('O número de telefone com DDD é obrigatório para salvar e enviar o convite pelo WhatsApp.');
       return;
     }
 
     setLoadingForm(true);
 
     const headPerson = persons.find((p) => p.id === headPersonId);
-    const maxGuests = 1 + companionPersonIds.length;
+    const companions = inviteType === 'individual' ? [] : companionPersonIds;
+    const maxGuests = 1 + companions.length;
 
     try {
-      await saveInvite({
+      const saved = await saveInvite({
         id: editingInvite ? editingInvite.id : undefined,
+        invite_type: inviteType,
         head_person_id: headPersonId,
-        companion_person_ids: companionPersonIds,
+        companion_person_ids: companions,
         head_name: headPerson ? headPerson.name : 'Convidado',
         phone,
         max_guests: maxGuests,
@@ -161,6 +186,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
       setIsAddOpen(false);
       onRefresh();
+
+      if (dispatchWhatsApp && saved) {
+        await markInviteAsSent(saved.id);
+        onRefresh();
+        const waUrl = buildWhatsAppLink(saved.head_name, saved.phone, saved.id);
+        window.open(waUrl, '_blank');
+      }
     } catch (err) {
       console.error('Erro ao salvar convite:', err);
     } finally {
@@ -168,11 +200,16 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     }
   };
 
+  const handlePromoteToMain = async (invite: Invite) => {
+    await promoteInviteToMain(invite.id);
+    onRefresh();
+  };
+
   const handleWhatsAppDispatch = async (invite: Invite) => {
     const cleanDigits = invite.phone ? invite.phone.replace(/\D/g, '') : '';
     if (!cleanDigits || cleanDigits.length < 8) {
       alert(
-        `O telefone do Mandante "${invite.head_name}" está em branco ou incompleto. Informe o DDD e o número para realizar o disparo.`
+        `O telefone de "${invite.head_name}" está em branco ou incompleto. Informe o número com DDD para realizar o disparo.`
       );
       handleOpenEdit(invite);
       return;
@@ -200,11 +237,12 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
   return (
     <div className="space-y-6">
-      {/* Dashboard de Métricas 1:1 do Buffet & Convites */}
+      {/* Dashboard de Métricas Solicitado (Print 1, 2, 3, 4) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* PRINT 1: Lista Total de Convidados */}
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lista Máster (1:1)</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lista Total de Convidados</span>
             <Users className="w-4 h-4 text-purple-500" />
           </div>
           <div>
@@ -214,9 +252,10 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           <p className="text-[10px] text-slate-400">119 nomes cadastrados</p>
         </div>
 
+        {/* PRINT 2: Convidados Já Com Mesa */}
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Com Assento (Mesas)</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Convidados Já Com Mesa</span>
             <Armchair className="w-4 h-4 text-emerald-500" />
           </div>
           <div>
@@ -228,26 +267,28 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           </div>
         </div>
 
+        {/* PRINT 3: Convidados Ainda Sem Mesa */}
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sem Mesa (Reserva)</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Convidados Ainda Sem Mesa</span>
             <CalendarClock className="w-4 h-4 text-amber-500" />
           </div>
           <div>
             <span className="text-2xl font-black text-amber-500">{unseatedPersons.length}</span>
             <span className="text-xs text-slate-400 ml-1">pessoas</span>
           </div>
-          <p className="text-[10px] text-amber-400 font-semibold">Fila de Espera</p>
+          <p className="text-[10px] text-amber-400 font-semibold">Fila de Espera (Reserva)</p>
         </div>
 
+        {/* PRINT 4: Disparos de Convites */}
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Convites Agrupados</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Disparos de Convites</span>
             <Send className="w-4 h-4 text-sky-500" />
           </div>
           <div>
             <span className="text-2xl font-black text-sky-500">{invites.length}</span>
-            <span className="text-xs text-slate-400 ml-1">grupos ({sentInvites.length} env)</span>
+            <span className="text-xs text-slate-400 ml-1">criados ({sentInvites.length} env)</span>
           </div>
           <p className="text-[10px] text-slate-400">Disparos pelo WhatsApp</p>
         </div>
@@ -259,7 +300,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         <div>
           <strong className="text-amber-300 font-black">Regra de Ouro da Festa:</strong>
           <span>
-            {" "}Para criar um convite e enviar no WhatsApp, a pessoa física <strong>deve primeiramente ter um assento atribuído</strong> em uma mesa no salão! As pessoas sem mesa permanecem na lista de reserva.
+            {" "}Para enviar o convite no WhatsApp (Individual ou Família), a pessoa física <strong>deve ter um assento atribuído</strong> na mesa do salão. As pessoas sem mesa permanecem na lista de reserva.
           </span>
         </div>
       </div>
@@ -297,12 +338,12 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               onClick={handleOpenAdd}
               className="min-h-[44px] col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> <span>Criar Convite (Mandante + Acompanhantes)</span>
+              <Plus className="w-4 h-4" /> <span>Novo Convite (Wizard)</span>
             </button>
           </div>
         </div>
 
-        {/* Filtros Limpos */}
+        {/* Filtros */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-700/60 pt-3 pb-1">
           <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtrar:</span>
           {[
@@ -331,14 +372,14 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
-      {/* LISTA / TABELA DE CONVITES AGRUPADOS */}
+      {/* TABELA DE CONVITES CRIADOS */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                <th className="py-3.5 px-4">Mandante (Titular) & WhatsApp</th>
-                <th className="py-3.5 px-4">Acompanhantes da Família (1:1)</th>
+                <th className="py-3.5 px-4">Titular / WhatsApp</th>
+                <th className="py-3.5 px-4">Tipo & Pessoas (1:1)</th>
                 <th className="py-3.5 px-4">Mesa Atribuída</th>
                 <th className="py-3.5 px-4">Status & Prazos</th>
                 <th className="py-3.5 px-4 text-center">Disparo WhatsApp</th>
@@ -349,7 +390,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               {filteredInvites.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
-                    Nenhum convite cadastrado ainda. Selecione pessoas com assento definido para criar convites!
+                    Nenhum convite cadastrado ainda. Clique em &quot;Novo Convite (Wizard)&quot; para criar!
                   </td>
                 </tr>
               ) : (
@@ -357,6 +398,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   const deadlineInfo = getDeadlineInfo(invite, config.deadline_rsvp);
                   const isSent = invite.sent_status === 'sent';
                   const isReserve = invite.tier === 'reserve';
+                  const isFamily = invite.invite_type === 'family' || (invite.companion_person_ids && invite.companion_person_ids.length > 0);
 
                   const headPerson = persons.find((p) => p.id === invite.head_person_id);
                   const companionPersons = persons.filter((p) => invite.companion_person_ids?.includes(p.id));
@@ -364,7 +406,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
                   return (
                     <tr key={invite.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                      {/* Mandante */}
+                      {/* Titular */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
                           <span className="font-extrabold text-slate-800 dark:text-slate-100">{invite.head_name}</span>
@@ -378,19 +420,23 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         <div className="text-[10px] font-mono text-purple-500 mt-0.5">/convite/{invite.id}</div>
                       </td>
 
-                      {/* Acompanhantes */}
+                      {/* Tipo & Acompanhantes */}
                       <td className="py-3.5 px-4 space-y-1">
-                        <div className="font-bold text-slate-700 dark:text-slate-300">
-                          {1 + companionPersons.length} pessoa(s) no convite
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
+                            isFamily
+                              ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300'
+                              : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300'
+                          }`}>
+                            {isFamily ? `Família (${1 + companionPersons.length} pes)` : 'Individual (1:1)'}
+                          </span>
                         </div>
-                        {companionPersons.length > 0 ? (
+                        {isFamily && companionPersons.length > 0 && (
                           <div className="space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                             {companionPersons.map((cp) => (
                               <div key={cp.id}>• {cp.name}</div>
                             ))}
                           </div>
-                        ) : (
-                          <div className="text-[11px] text-slate-400 italic">Convite individual (sem acompanhantes)</div>
                         )}
                       </td>
 
@@ -424,7 +470,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         </div>
                       </td>
 
-                      {/* WhatsApp */}
+                      {/* Disparo WhatsApp */}
                       <td className="py-3.5 px-4 text-center">
                         <button
                           onClick={() => handleWhatsAppDispatch(invite)}
@@ -446,7 +492,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         <button
                           onClick={() => handleOpenEdit(invite)}
                           className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                          title="Editar convite completo"
+                          title="Editar convite no Wizard"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
@@ -485,117 +531,243 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
-      {/* Modal Criar / Editar Convite Agrupado */}
+      {/* PRINT 5: MODAL WIZARD STEP-BY-STEP PARA NOVO / EDITAR CONVITE */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
-                {editingInvite ? 'Editar Convite Agrupado' : 'Novo Convite Agrupado (WhatsApp)'}
-              </h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-slate-200 dark:border-slate-800 transition-all">
+            {/* Header do Wizard com Barra de Progresso */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 bg-purple-600 text-white rounded-full flex items-center justify-center font-black text-xs">
+                    {wizardStep}
+                  </span>
+                  <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                    {editingInvite ? 'Editar Convite' : 'Criar Convite (Wizard)'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsAddOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Indicador de Passos */}
+              <div className="flex items-center justify-between gap-1 text-[10px] font-extrabold text-slate-400">
+                <span className={wizardStep >= 1 ? 'text-purple-500 font-black' : ''}>1. Tipo</span>
+                <span className="text-slate-600">•</span>
+                <span className={wizardStep >= 2 ? 'text-purple-500 font-black' : ''}>2. Responsável</span>
+                <span className="text-slate-600">•</span>
+                <span className={wizardStep >= 3 ? 'text-purple-500 font-black' : ''}>3. Contato</span>
+                {inviteType === 'family' && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className={wizardStep >= 4 ? 'text-purple-500 font-black' : ''}>4. Integrantes</span>
+                  </>
+                )}
+                <span className="text-slate-600">•</span>
+                <span className={wizardStep === (inviteType === 'family' ? 5 : 4) ? 'text-purple-500 font-black' : ''}>Final. Revisar</span>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveInviteForm} className="space-y-4">
-              {/* Etapa 1: Mandante (Titular) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  1. Mandante (Titular do Disparo com Assento em Mesa) *
-                </label>
-                <select
-                  required
-                  value={headPersonId}
-                  onChange={(e) => {
-                    setHeadPersonId(e.target.value);
-                    const selectedP = persons.find((p) => p.id === e.target.value);
-                    if (selectedP?.phone) setPhone(selectedP.phone);
-                  }}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100"
-                >
-                  <option value="">-- Selecione o Mandante --</option>
-                  {seatedPersonsEligibleForInvite.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (Mesa atribuída)
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* CORPO DO PASSO ATUAL DO WIZARD */}
 
-              {/* Etapa 2: Telefone com DDD para WhatsApp */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  2. Telefone WhatsApp do Mandante (com DDD) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: 11999998888"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
-                />
-              </div>
+            {/* PASSO 1: Seleção do Tipo de Convite (Individual vs Família) */}
+            {wizardStep === 1 && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Selecione o tipo de experiência para este disparo:
+                </p>
 
-              {/* Etapa 3: Seleção dos Acompanhantes da Família */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  3. Acompanhantes da Família (Pessoas da Lista com Mesa)
-                </label>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700">
-                  {seatedPersonsEligibleForInvite
-                    .filter((p) => p.id !== headPersonId)
-                    .map((p) => {
-                      const isSelected = companionPersonIds.includes(p.id);
-                      return (
-                        <label
-                          key={p.id}
-                          className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer hover:bg-slate-200/50 p-1.5 rounded-lg"
-                        >
-                          <span>{p.name}</span>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setCompanionPersonIds([...companionPersonIds, p.id]);
-                              } else {
-                                setCompanionPersonIds(companionPersonIds.filter((id) => id !== p.id));
-                              }
-                            }}
-                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                          />
-                        </label>
-                      );
-                    })}
-
-                  {seatedPersonsEligibleForInvite.filter((p) => p.id !== headPersonId).length === 0 && (
-                    <p className="text-[11px] text-slate-400 italic">
-                      Nenhuma outra pessoa com assento livre para adicionar como acompanhante.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Tipo de Lista *
-                  </label>
-                  <select
-                    value={tier}
-                    onChange={(e) => setTier(e.target.value as any)}
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100"
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setInviteType('individual')}
+                    className={`p-4 rounded-2xl border-2 text-left space-y-2 transition-all cursor-pointer ${
+                      inviteType === 'individual'
+                        ? 'border-purple-600 bg-purple-500/10 text-purple-400'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                    }`}
                   >
-                    <option value="main">Lista Principal (Oficial)</option>
-                    <option value="reserve">Lista de Espera (Reserva)</option>
-                  </select>
+                    <User className="w-6 h-6 text-purple-500" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Convite Individual</h4>
+                      <p className="text-[10px] text-slate-400">1 convidado (1:1 com assento)</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInviteType('family')}
+                    className={`p-4 rounded-2xl border-2 text-left space-y-2 transition-all cursor-pointer ${
+                      inviteType === 'family'
+                        ? 'border-purple-600 bg-purple-500/10 text-purple-400'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                    }`}
+                  >
+                    <Users className="w-6 h-6 text-purple-500" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Convite Família</h4>
+                      <p className="text-[10px] text-slate-400">Responsável + acompanhantes</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 2: Buscar Convidado ou Responsável da Família por Digitação */}
+            {wizardStep === 2 && (
+              <div className="space-y-4">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {inviteType === 'individual'
+                    ? 'Selecione o convidado na lista (com assento livre na mesa):'
+                    : 'Quem irá confirmar a presença dos outros convidados? (Responsável/Mandante):'}
+                </label>
+
+                {/* Campo de Busca por Caractere Digitado */}
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Digite para buscar nome (ex: Ana, Carlos, Barreto)..."
+                    value={searchPersonQuery}
+                    onChange={(e) => setSearchPersonQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                  />
                 </div>
 
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  {(() => {
+                    const filtered = seatedPersonsEligibleForInvite.filter((p) =>
+                      p.name.toLowerCase().includes(searchPersonQuery.toLowerCase().trim())
+                    );
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-xs text-slate-400">
+                          Nenhum convidado com assento livre encontrado para &quot;<strong className="text-white">{searchPersonQuery}</strong>&quot;.
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setHeadPersonId(p.id);
+                          if (p.phone) setPhone(p.phone);
+                        }}
+                        className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+                          headPersonId === p.id
+                            ? 'bg-purple-600 text-white border-purple-500 shadow-md'
+                            : 'bg-slate-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-950/40 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100'
+                        }`}
+                      >
+                        <span>{p.name}</span>
+                        {headPersonId === p.id && <Check className="w-4 h-4 text-white" />}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 3: Confirmar Contato / Telefone WhatsApp com DDD */}
+            {wizardStep === 3 && (
+              <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Prazo Limite (opcional)
+                    Confirme o número de contato WhatsApp (com DDD) *
+                  </label>
+                  <p className="text-[10px] text-slate-400 mb-2">
+                    Exibe o número cadastrado ou em branco. <strong>Só permite seguir se houver número válido com DDD.</strong>
+                  </p>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: 11999998888"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                {phone.replace(/\D/g, '').length < 8 && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl text-xs flex items-center gap-2 font-semibold">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Por favor, digite um telefone com DDD válido para avançar no disparo do WhatsApp.</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PASSO 4 (Família): Definir Qtd de Membros e Selecionar Integrantes */}
+            {wizardStep === 4 && inviteType === 'family' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Selecione quantos convites a família terá:
+                  </label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={10}
+                    value={familySlotsCount}
+                    onChange={(e) => setFamilySlotsCount(Math.max(2, parseInt(e.target.value, 10) || 2))}
+                    className="w-20 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-center text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Selecione os outros {familySlotsCount - 1} convidado(s) da lista:
+                  </label>
+
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {seatedPersonsEligibleForInvite
+                      .filter((p) => p.id !== headPersonId)
+                      .map((p) => {
+                        const isSelected = companionPersonIds.includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                              isSelected
+                                ? 'bg-purple-100 dark:bg-purple-950/80 border-purple-400 text-purple-900 dark:text-purple-200'
+                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            <span>{p.name}</span>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCompanionPersonIds([...companionPersonIds, p.id]);
+                                } else {
+                                  setCompanionPersonIds(companionPersonIds.filter((id) => id !== p.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                            />
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO FINAL: Definição de Prazo Limite & Revisão de Mensagem */}
+            {((wizardStep === 4 && inviteType === 'individual') || (wizardStep === 5 && inviteType === 'family')) && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Defina a data limite de resposta (opcional):
                   </label>
                   <input
                     type="date"
@@ -604,29 +776,83 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                     className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
                   />
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+                <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                    Prévia da Mensagem do WhatsApp:
+                  </span>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                    {inviteType === 'individual' ? (
+                      <>
+                        &quot;Olá <strong>{(persons.find((p) => p.id === headPersonId)?.name) || 'Convidado'}</strong>! Você foi convidado(a) para a Festa de 40 Anos da Fernanda Seppi ✨. Confirme sua presença pelo link:&quot;
+                      </>
+                    ) : (
+                      <>
+                        &quot;Olá <strong>{(persons.find((p) => p.id === headPersonId)?.name) || 'Responsável'}</strong>! Você e sua família foram convidados para a Festa de 40 Anos da Fernanda Seppi ✨. Acesse o link para confirmar a presença de todos:&quot;
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* NAVEGAÇÃO DOS BOTÕES DO WIZARD (ANTERIOR / PRÓXIMO / SALVAR) */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+              {wizardStep > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setIsAddOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+                  onClick={() => setWizardStep(wizardStep - 1)}
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
                 >
-                  Cancelar
+                  <ChevronLeft className="w-4 h-4" /> Voltar
                 </button>
-                <button
-                  type="submit"
-                  disabled={loadingForm}
-                  className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
-                >
-                  {loadingForm ? 'Salvando...' : editingInvite ? 'Salvar Alterações' : 'Criar Convite Agrupado'}
-                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                {wizardStep < (inviteType === 'family' ? 5 : 4) ? (
+                  <button
+                    type="button"
+                    disabled={
+                      (wizardStep === 2 && !headPersonId) ||
+                      (wizardStep === 3 && phone.replace(/\D/g, '').length < 8)
+                    }
+                    onClick={() => setWizardStep(wizardStep + 1)}
+                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Avançar</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={loadingForm}
+                      onClick={() => handleSaveInviteForm(false)}
+                      className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
+                    >
+                      Salvar Apenas
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loadingForm}
+                      onClick={() => handleSaveInviteForm(true)}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4 text-amber-300" />
+                      <span>Salvar & Enviar WhatsApp</span>
+                    </button>
+                  </>
+                )}
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Modal Importador em Massa */}
       <BulkImporter isOpen={isBulkOpen} onClose={() => setIsBulkOpen(false)} onSuccess={onRefresh} />
     </div>
   );

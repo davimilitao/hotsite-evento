@@ -175,7 +175,7 @@ export default function AdminPage() {
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Convidados & Disparos</span>
+              <span>Lista de Convidados e Convites</span>
             </button>
 
             <button

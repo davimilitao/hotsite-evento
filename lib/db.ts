@@ -536,6 +536,7 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
     } else {
       fullInvite = {
         id: invite.id,
+        invite_type: invite.invite_type || 'family',
         head_person_id: invite.head_person_id,
         companion_person_ids: invite.companion_person_ids || [],
         head_name: invite.head_name || 'Convidado',
@@ -557,6 +558,7 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
     const newToken = generateInviteToken(invite.head_name || 'Convidado');
     fullInvite = {
       id: newToken,
+      invite_type: invite.invite_type || 'family',
       head_person_id: invite.head_person_id,
       companion_person_ids: invite.companion_person_ids || [],
       head_name: invite.head_name || 'Convidado',

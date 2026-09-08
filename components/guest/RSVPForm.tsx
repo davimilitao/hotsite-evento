@@ -322,6 +322,50 @@ export function RSVPForm({ invite, config, onUpdate, onSubmittedFeedback }: RSVP
                       </div>
                     </div>
 
+                    {/* Status Individual do Membro (para convites Família ou múltiplos integrantes) */}
+                    {(invite.invite_type === 'family' || (invite.guests && invite.guests.length > 1)) && (
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                          Status deste integrante:
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleGuestChange(index, 'status', 'confirmed')}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border ${
+                              (guest.status || 'confirmed') === 'confirmed'
+                                ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            <span>🎉 Vou</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGuestChange(index, 'status', 'pending_date')}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border ${
+                              guest.status === 'pending_date'
+                                ? 'bg-purple-500 text-white border-purple-600 shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            <span>🤔 Prazo</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGuestChange(index, 'status', 'declined')}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border ${
+                              guest.status === 'declined'
+                                ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            <span>😔 Não vou</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Restrições alimentares opcional */}
                     <div className="flex items-center gap-2 pt-1">
                       <Utensils className="w-3.5 h-3.5 text-slate-400 shrink-0" />

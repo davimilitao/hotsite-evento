@@ -2,11 +2,13 @@ export type GuestType = 'adult' | 'child';
 
 export interface Guest {
   id?: string;
+  person_id?: string;
   name: string;
   type: GuestType;
   age?: number;
   phone?: string;
   dietary?: string;
+  status?: InviteStatus;
 }
 
 export type InviteStatus = 'pending' | 'confirmed' | 'declined' | 'pending_date' | 'expired';
@@ -52,6 +54,7 @@ export interface Person {
 
 export interface Invite {
   id: string; // Token (ex: carlos-silva-9x7k)
+  invite_type?: 'individual' | 'family';
   head_person_id?: string;
   companion_person_ids?: string[];
   head_name: string;
