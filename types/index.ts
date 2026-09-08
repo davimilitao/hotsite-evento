@@ -37,8 +37,23 @@ export interface SurpriseContribution {
   updated_at?: string;
 }
 
+export interface Person {
+  id: string;
+  name: string;
+  phone?: string;
+  age?: number;
+  type?: GuestType;
+  table_id?: string | null;
+  seat_number?: number | null;
+  invite_id?: string | null;
+  role_in_invite?: 'head' | 'companion' | null;
+  notes?: string;
+}
+
 export interface Invite {
   id: string; // Token (ex: carlos-silva-9x7k)
+  head_person_id?: string;
+  companion_person_ids?: string[];
   head_name: string;
   phone: string;
   max_guests: number;

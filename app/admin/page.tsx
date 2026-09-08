@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData } from '@/lib/db';
+import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData, getAllPersons } from '@/lib/db';
 import { isFirebaseConfigured } from '@/lib/firebase';
-import { Invite, Table, EventConfig, UserRole } from '@/types';
+import { Invite, Table, EventConfig, UserRole, Person } from '@/types';
 import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
 import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
@@ -20,6 +20,7 @@ export default function AdminPage() {
   const [currentRole, setCurrentRole] = useState<UserRole>('admin');
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
+  const [persons, setPersons] = useState<Person[]>([]);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
@@ -35,15 +36,17 @@ export default function AdminPage() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [invitesData, tablesData, configData] = await Promise.all([
+      const [invitesData, tablesData, configData, personsData] = await Promise.all([
         getAllInvites(),
         getAllTables(),
         getEventConfig(),
+        getAllPersons(),
       ]);
 
       setInvites(invitesData);
       setTables(tablesData);
       setConfig(configData);
+      setPersons(personsData);
     } catch (err) {
       console.error('Erro ao carregar dados do admin:', err);
     } finally {
@@ -223,7 +226,7 @@ export default function AdminPage() {
 
       {/* Conteúdo da Aba Ativa */}
       <div className="max-w-6xl mx-auto px-4 pt-6">
-        {loading && invites.length === 0 ? (
+        {loading && persons.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mb-3" />
             <p className="text-sm font-medium text-slate-400">Carregando painel de gestão...</p>
@@ -231,9 +234,9 @@ export default function AdminPage() {
         ) : (
           <>
             {activeTab === 'guests' && config && (
-              <GuestList invites={invites} tables={tables} config={config} onRefresh={loadAll} />
+              <GuestList invites={invites} tables={tables} persons={persons} config={config} onRefresh={loadAll} />
             )}
-            {activeTab === 'tables' && <TableManager tables={tables} invites={invites} onRefresh={loadAll} />}
+            {activeTab === 'tables' && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} />}
             {activeTab === 'surprise' && currentRole !== 'birthday_person' && (
               <SurpriseDashboard invites={invites} onRefresh={loadAll} />
             )}
@@ -244,3 +247,4 @@ export default function AdminPage() {
     </main>
   );
 }
+

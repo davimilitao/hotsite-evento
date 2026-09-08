@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
@@ -78,6 +78,9 @@ export const INITIAL_TABLES: Table[] = [
   { id: 'mesa-03', name: 'Mesa 03 - Colegas de Trabalho', capacity: 8, shape: 'round', description: 'Próxima ao buffet' },
   { id: 'mesa-04', name: 'Mesa 04 - Família Expandida', capacity: 8, shape: 'round', description: 'Ambiente tranquilo' },
   { id: 'mesa-05', name: 'Mesa 05 - Hóspedes & Viagem', capacity: 8, shape: 'round', description: 'Próxima ao bar de drinks' },
+  { id: 'mesa-06', name: 'Mesa 06 - Primos & Família', capacity: 8, shape: 'round', description: 'Setor VIP' },
+  { id: 'mesa-07', name: 'Mesa 07 - Convidado Especial', capacity: 8, shape: 'round', description: 'Próxima ao palco' },
+  { id: 'mesa-08', name: 'Mesa 08 - Amigos Próximos', capacity: 8, shape: 'round', description: 'Setor da varanda' },
 ];
 
 const RAW_GUEST_NAMES = [
@@ -202,38 +205,26 @@ const RAW_GUEST_NAMES = [
   'YASMIM',
 ];
 
-export const INITIAL_INVITES: Invite[] = RAW_GUEST_NAMES.map((name, index) => {
-  const slug = name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  const id = `${slug || 'convidado'}-${index + 1}`;
+// Lista Máster de 119 Pessoas Físicas (1:1 com os assentos)
+export const INITIAL_PERSONS: Person[] = RAW_GUEST_NAMES.map((name, index) => ({
+  id: `person-${index + 1}`,
+  name: name,
+  phone: '',
+  type: 'adult',
+  table_id: null,
+  seat_number: null,
+  invite_id: null,
+  role_in_invite: null,
+}));
 
-  return {
-    id,
-    head_name: name,
-    phone: '',
-    max_guests: 1,
-    status: 'pending' as const,
-    confirmed_count: 0,
-    table_id: null,
-    tier: 'main' as const,
-    sent_status: 'not_sent' as const,
-    checked_in: false,
-    created_at: new Date('2026-09-07T12:00:00.000Z').toISOString(),
-    updated_at: new Date('2026-09-07T12:00:00.000Z').toISOString(),
-    guests: [],
-  };
-});
+export const INITIAL_INVITES: Invite[] = [];
 
-// Chaves do LocalStorage v7 (119 convidados - 1 vaga por padrão)
+// Chaves do LocalStorage v8 (1:1 Pessoas vs Assentos e Convites Agrupados)
 const LS_KEYS = {
-  CONFIG: 'festa_config_v7',
-  TABLES: 'festa_tables_v7',
-  INVITES: 'festa_invites_v7_1vaga',
+  CONFIG: 'festa_config_v8',
+  TABLES: 'festa_tables_v8',
+  PERSONS: 'festa_persons_v8_1to1',
+  INVITES: 'festa_invites_v8_grouped',
 };
 
 function getLS<T>(key: string, defaultData: T): T {
@@ -256,7 +247,7 @@ function setLS<T>(key: string, data: T): void {
 }
 
 /**
- * Popula o banco de dados do Firestore com os dados reais de Fernanda Seppi
+ * Popula o banco de dados do Firestore com os dados de 119 pessoas reais de Fernanda Seppi
  */
 export async function seedFirestoreData(): Promise<void> {
   if (typeof window !== 'undefined') {
@@ -265,6 +256,7 @@ export async function seedFirestoreData(): Promise<void> {
     } catch {}
     setLS(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
     setLS(LS_KEYS.TABLES, INITIAL_TABLES);
+    setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
     setLS(LS_KEYS.INVITES, INITIAL_INVITES);
   }
 
@@ -278,12 +270,131 @@ export async function seedFirestoreData(): Promise<void> {
     await setDoc(doc(db, 'tables', table.id), table);
   }
 
-  for (const invite of INITIAL_INVITES) {
-    await setDoc(doc(db, 'invites', invite.id), invite);
+  for (const person of INITIAL_PERSONS) {
+    await setDoc(doc(db, 'persons', person.id), person);
   }
 }
 
-// ---- API DO BANCO DE DADOS (COM DEEP MERGE PARA GARANTIR 100% PERSISTÊNCIA) ----
+// ---- API DO BANCO DE DADOS PARA PESSOAS (1:1) ----
+
+export async function getAllPersons(): Promise<Person[]> {
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(collection(db, 'persons'));
+      if (!snap.empty && snap.docs.length >= 50) {
+        return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Person));
+      } else {
+        console.log('Populando Firestore com as 119 pessoas físicas...');
+        for (const person of INITIAL_PERSONS) {
+          await setDoc(doc(db, 'persons', person.id), person);
+        }
+        setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
+        return INITIAL_PERSONS;
+      }
+    } catch (err) {
+      console.warn('Erro ao buscar pessoas no Firestore:', err);
+    }
+  }
+
+  const cached = getLS<Person[]>(LS_KEYS.PERSONS, INITIAL_PERSONS);
+  if (!cached || cached.length < 50) {
+    setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
+    return INITIAL_PERSONS;
+  }
+
+  return cached;
+}
+
+export async function savePerson(person: Partial<Person> & { id?: string }): Promise<Person> {
+  const persons = await getAllPersons();
+  let fullPerson: Person;
+
+  if (person.id) {
+    const existingIndex = persons.findIndex((p) => p.id === person.id);
+    if (existingIndex >= 0) {
+      fullPerson = { ...persons[existingIndex], ...person };
+      persons[existingIndex] = fullPerson;
+    } else {
+      fullPerson = {
+        id: person.id,
+        name: person.name || 'Sem nome',
+        phone: person.phone || '',
+        type: person.type || 'adult',
+        table_id: person.table_id || null,
+        seat_number: person.seat_number ?? null,
+        invite_id: person.invite_id || null,
+        role_in_invite: person.role_in_invite || null,
+        notes: person.notes || '',
+      };
+      persons.push(fullPerson);
+    }
+  } else {
+    const newId = `person-${Date.now()}`;
+    fullPerson = {
+      id: newId,
+      name: person.name || 'Sem nome',
+      phone: person.phone || '',
+      type: person.type || 'adult',
+      table_id: person.table_id || null,
+      seat_number: person.seat_number ?? null,
+      invite_id: person.invite_id || null,
+      role_in_invite: person.role_in_invite || null,
+      notes: person.notes || '',
+    };
+    persons.push(fullPerson);
+  }
+
+  if (isFirebaseConfigured) {
+    try {
+      await setDoc(doc(db, 'persons', fullPerson.id), fullPerson);
+    } catch (err) {
+      console.error('Erro ao salvar pessoa no Firestore:', err);
+    }
+  }
+
+  setLS(LS_KEYS.PERSONS, persons);
+  return fullPerson;
+}
+
+export async function deletePerson(id: string): Promise<void> {
+  const persons = await getAllPersons();
+  const filtered = persons.filter((p) => p.id !== id);
+
+  if (isFirebaseConfigured) {
+    try {
+      await deleteDoc(doc(db, 'persons', id));
+    } catch (err) {
+      console.error('Erro ao deletar pessoa no Firestore:', err);
+    }
+  }
+
+  setLS(LS_KEYS.PERSONS, filtered);
+}
+
+export async function assignPersonToSeat(personId: string, tableId: string, seatNumber: number): Promise<Person | null> {
+  const person = (await getAllPersons()).find((p) => p.id === personId);
+  if (!person) return null;
+
+  return savePerson({
+    ...person,
+    table_id: tableId,
+    seat_number: seatNumber,
+  });
+}
+
+export async function unassignPersonSeat(personId: string): Promise<Person | null> {
+  const person = (await getAllPersons()).find((p) => p.id === personId);
+  if (!person) return null;
+
+  // Se a pessoa estiver associada a um convite, precisamos verificar o impacto
+  return savePerson({
+    ...person,
+    table_id: null,
+    seat_number: null,
+  });
+}
+
+// ---- API DO BANCO DE DADOS (CONFIG, CONVITES E MESAS) ----
 
 export async function getEventConfig(): Promise<EventConfig> {
   let mergedConfig: EventConfig = { ...INITIAL_EVENT_CONFIG };
@@ -383,28 +494,13 @@ export async function getAllInvites(): Promise<Invite[]> {
   if (isFirebaseConfigured) {
     try {
       const snap = await getDocs(collection(db, 'invites'));
-      if (!snap.empty && snap.docs.length >= 50) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Invite));
-      } else {
-        console.log('Populando Firestore com a lista dos 119 convidados...');
-        for (const invite of INITIAL_INVITES) {
-          await setDoc(doc(db, 'invites', invite.id), invite);
-        }
-        setLS(LS_KEYS.INVITES, INITIAL_INVITES);
-        return INITIAL_INVITES;
-      }
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Invite));
     } catch (err) {
       console.warn('Erro ao buscar convites no Firestore:', err);
     }
   }
 
-  const cached = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
-  if (!cached || cached.length < 50) {
-    setLS(LS_KEYS.INVITES, INITIAL_INVITES);
-    return INITIAL_INVITES;
-  }
-
-  return cached;
+  return getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
 }
 
 export async function getInviteByToken(token: string): Promise<Invite | null> {
@@ -440,6 +536,8 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
     } else {
       fullInvite = {
         id: invite.id,
+        head_person_id: invite.head_person_id,
+        companion_person_ids: invite.companion_person_ids || [],
         head_name: invite.head_name || 'Convidado',
         phone: invite.phone || '',
         max_guests: invite.max_guests || 1,
@@ -459,6 +557,8 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
     const newToken = generateInviteToken(invite.head_name || 'Convidado');
     fullInvite = {
       id: newToken,
+      head_person_id: invite.head_person_id,
+      companion_person_ids: invite.companion_person_ids || [],
       head_name: invite.head_name || 'Convidado',
       phone: invite.phone || '',
       max_guests: invite.max_guests || 1,
@@ -473,6 +573,38 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
       guests: invite.guests || [],
     };
     invites.push(fullInvite);
+  }
+
+  // Sincroniza os objetos Person envolvidos
+  const persons = await getAllPersons();
+  const allInvolvedIds = new Set<string>();
+  if (fullInvite.head_person_id) allInvolvedIds.add(fullInvite.head_person_id);
+  if (fullInvite.companion_person_ids) {
+    fullInvite.companion_person_ids.forEach((cId) => allInvolvedIds.add(cId));
+  }
+
+  for (const person of persons) {
+    if (person.id === fullInvite.head_person_id) {
+      await savePerson({
+        ...person,
+        invite_id: fullInvite.id,
+        role_in_invite: 'head',
+        phone: fullInvite.phone || person.phone,
+      });
+    } else if (fullInvite.companion_person_ids?.includes(person.id)) {
+      await savePerson({
+        ...person,
+        invite_id: fullInvite.id,
+        role_in_invite: 'companion',
+      });
+    } else if (person.invite_id === fullInvite.id && !allInvolvedIds.has(person.id)) {
+      // Pessoa foi removida deste convite
+      await savePerson({
+        ...person,
+        invite_id: null,
+        role_in_invite: null,
+      });
+    }
   }
 
   if (isFirebaseConfigured) {
@@ -490,6 +622,18 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
 export async function deleteInvite(id: string): Promise<void> {
   const invites = await getAllInvites();
   const filtered = invites.filter((i) => i.id !== id);
+
+  // Desvincula as pessoas associadas a este convite
+  const persons = await getAllPersons();
+  for (const person of persons) {
+    if (person.invite_id === id) {
+      await savePerson({
+        ...person,
+        invite_id: null,
+        role_in_invite: null,
+      });
+    }
+  }
 
   if (isFirebaseConfigured) {
     try {
@@ -586,6 +730,18 @@ export async function deleteTable(id: string): Promise<void> {
   const tables = await getAllTables();
   const filtered = tables.filter((t) => t.id !== id);
 
+  // Pessoas na mesa excluída têm table_id e seat_number limpos
+  const persons = await getAllPersons();
+  for (const p of persons) {
+    if (p.table_id === id) {
+      await savePerson({
+        ...p,
+        table_id: null,
+        seat_number: null,
+      });
+    }
+  }
+
   if (isFirebaseConfigured) {
     try {
       await deleteDoc(doc(db, 'tables', id));
@@ -623,18 +779,21 @@ export async function bulkImportInvites(
   for (const item of rawInvites) {
     const cleanName = item.head_name ? item.head_name.trim() : '';
     if (cleanName) {
-      await saveInvite({
-        head_name: cleanName,
-        phone: item.phone ? item.phone.trim() : '',
-        max_guests: item.max_guests || 2,
-        status: 'pending',
-        tier: item.tier || 'main',
-        sent_status: 'not_sent',
-      });
+      // Cria a pessoa se não existir
+      const persons = await getAllPersons();
+      let person = persons.find((p) => p.name.toLowerCase() === cleanName.toLowerCase());
+      if (!person) {
+        person = await savePerson({
+          name: cleanName,
+          phone: item.phone ? item.phone.trim() : '',
+          type: 'adult',
+        });
+      }
       count++;
     }
   }
   return count;
 }
+
 
 
