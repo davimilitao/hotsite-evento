@@ -496,17 +496,128 @@ export async function saveEventConfig(config: EventConfig): Promise<void> {
   setLS(LS_KEYS.CONFIG, config);
 }
 
-export async function getAllInvites(): Promise<Invite[]> {
-  if (isFirebaseConfigured) {
+/**
+ * Deduplica e limpa convites duplicados/órfãos globalmente.
+ * Garante no máximo 1 convite ativo por pessoa (head_person_id ou head_name).
+ */
+export function deduplicateInvitesList(invites: Invite[]): Invite[] {
+  if (!invites || invites.length === 0) return [];
+
+  let persons: Person[] = [];
+  if (typeof window !== 'undefined') {
     try {
-      const snap = await getDocs(collection(db, 'invites'));
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Invite));
-    } catch (err) {
-      console.warn('Erro ao buscar convites no Firestore:', err);
+      const cachedPersons = localStorage.getItem(LS_KEYS.PERSONS);
+      if (cachedPersons) persons = JSON.parse(cachedPersons);
+    } catch {}
+  }
+
+  // 1. Identifica IDs de pessoas que atuam como acompanhantes em algum convite
+  const companionSet = new Set<string>();
+  for (const inv of invites) {
+    if (inv.companion_person_ids && inv.companion_person_ids.length > 0) {
+      inv.companion_person_ids.forEach((id) => companionSet.add(id));
     }
   }
 
-  return getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+  // 2. Filtra convites cujos titulares sejam na verdade acompanhantes em outro convite ativo de família
+  const activeInvites = invites.filter((inv) => {
+    if (inv.head_person_id && companionSet.has(inv.head_person_id)) {
+      return false;
+    }
+    return true;
+  });
+
+  // 3. Agrupa por head_person_id ou head_name normalizado
+  const groupMap = new Map<string, Invite[]>();
+
+  for (const inv of activeInvites) {
+    let key = inv.head_person_id ? `person:${inv.head_person_id}` : `name:${(inv.head_name || '').trim().toLowerCase()}`;
+    if (!key || key === 'name:') key = `id:${inv.id}`;
+
+    const existing = groupMap.get(key) || [];
+    existing.push(inv);
+    groupMap.set(key, existing);
+  }
+
+  const result: Invite[] = [];
+
+  for (const [, group] of groupMap.entries()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+    } else {
+      const scored = group.map((inv) => {
+        let score = 0;
+
+        if (persons.some((p) => p.invite_id === inv.id)) {
+          score += 100;
+        }
+        if (inv.sent_status === 'sent') {
+          score += 20;
+        }
+        if (inv.status && inv.status !== 'pending') {
+          score += 20;
+        }
+        if (inv.phone && inv.phone.trim().length >= 8) {
+          score += 10;
+        }
+        if (inv.table_id) {
+          score += 10;
+        }
+        if (inv.companion_person_ids && inv.companion_person_ids.length > 0) {
+          score += 5;
+        }
+        const time = inv.updated_at ? new Date(inv.updated_at).getTime() : inv.created_at ? new Date(inv.created_at).getTime() : 0;
+
+        return { inv, score, time };
+      });
+
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.time - a.time;
+      });
+
+      result.push(scored[0].inv);
+    }
+  }
+
+  return result;
+}
+
+export async function getAllInvites(): Promise<Invite[]> {
+  let rawInvites: Invite[] = [];
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(collection(db, 'invites'));
+      rawInvites = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Invite));
+    } catch (err) {
+      console.warn('Erro ao buscar convites no Firestore:', err);
+      rawInvites = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+    }
+  } else {
+    rawInvites = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+  }
+
+  const deduplicated = deduplicateInvitesList(rawInvites);
+
+  if (deduplicated.length < rawInvites.length) {
+    const removedIds = rawInvites
+      .filter((raw) => !deduplicated.some((d) => d.id === raw.id))
+      .map((i) => i.id);
+
+    setLS(LS_KEYS.INVITES, deduplicated);
+
+    if (isFirebaseConfigured) {
+      for (const remId of removedIds) {
+        try {
+          await deleteDoc(doc(db, 'invites', remId));
+        } catch (e) {
+          console.warn(`Erro ao deletar convite duplicado ${remId} do Firestore:`, e);
+        }
+      }
+    }
+  }
+
+  return deduplicated;
 }
 
 export async function getInviteByToken(token: string): Promise<Invite | null> {
@@ -522,77 +633,104 @@ export async function getInviteByToken(token: string): Promise<Invite | null> {
     }
   }
 
-  const invites = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+  const invites = await getAllInvites();
   return invites.find((i) => i.id === token) || null;
 }
 
+function createFullInvite(id: string, invite: Partial<Invite>): Invite {
+  return {
+    id,
+    invite_type: invite.invite_type || 'family',
+    head_person_id: invite.head_person_id,
+    companion_person_ids: invite.companion_person_ids || [],
+    head_name: invite.head_name || 'Convidado',
+    phone: invite.phone || '',
+    max_guests: invite.max_guests || 1,
+    status: invite.status || 'pending',
+    confirmed_count: invite.confirmed_count || 0,
+    table_id: invite.table_id || null,
+    tier: invite.tier || 'main',
+    sent_status: invite.sent_status || 'not_sent',
+    checked_in: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    guests: invite.guests || [],
+    special_role: invite.special_role || 'guest',
+    counts_towards_buffet: invite.counts_towards_buffet ?? (invite.special_role ? invite.special_role === 'guest' : true),
+    special_arrival_time: invite.special_arrival_time || '',
+    custom_whatsapp_message: invite.custom_whatsapp_message || '',
+  };
+}
+
 export async function saveInvite(invite: Partial<Invite> & { id?: string }): Promise<Invite> {
-  const invites = await getAllInvites();
+  let invites = await getAllInvites();
+  let targetId = invite.id;
+
+  // Se ID não foi fornecido, buscar se já existe convite para esta pessoa (head_person_id ou head_name)
+  if (!targetId) {
+    if (invite.head_person_id) {
+      const existing = invites.find((i) => i.head_person_id === invite.head_person_id);
+      if (existing) targetId = existing.id;
+    }
+    if (!targetId && invite.head_name) {
+      const normName = invite.head_name.trim().toLowerCase();
+      const existing = invites.find((i) => i.head_name.trim().toLowerCase() === normName);
+      if (existing) targetId = existing.id;
+    }
+  }
+
+  // Tenta vincular head_person_id se não fornecido
+  const persons = await getAllPersons();
+  let headPersonId = invite.head_person_id;
+  if (!headPersonId && invite.head_name) {
+    const matchPerson = persons.find((p) => p.name.trim().toLowerCase() === invite.head_name?.trim().toLowerCase());
+    if (matchPerson) {
+      headPersonId = matchPerson.id;
+    }
+  }
+
+  // Se acompanhantes foram definidos, remove convites individuais onde esses acompanhantes eram titulares
+  if (invite.companion_person_ids && invite.companion_person_ids.length > 0) {
+    const companionSet = new Set(invite.companion_person_ids);
+    const obsoleteInvites = invites.filter((i) => i.head_person_id && companionSet.has(i.head_person_id));
+    for (const obs of obsoleteInvites) {
+      if (obs.id !== targetId) {
+        invites = invites.filter((i) => i.id !== obs.id);
+        if (isFirebaseConfigured) {
+          try {
+            await deleteDoc(doc(db, 'invites', obs.id));
+          } catch (e) {}
+        }
+      }
+    }
+  }
+
   let fullInvite: Invite;
 
-  if (invite.id) {
-    const existingIndex = invites.findIndex((i) => i.id === invite.id);
+  if (targetId) {
+    const existingIndex = invites.findIndex((i) => i.id === targetId);
     if (existingIndex >= 0) {
+      const existing = invites[existingIndex];
       fullInvite = {
-        ...invites[existingIndex],
+        ...existing,
         ...invite,
+        id: targetId,
+        head_person_id: headPersonId || existing.head_person_id,
+        head_name: invite.head_name || existing.head_name,
         updated_at: new Date().toISOString(),
       };
       invites[existingIndex] = fullInvite;
     } else {
-      fullInvite = {
-        id: invite.id,
-        invite_type: invite.invite_type || 'family',
-        head_person_id: invite.head_person_id,
-        companion_person_ids: invite.companion_person_ids || [],
-        head_name: invite.head_name || 'Convidado',
-        phone: invite.phone || '',
-        max_guests: invite.max_guests || 1,
-        status: invite.status || 'pending',
-        confirmed_count: invite.confirmed_count || 0,
-        table_id: invite.table_id || null,
-        tier: invite.tier || 'main',
-        sent_status: invite.sent_status || 'not_sent',
-        checked_in: invite.checked_in || false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        guests: invite.guests || [],
-        special_role: invite.special_role || 'guest',
-        counts_towards_buffet: invite.counts_towards_buffet ?? (invite.special_role ? invite.special_role === 'guest' : true),
-        special_arrival_time: invite.special_arrival_time || '',
-        custom_whatsapp_message: invite.custom_whatsapp_message || '',
-      };
+      fullInvite = createFullInvite(targetId, { ...invite, head_person_id: headPersonId });
       invites.push(fullInvite);
     }
   } else {
     const newToken = generateInviteToken(invite.head_name || 'Convidado');
-    fullInvite = {
-      id: newToken,
-      invite_type: invite.invite_type || 'family',
-      head_person_id: invite.head_person_id,
-      companion_person_ids: invite.companion_person_ids || [],
-      head_name: invite.head_name || 'Convidado',
-      phone: invite.phone || '',
-      max_guests: invite.max_guests || 1,
-      status: invite.status || 'pending',
-      confirmed_count: invite.confirmed_count || 0,
-      table_id: invite.table_id || null,
-      tier: invite.tier || 'main',
-      sent_status: invite.sent_status || 'not_sent',
-      checked_in: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      guests: invite.guests || [],
-      special_role: invite.special_role || 'guest',
-      counts_towards_buffet: invite.counts_towards_buffet ?? (invite.special_role ? invite.special_role === 'guest' : true),
-      special_arrival_time: invite.special_arrival_time || '',
-      custom_whatsapp_message: invite.custom_whatsapp_message || '',
-    };
+    fullInvite = createFullInvite(newToken, { ...invite, head_person_id: headPersonId });
     invites.push(fullInvite);
   }
 
   // Sincroniza os objetos Person envolvidos
-  const persons = await getAllPersons();
   const allInvolvedIds = new Set<string>();
   if (fullInvite.head_person_id) allInvolvedIds.add(fullInvite.head_person_id);
   if (fullInvite.companion_person_ids) {
