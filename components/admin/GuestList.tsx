@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
@@ -33,6 +33,7 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
+  ChevronDown,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -50,6 +51,10 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  // Estados de Edição Inline & Menu Dropdown na DataTable
+  const [editingCell, setEditingCell] = useState<{ inviteId: string; field: 'name' | 'phone'; value: string } | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Estados do Wizard Step-by-Step
   const [wizardStep, setWizardStep] = useState<number>(1);
@@ -235,6 +240,68 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     setTimeout(() => setCopiedToken(null), 2500);
   };
 
+  // Handlers para Edição Inline (DataTable 360º)
+  const handleSaveInlineCell = async (invite: Invite) => {
+    if (!editingCell) return;
+    const { field, value } = editingCell;
+
+    if (field === 'name') {
+      const cleanName = value.trim();
+      if (!cleanName) {
+        setEditingCell(null);
+        return;
+      }
+      await saveInvite({
+        ...invite,
+        head_name: cleanName,
+      });
+      if (invite.head_person_id) {
+        const headP = persons.find((p) => p.id === invite.head_person_id);
+        if (headP) {
+          await savePerson({
+            ...headP,
+            name: cleanName,
+          });
+        }
+      }
+    } else if (field === 'phone') {
+      await saveInvite({
+        ...invite,
+        phone: value,
+      });
+      if (invite.head_person_id) {
+        const headP = persons.find((p) => p.id === invite.head_person_id);
+        if (headP) {
+          await savePerson({
+            ...headP,
+            phone: value,
+          });
+        }
+      }
+    }
+
+    setEditingCell(null);
+    onRefresh();
+  };
+
+  const handleTableChangeInline = async (invite: Invite, newTableId: string) => {
+    const tableIdToSave = newTableId === '' ? null : newTableId;
+    await saveInvite({
+      ...invite,
+      table_id: tableIdToSave,
+    });
+    if (invite.head_person_id) {
+      const headP = persons.find((p) => p.id === invite.head_person_id);
+      if (headP) {
+        await savePerson({
+          ...headP,
+          table_id: tableIdToSave,
+        });
+      }
+    }
+    onRefresh();
+  };
+
   return (
     <div className="space-y-6">
       {/* Dashboard de Métricas Solicitado (Print 1, 2, 3, 4) */}
@@ -372,24 +439,25 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
-      {/* TABELA DE CONVITES CRIADOS */}
+      {/* TABELA DE CONVITES CRIADOS (DATATABLE 360º) */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                <th className="py-3.5 px-4">Titular / WhatsApp</th>
+                <th className="py-3.5 px-4">Nome</th>
+                <th className="py-3.5 px-4">Telefone</th>
                 <th className="py-3.5 px-4">Tipo & Pessoas (1:1)</th>
-                <th className="py-3.5 px-4">Mesa Atribuída</th>
-                <th className="py-3.5 px-4">Status & Prazos</th>
-                <th className="py-3.5 px-4 text-center">Disparo WhatsApp</th>
+                <th className="py-3.5 px-4">Mesa</th>
+                <th className="py-3.5 px-4">Status da Confirmação</th>
+                <th className="py-3.5 px-4 text-center">Convidar</th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
               {filteredInvites.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
                     Nenhum convite cadastrado ainda. Clique em &quot;Novo Convite (Wizard)&quot; para criar!
                   </td>
                 </tr>
@@ -402,25 +470,93 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
                   const headPerson = persons.find((p) => p.id === invite.head_person_id);
                   const companionPersons = persons.filter((p) => invite.companion_person_ids?.includes(p.id));
-                  const assignedTable = tables.find((t) => t.id === invite.table_id || t.id === headPerson?.table_id);
+                  const currentTableId = invite.table_id || headPerson?.table_id || '';
+
+                  const isEditingName = editingCell?.inviteId === invite.id && editingCell?.field === 'name';
+                  const isEditingPhone = editingCell?.inviteId === invite.id && editingCell?.field === 'phone';
 
                   return (
                     <tr key={invite.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                      {/* Titular */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-slate-800 dark:text-slate-100">{invite.head_name}</span>
-                          {isReserve && (
-                            <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-md border border-amber-500/30">
-                              Reserva
+                      {/* COLUNA 1: NOME (Edição Inline) */}
+                      <td className="py-3.5 px-4 min-w-[180px]">
+                        {isEditingName ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingCell.value}
+                              onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveInlineCell(invite);
+                                if (e.key === 'Escape') setEditingCell(null);
+                              }}
+                              className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
+                            />
+                            <button
+                              onClick={() => handleSaveInlineCell(invite)}
+                              className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                              title="Salvar Nome"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setEditingCell({ inviteId: invite.id, field: 'name', value: invite.head_name })}
+                            className="group flex items-center gap-1.5 cursor-pointer py-1"
+                            title="Clique para editar o nome diretamente na tabela"
+                          >
+                            <span className="font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
+                              {invite.head_name}
                             </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-medium">{formatPhoneDisplay(invite.phone) || 'Sem telefone'}</div>
+                            <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {isReserve && (
+                              <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30">
+                                Reserva
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="text-[10px] font-mono text-purple-500 mt-0.5">/convite/{invite.id}</div>
                       </td>
 
-                      {/* Tipo & Acompanhantes */}
+                      {/* COLUNA 2: TELEFONE (Nova Coluna Separada com Edição Inline) */}
+                      <td className="py-3.5 px-4 min-w-[140px]">
+                        {isEditingPhone ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              autoFocus
+                              placeholder="11999998888"
+                              value={editingCell.value}
+                              onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveInlineCell(invite);
+                                if (e.key === 'Escape') setEditingCell(null);
+                              }}
+                              className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-medium focus:outline-none"
+                            />
+                            <button
+                              onClick={() => handleSaveInlineCell(invite)}
+                              className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                              title="Salvar Telefone"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => setEditingCell({ inviteId: invite.id, field: 'phone', value: invite.phone || '' })}
+                            className="group flex items-center gap-1.5 cursor-pointer py-1 text-slate-600 dark:text-slate-300 font-medium"
+                            title="Clique para editar o telefone"
+                          >
+                            <span>{formatPhoneDisplay(invite.phone) || <em className="text-amber-500 text-[11px]">Sem fone (adicionar)</em>}</span>
+                            <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        )}
+                      </td>
+
+                      {/* COLUNA 3: TIPO & PESSOAS (1:1) */}
                       <td className="py-3.5 px-4 space-y-1">
                         <div className="flex items-center gap-1.5">
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
@@ -440,19 +576,27 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         )}
                       </td>
 
-                      {/* Mesa Atribuída */}
-                      <td className="py-3.5 px-4">
-                        {assignedTable ? (
-                          <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-bold border border-amber-300 dark:border-amber-800 inline-flex items-center gap-1">
-                            <Armchair className="w-3.5 h-3.5 text-amber-500" />
-                            {assignedTable.name}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 italic">-- Sem Mesa --</span>
-                        )}
+                      {/* COLUNA 4: MESA (Seletor Inline 360º) */}
+                      <td className="py-3.5 px-4 min-w-[150px]">
+                        <select
+                          value={currentTableId}
+                          onChange={(e) => handleTableChangeInline(invite, e.target.value)}
+                          className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
+                            currentTableId
+                              ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800'
+                              : 'bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700 italic'
+                          }`}
+                        >
+                          <option value="">-- Sem Mesa --</option>
+                          {tables.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
 
-                      {/* Status */}
+                      {/* COLUNA 5: STATUS DA CONFIRMAÇÃO */}
                       <td className="py-3.5 px-4 space-y-1">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo.color}`}>
                           {deadlineInfo.label}
@@ -470,57 +614,90 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         </div>
                       </td>
 
-                      {/* Disparo WhatsApp */}
+                      {/* COLUNA 6: CONVIDAR (Disparo WhatsApp) */}
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleWhatsAppDispatch(invite)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer ${
-                            !invite.phone
-                              ? 'bg-slate-900 text-amber-300 border border-amber-500/40 hover:bg-slate-800'
-                              : isSent
-                              ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          }`}
-                        >
-                          <MessageCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                          <span>{!invite.phone ? '+ Adicionar Fone' : isSent ? 'Re-enviar WhatsApp' : 'Enviar no WhatsApp'}</span>
-                        </button>
+                        {invite.phone && invite.phone.replace(/\D/g, '').length >= 8 ? (
+                          <button
+                            onClick={() => handleWhatsAppDispatch(invite)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer ${
+                              isSent
+                                ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                            <span>{isSent ? 'Re-enviar WhatsApp' : 'Enviar no WhatsApp'}</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setEditingCell({ inviteId: invite.id, field: 'phone', value: invite.phone || '' })}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-amber-300 hover:bg-slate-800 border border-amber-500/40 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-amber-400" />
+                            <span>+ Adicionar Fone</span>
+                          </button>
+                        )}
                       </td>
 
-                      {/* Ações */}
-                      <td className="py-3.5 px-4 text-right space-x-1">
-                        <button
-                          onClick={() => handleOpenEdit(invite)}
-                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                          title="Editar convite no Wizard"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                      {/* COLUNA 7: AÇÕES (Dropdown Popover) */}
+                      <td className="py-3.5 px-4 text-right relative">
+                        <div className="relative inline-block text-left">
+                          <button
+                            onClick={() => setOpenDropdownId(openDropdownId === invite.id ? null : invite.id)}
+                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Ações</span>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                          </button>
 
-                        <button
-                          onClick={() => handleCopyLink(invite.id)}
-                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
-                          title="Copiar link do convite"
-                        >
-                          {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                        </button>
+                          {openDropdownId === invite.id && (
+                            <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-30 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in">
+                              <button
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  handleOpenEdit(invite);
+                                }}
+                                className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                              >
+                                <Edit className="w-4 h-4 text-purple-500" />
+                                <span>Editar (Wizard)</span>
+                              </button>
 
-                        <a
-                          href={`/convite/${invite.id}`}
-                          target="_blank"
-                          className="p-1.5 inline-block text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          title="Visualizar hotsite"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
+                              <button
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  handleCopyLink(invite.id);
+                                }}
+                                className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                              >
+                                {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-purple-500" />}
+                                <span>{copiedToken === invite.id ? 'Link Copiado!' : 'Copiar Link'}</span>
+                              </button>
 
-                        <button
-                          onClick={() => handleDelete(invite.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                          title="Excluir convite"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                              <a
+                                href={`/convite/${invite.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={() => setOpenDropdownId(null)}
+                                className="w-full text-left px-3.5 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
+                              >
+                                <ExternalLink className="w-4 h-4 text-blue-500" />
+                                <span>Acessar Hotsite</span>
+                              </a>
+
+                              <button
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  handleDelete(invite.id);
+                                }}
+                                className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4 text-rose-500" />
+                                <span>Excluir Convite</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
