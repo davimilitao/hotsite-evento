@@ -581,7 +581,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
                 <th className="py-3.5 px-4">Nome</th>
                 <th className="py-3.5 px-4">Telefone</th>
-                <th className="py-3.5 px-4">Tipo & Pessoas (1:1)</th>
+                <th className="py-3.5 px-4">Tipo de Convite</th>
                 <th className="py-3.5 px-4">Mesa</th>
                 <th className="py-3.5 px-4">Status da Confirmação</th>
                 <th className="py-3.5 px-4 text-center">Convidar</th>
@@ -720,27 +720,27 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         )}
                       </td>
 
-                      {/* COLUNA 3: TIPO & VÍNCULO */}
+                      {/* COLUNA 3: TIPO DE CONVITE */}
                       <td className="py-3.5 px-4 space-y-1">
                         {isHead && (
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${
                             invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
-                              ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-300'
-                              : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300'
+                              ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800'
+                              : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
                           }`}>
                             {invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
-                              ? `Mandante (Família - ${1 + (invite?.companion_person_ids?.length || 0)} pes)`
-                              : 'Individual (1:1)'}
+                              ? `Convite Família - Mandante (${1 + (invite?.companion_person_ids?.length || 0)} pes)`
+                              : 'Convite Individual (Titular)'}
                           </span>
                         )}
                         {isCompanion && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase border bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-300">
-                            Acompanhante (Família: {headPerson?.name || 'Titular'})
+                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800">
+                            Convite Família - Acompanhante (Titular: {headPerson?.name || 'Titular'})
                           </span>
                         )}
                         {!invite && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-medium uppercase border bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-300">
-                            Sem Convite Gerado
+                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-300 dark:border-slate-800">
+                            Sem Convite (Não Convidado)
                           </span>
                         )}
                       </td>
@@ -767,52 +767,56 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
                       {/* COLUNA 5: STATUS DA CONFIRMAÇÃO */}
                       <td className="py-3.5 px-4 space-y-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {rsvpStatus === 'confirmed' ? (
-                            <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                              🟢 Confirmado {isCompanion ? '(via Família)' : ''}
-                            </span>
-                          ) : rsvpStatus === 'declined' ? (
-                            <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                              🔴 Não Poderá Ir
-                            </span>
-                          ) : rsvpStatus === 'pending_date' ? (
-                            <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                              🟡 Pediu Prazo {guestObj?.requested_date ? `(${guestObj.requested_date})` : ''}
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
-                              {deadlineInfo?.label || 'Pendente'}
-                            </span>
-                          )}
-                        </div>
+                        {invite ? (
+                          <>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {rsvpStatus === 'confirmed' ? (
+                                <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  🟢 Confirmado {isCompanion ? '(via Família)' : ''}
+                                </span>
+                              ) : rsvpStatus === 'declined' ? (
+                                <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  🔴 Não Poderá Ir
+                                </span>
+                              ) : rsvpStatus === 'pending_date' ? (
+                                <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  🟡 Pediu Prazo {guestObj?.requested_date ? `(${guestObj.requested_date})` : ''}
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                                  {deadlineInfo?.label || 'Pendente'}
+                                </span>
+                              )}
+                            </div>
 
-                        <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                          {isSent ? (
-                            <span className="text-emerald-500 flex items-center gap-1 font-semibold">
-                              <Send className="w-3 h-3" /> Enviado {invite?.sent_at ? `(${formatDateShort(invite.sent_at)})` : ''}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> Não enviado ainda
-                            </span>
-                          )}
-                        </div>
+                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                              {isSent ? (
+                                <span className="text-emerald-500 flex items-center gap-1 font-semibold">
+                                  <Send className="w-3 h-3" /> Enviado {invite?.sent_at ? `(${formatDateShort(invite.sent_at)})` : ''}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> Não enviado ainda
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-[10px] font-medium text-slate-400 italic">
+                            -- Sem Convite --
+                          </span>
+                        )}
                       </td>
 
-                      {/* COLUNA 6: CONVIDAR (Disparo WhatsApp) */}
+                      {/* COLUNA 6: CONVIDAR (Ação de Convite) */}
                       <td className="py-3.5 px-4 text-center">
                         {invite ? (
                           <button
-                            onClick={() => handleWhatsAppDispatch(invite)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer ${
-                              isSent
-                                ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700'
-                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                            }`}
+                            onClick={() => handleOpenEdit(invite)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
                           >
-                            <MessageCircle className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                            <span>{isSent ? 'Re-enviar WhatsApp' : 'Enviar no WhatsApp'}</span>
+                            <Edit className="w-3.5 h-3.5 text-white shrink-0" />
+                            <span>Editar Convite</span>
                           </button>
                         ) : (
                           <button
@@ -891,18 +895,30 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                                 </button>
                               )}
 
-                              <button
-                                onClick={async () => {
-                                  setOpenDropdownId(null);
-                                  if (!confirm(`Tem certeza que deseja excluir "${person.name}" do evento? O assento será libertado, a vaga do buffet devolvida e a pessoa removida do sistema.`)) return;
-                                  await deletePerson(person.id);
-                                  onRefresh();
-                                }}
-                                className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4 text-rose-500" />
-                                <span>Excluir Convidado</span>
-                              </button>
+                              {invite && (
+                                rsvpStatus === 'confirmed' ? (
+                                  <div
+                                    className="w-full text-left px-3.5 py-2 text-slate-400 font-medium flex items-center gap-2 cursor-not-allowed opacity-50"
+                                    title="Presença confirmada — não é permitido excluir o convite (apenas trocar de mesa)"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-slate-400" />
+                                    <span>Excluir Convite (Bloqueado)</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={async () => {
+                                      setOpenDropdownId(null);
+                                      if (!confirm(`Tem certeza que deseja excluir o convite de "${person.name}"? As pessoas associadas voltarão ao status sem convite gerado e manterão suas mesas.`)) return;
+                                      await deleteInvite(invite.id);
+                                      onRefresh();
+                                    }}
+                                    className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-rose-500" />
+                                    <span>Excluir Convite</span>
+                                  </button>
+                                )
+                              )}
                             </div>
                           )}
                         </div>
