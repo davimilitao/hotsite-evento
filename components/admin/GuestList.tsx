@@ -824,7 +824,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5 text-white" />
-                            <span>+ Gerar Convite</span>
+                            <span>Gerar Convite</span>
                           </button>
                         )}
                       </td>

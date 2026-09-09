@@ -437,26 +437,24 @@ export async function getEventConfig(): Promise<EventConfig> {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data() as EventConfig;
-        if (data.birthday_person !== 'Lucas Silva') {
-          mergedConfig = {
-            ...INITIAL_EVENT_CONFIG,
-            ...data,
-            theme: {
-              preset: data.theme?.preset || defaultTheme.preset,
-              invite_mode: data.theme?.invite_mode || defaultTheme.invite_mode,
-              uploaded_invite_url: data.theme?.uploaded_invite_url ?? defaultTheme.uploaded_invite_url,
-              primary_color: data.theme?.primary_color || defaultTheme.primary_color,
-              accent_color: data.theme?.accent_color || defaultTheme.accent_color,
-              bg_color: data.theme?.bg_color || defaultTheme.bg_color,
-              card_bg_color: data.theme?.card_bg_color || defaultTheme.card_bg_color,
-              text_color: data.theme?.text_color || defaultTheme.text_color,
-              font_family: data.theme?.font_family || defaultTheme.font_family,
-              banner_image_url: data.theme?.banner_image_url ?? defaultTheme.banner_image_url,
-            },
-          };
-          setLS(LS_KEYS.CONFIG, mergedConfig);
-          return mergedConfig;
-        }
+        mergedConfig = {
+          ...INITIAL_EVENT_CONFIG,
+          ...data,
+          theme: {
+            preset: data.theme?.preset || defaultTheme.preset,
+            invite_mode: data.theme?.invite_mode || defaultTheme.invite_mode,
+            uploaded_invite_url: data.theme?.uploaded_invite_url ?? defaultTheme.uploaded_invite_url,
+            primary_color: data.theme?.primary_color || defaultTheme.primary_color,
+            accent_color: data.theme?.accent_color || defaultTheme.accent_color,
+            bg_color: data.theme?.bg_color || defaultTheme.bg_color,
+            card_bg_color: data.theme?.card_bg_color || defaultTheme.card_bg_color,
+            text_color: data.theme?.text_color || defaultTheme.text_color,
+            font_family: data.theme?.font_family || defaultTheme.font_family,
+            banner_image_url: data.theme?.banner_image_url ?? defaultTheme.banner_image_url,
+          },
+        };
+        setLS(LS_KEYS.CONFIG, mergedConfig);
+        return mergedConfig;
       }
     } catch (err) {
       console.warn('Erro ao ler Firestore event_config, usando fallback:', err);
@@ -464,7 +462,7 @@ export async function getEventConfig(): Promise<EventConfig> {
   }
 
   const cached = getLS<EventConfig>(LS_KEYS.CONFIG, INITIAL_EVENT_CONFIG);
-  if (cached && cached.birthday_person !== 'Lucas Silva') {
+  if (cached) {
     mergedConfig = {
       ...INITIAL_EVENT_CONFIG,
       ...cached,
