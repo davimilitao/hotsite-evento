@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { EventConfig, EventTheme, FontOption } from '@/types';
-import { saveEventConfig } from '@/lib/db';
+import { saveEventConfig, resetAllInvitesData } from '@/lib/db';
 import {
   Save,
   Palette,
@@ -20,14 +20,17 @@ import {
   Smartphone,
   ShieldCheck,
   Key,
+  Database,
 } from 'lucide-react';
 
 interface SettingsFormProps {
   config: EventConfig;
   onRefresh: () => void;
+  onSeedDatabase?: () => Promise<void>;
+  seeding?: boolean;
 }
 
-export function SettingsForm({ config, onRefresh }: SettingsFormProps) {
+export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: SettingsFormProps) {
   const [formData, setFormData] = useState<EventConfig>(config);
   const [loading, setLoading] = useState(false);
 
@@ -517,6 +520,64 @@ export function SettingsForm({ config, onRefresh }: SettingsFormProps) {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ZONA DE MANUTENÇÃO & RESET DE DADOS (USO EXCLUSIVO DO ADMIN GERAL) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <Trash2 className="w-5 h-5 text-rose-500" />
+          <h3 className="text-sm font-extrabold text-white">Manutenção & Reset de Dados (Exclusivo Admin Geral)</h3>
+        </div>
+
+        <p className="text-xs text-slate-400">
+          Ferramentas avançadas para gerenciamento de dados da festa. Ações nesta área alteram os convites e o banco.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {/* Botão Zerar Convites de Teste */}
+          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+            <h4 className="text-xs font-black text-rose-400 uppercase tracking-wide">Zerar Convites de Teste</h4>
+            <p className="text-[11px] text-slate-400">
+              Apaga convites gerados e confirmações de teste. Preserva a lista de 119 pessoas e a alocação de mesas.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                if (confirm('Atenção: Tem certeza que deseja zerar todos os convites de teste e presenças confirmadas?\n\nA lista máster de 119 pessoas e a alocação de mesas continuarão 100% intactas.')) {
+                  await resetAllInvitesData();
+                  onRefresh();
+                }
+              }}
+              className="w-full min-h-[42px] px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              <span>Zerar Convites de Teste</span>
+            </button>
+          </div>
+
+          {/* Botão Resetar Banco Iniciais (Seed) */}
+          {onSeedDatabase && (
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+              <h4 className="text-xs font-black text-amber-400 uppercase tracking-wide">Resetar Banco Iniciais (Seed)</h4>
+              <p className="text-[11px] text-slate-400">
+                Reinicializa o banco de dados com as 119 pessoas físicas originais de Fernanda Seppi.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (confirm('Atenção: Deseja repopular o banco com o seed inicial das 119 pessoas da festa?')) {
+                    await onSeedDatabase();
+                  }
+                }}
+                disabled={seeding}
+                className="w-full min-h-[42px] px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                <Database className="w-4 h-4 text-amber-400" />
+                <span>{seeding ? 'Carregando...' : 'Resetar Dados Iniciais'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </form>

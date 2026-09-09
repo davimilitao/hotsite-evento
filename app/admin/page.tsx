@@ -78,12 +78,15 @@ export default function AdminPage() {
     loadAll();
   }, []);
 
-  // Se a aniversariante estiver logada e estiver na aba surpresa, força redirecionamento para convidados
+  // Se a aniversariante estiver na aba surpresa ou um não-admin na aba de configurações, força redirecionamento para convidados
   useEffect(() => {
     if (currentRole === 'birthday_person' && activeTab === 'surprise') {
       setActiveTab('guests');
     }
-  }, [currentRole, activeTab]);
+    if (user?.role !== 'admin' && activeTab === 'settings') {
+      setActiveTab('guests');
+    }
+  }, [currentRole, activeTab, user]);
 
   if (authLoading) {
     return (
@@ -133,18 +136,8 @@ export default function AdminPage() {
               <AdminUserHeader currentRole={currentRole} onRoleChange={(role) => setCurrentRole(role)} />
             </div>
 
-            {/* Ações de Dados (Resetar & Atualizar) */}
+            {/* Ações de Dados (Atualizar) */}
             <div className="flex items-center justify-end gap-2 shrink-0">
-              <button
-                onClick={handleSeedDatabase}
-                disabled={seeding}
-                className="min-h-[40px] px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                title="Popula os dados reais com 1 clique"
-              >
-                <Database className="w-4 h-4" />
-                <span>{seeding ? 'Carregando...' : 'Resetar Dados'}</span>
-              </button>
-
               <button
                 onClick={loadAll}
                 className="min-h-[40px] px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
@@ -209,17 +202,24 @@ export default function AdminPage() {
               </div>
             )}
 
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
-                  : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Configurações</span>
-            </button>
+            {/* ABA CONFIGURAÇÕES (EXCLUSIVA ADMIN GERAL) */}
+            {user?.role === 'admin' ? (
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
+                    : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Configurações</span>
+              </button>
+            ) : (
+              <div className="min-h-[42px] px-3.5 py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
+                <Lock className="w-3.5 h-3.5" /> <span className="italic">Configurações (Restrito)</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -240,7 +240,14 @@ export default function AdminPage() {
             {activeTab === 'surprise' && currentRole !== 'birthday_person' && (
               <SurpriseDashboard invites={invites} onRefresh={loadAll} />
             )}
-            {activeTab === 'settings' && config && <SettingsForm config={config} onRefresh={loadAll} />}
+            {activeTab === 'settings' && user?.role === 'admin' && config && (
+              <SettingsForm
+                config={config}
+                onRefresh={loadAll}
+                onSeedDatabase={handleSeedDatabase}
+                seeding={seeding}
+              />
+            )}
           </>
         )}
       </div>

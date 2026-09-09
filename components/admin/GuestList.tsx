@@ -49,7 +49,7 @@ interface GuestListProps {
 
 export function GuestList({ invites, tables, persons, config, onRefresh }: GuestListProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'main' | 'reserve' | 'sent' | 'not_sent' | 'confirmed' | 'pending' | 'pending_date' | 'expired' | 'declined'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined'>('all');
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
@@ -162,10 +162,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     if (!matchesSearch) return false;
 
     if (statusFilter === 'all') return true;
-    if (statusFilter === 'main') return !invite?.tier || invite.tier === 'main';
-    if (statusFilter === 'reserve') return invite?.tier === 'reserve' || !person.table_id;
-    if (statusFilter === 'sent') return invite?.sent_status === 'sent';
-    if (statusFilter === 'not_sent') return !invite?.sent_status || invite.sent_status === 'not_sent';
+    if (statusFilter === 'uninvited') return !invite;
 
     const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
     const isConfirmed = (guestObj && guestObj.status === 'confirmed') || (invite && invite.status === 'confirmed');
@@ -174,7 +171,6 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
     if (statusFilter === 'confirmed') return isConfirmed;
     if (statusFilter === 'declined') return isDeclined;
-    if (statusFilter === 'pending') return !isConfirmed && !isDeclined && !isPendingDate;
     if (statusFilter === 'pending_date') return isPendingDate;
     if (statusFilter === 'expired') {
       const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : { expired: false, label: 'Pendente', color: '' };
@@ -642,10 +638,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtrar:</span>
           {[
             { id: 'all', label: 'Todos' },
-            { id: 'main', label: 'Lista Principal' },
-            { id: 'reserve', label: `Lista de Espera (${reserveInvites.length})` },
-            { id: 'sent', label: 'Enviados' },
-            { id: 'not_sent', label: 'Não Enviados' },
+            { id: 'uninvited', label: 'Sem Convite' },
             { id: 'confirmed', label: 'Confirmados' },
             { id: 'pending_date', label: 'Pediram Prazo' },
             { id: 'expired', label: 'Prazo Vencido' },

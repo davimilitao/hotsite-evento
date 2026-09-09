@@ -71,31 +71,33 @@ export function AdminUserHeader({ currentRole, onRoleChange }: AdminUserHeaderPr
         </div>
       </div>
 
-      {/* Linha Inferior: Seletor de Perfil Segmentado (Touch Targets Ampliados) */}
+      {/* Linha Inferior: Seletor de Perfil Segmentado (Disponível Apenas para Admin Geral) */}
       <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full overflow-x-auto scrollbar-none">
         {[
           { id: 'admin', label: 'Admin Geral', icon: Crown },
           { id: 'birthday_person', label: 'Aniversariante', icon: Sparkles },
           { id: 'assessor', label: 'Cerimonial / Assessora', icon: UserCheck },
-        ].map((role) => {
-          const Icon = role.icon;
-          const isSelected = currentRole === role.id;
-          return (
-            <button
-              key={role.id}
-              type="button"
-              onClick={() => handleRoleSelect(role.id as UserRole)}
-              className={`flex-1 min-h-[40px] px-3 py-2 rounded-lg font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                isSelected
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-300' : 'text-slate-400'}`} />
-              <span>{role.label}</span>
-            </button>
-          );
-        })}
+        ]
+          .filter((role) => user.role === 'admin' || role.id === user.role)
+          .map((role) => {
+            const Icon = role.icon;
+            const isSelected = currentRole === role.id;
+            return (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => handleRoleSelect(role.id as UserRole)}
+                className={`flex-1 min-h-[40px] px-3 py-2 rounded-lg font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-300' : 'text-slate-400'}`} />
+                <span>{role.label}</span>
+              </button>
+            );
+          })}
       </div>
     </div>
   );
