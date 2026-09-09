@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, resetAllInvitesData } from '@/lib/db';
-import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate, formatPhoneE164 } from '@/lib/utils';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat } from '@/lib/db';
+import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
   Users,
@@ -25,8 +25,6 @@ import {
   Send,
   Sparkles,
   ArrowUpRight,
-  Download,
-  FileSpreadsheet,
   AlertTriangle,
   Armchair,
   User,
@@ -608,17 +606,6 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
-      {/* Regra de Ouro em Destaque */}
-      <div className="bg-purple-900/30 border border-purple-500/40 p-4 rounded-2xl flex items-start gap-3 text-purple-200 text-xs font-semibold">
-        <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div>
-          <strong className="text-amber-300 font-black">Regra de Ouro da Festa:</strong>
-          <span>
-            {" "}Para enviar o convite no WhatsApp (Individual ou Família), a pessoa física <strong>deve ter um assento atribuído</strong> na mesa do salão. As pessoas sem mesa permanecem na lista de reserva.
-          </span>
-        </div>
-      </div>
-
       {/* Barra de Busca & Ações */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -634,33 +621,6 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
-            <button
-              onClick={() => exportInvitesToCSV(invites, tables)}
-              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4" /> <span>Exportar Buffet</span>
-            </button>
-
-            <button
-              onClick={downloadExcelTemplate}
-              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-purple-500" /> <span>Modelo Excel</span>
-            </button>
-
-            <button
-              onClick={async () => {
-                if (confirm('Atenção: Tem certeza que deseja zerar todos os convites de teste e presenças confirmadas?\n\nA lista máster de 119 pessoas e a alocação de mesas continuarão intactas.')) {
-                  await resetAllInvitesData();
-                  onRefresh();
-                }
-              }}
-              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition-all border border-rose-200 dark:border-rose-800 cursor-pointer"
-              title="Zerar convites de teste e presenças sem apagar as pessoas e mesas"
-            >
-              <Trash2 className="w-4 h-4 text-rose-500" /> <span>Zerar Convites de Teste</span>
-            </button>
-
             <button
               onClick={handleOpenSpecialModal}
               className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
