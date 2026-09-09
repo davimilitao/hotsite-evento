@@ -159,5 +159,8 @@ export interface EventConfig {
   show_digital_invite?: boolean; // Feature Toggle: Exibe Módulo Hotsite/Convite Digital (true) ou apenas RSVP Direto (false)
   access_token?: string;        // Código Token de Acesso do Evento (ex: FERNANDA40)
   allowed_emails?: string[];     // Lista Whitelist de e-mails Google com acesso direto liberado
+  admin_pin?: string;            // PIN de 4 dígitos para Admin Geral (ex: '4040')
+  birthday_person_pin?: string;  // PIN de 4 dígitos para Aniversariante (ex: '1986')
+  assessor_pin?: string;         // PIN de 4 dígitos para Cerimonial/Assessora (ex: '2026')
   theme?: EventTheme;
 }

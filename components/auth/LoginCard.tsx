@@ -1,31 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Zap, ArrowRight } from 'lucide-react';
+import { getEventConfig } from '@/lib/db';
+import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Key, ArrowRight } from 'lucide-react';
 
 export function LoginCard() {
-  const { loginWithGoogle, loginWithDemo, loading } = useAuth();
+  const { loginWithPin, loading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
+  const [pinDigits, setPinDigits] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [eventConfigPins, setEventConfigPins] = useState<{
+    admin_pin?: string;
+    birthday_person_pin?: string;
+    assessor_pin?: string;
+  }>({});
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    getEventConfig().then((cfg) => {
+      setEventConfigPins({
+        admin_pin: cfg.admin_pin || '4040',
+        birthday_person_pin: cfg.birthday_person_pin || '1986',
+        assessor_pin: cfg.assessor_pin || '2026',
+      });
+    });
+  }, []);
+
+  const handleDigitChange = (value: string) => {
+    const clean = value.replace(/\D/g, '').slice(0, 4);
+    setPinDigits(clean);
     setErrorMsg(null);
-    try {
-      await loginWithGoogle(selectedRole);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao autenticar. Tente o Acesso Direto abaixo.');
+
+    if (clean.length === 4) {
+      executePinLogin(clean);
     }
   };
 
-  const handleDirectLogin = async () => {
+  const executePinLogin = async (codeToSubmit: string) => {
     setErrorMsg(null);
     try {
-      await loginWithDemo(selectedRole, 'militao46@gmail.com');
+      await loginWithPin(codeToSubmit, selectedRole, eventConfigPins);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao iniciar sessão.');
+      setErrorMsg(err.message || 'Erro ao autenticar com PIN. Verifique os 4 dígitos.');
     }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinDigits.length < 4) {
+      setErrorMsg('Informe os 4 dígitos do seu PIN de acesso.');
+      return;
+    }
+    executePinLogin(pinDigits);
   };
 
   return (
@@ -43,7 +70,7 @@ export function LoginCard() {
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-white tracking-tight">Painel Administrativo</h2>
             <p className="text-xs font-medium text-slate-400">
-              Acesse o painel para gerenciar a <strong className="text-amber-300">lista completa dos 119 convidados</strong>, mesas e confirmações.
+              Digite seu <strong className="text-amber-300">PIN de 4 dígitos</strong> para acessar o painel da festa.
             </p>
           </div>
         </div>
@@ -66,7 +93,10 @@ export function LoginCard() {
                 <button
                   key={role.id}
                   type="button"
-                  onClick={() => setSelectedRole(role.id as UserRole)}
+                  onClick={() => {
+                    setSelectedRole(role.id as UserRole);
+                    setErrorMsg(null);
+                  }}
                   className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1 cursor-pointer ${
                     isSelected
                       ? 'bg-purple-600/20 border-purple-500 text-white shadow-md'
@@ -82,63 +112,70 @@ export function LoginCard() {
           </div>
         </div>
 
-        {errorMsg && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs text-center font-medium">
-            {errorMsg}
-          </div>
-        )}
+        {/* Formulário do Teclado PIN de 4 Dígitos */}
+        <form onSubmit={handleFormSubmit} className="space-y-4">
+          <div className="space-y-2 text-center">
+            <label className="block text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">
+              PIN de Acesso (4 Dígitos)
+            </label>
 
-        {/* Botão Oficial de Login com Google & Acesso Direto Instantâneo */}
-        <div className="space-y-3">
+            {/* Inputs visuais de 4 Caixas com Foco Unificado */}
+            <div className="relative flex justify-center items-center gap-2">
+              {[0, 1, 2, 3].map((idx) => {
+                const char = pinDigits[idx] || '';
+                return (
+                  <div
+                    key={idx}
+                    className={`w-12 h-14 rounded-2xl border flex items-center justify-center font-black text-xl transition-all ${
+                      char
+                        ? 'bg-purple-950/60 border-purple-500 text-amber-300 shadow-md scale-105'
+                        : 'bg-slate-950 border-slate-800 text-slate-600'
+                    }`}
+                  >
+                    {char ? '•' : ''}
+                  </div>
+                );
+              })}
+
+              {/* Campo oculto com foco para digitação no mobile/desktop */}
+              <input
+                type="tel"
+                pattern="[0-9]*"
+                maxLength={4}
+                autoFocus
+                value={pinDigits}
+                onChange={(e) => handleDigitChange(e.target.value)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-center text-transparent"
+              />
+            </div>
+          </div>
+
+          {errorMsg && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs text-center font-bold animate-fade-in">
+              {errorMsg}
+            </div>
+          )}
+
           <button
-            type="button"
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full py-3.5 px-5 bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-sm rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+            type="submit"
+            disabled={loading || pinDigits.length < 4}
+            className="w-full py-3.5 px-5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer active:scale-[0.99]"
           >
             {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
             ) : (
-              /* Logo Oficial do Google em SVG */
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
+              <Key className="w-4 h-4 text-amber-300 shrink-0" />
             )}
-            <span>{loading ? 'Entrando...' : 'Entrar com o Google'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDirectLogin}
-            disabled={loading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-extrabold transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-[0.99]"
-          >
-            <Zap className="w-4 h-4 text-amber-300 shrink-0" />
-            <span>Entrar Direto no Painel (1-Clique)</span>
+            <span>{loading ? 'Validando PIN...' : 'Entrar no Painel'}</span>
             <ArrowRight className="w-4 h-4 text-amber-300" />
           </button>
-        </div>
+        </form>
 
         {/* Aviso da Regra de Expiração de 24 Horas */}
         <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2.5 text-slate-400 text-xs">
           <Clock className="w-4 h-4 text-amber-400 shrink-0" />
           <p className="text-[11px] leading-tight">
-            <strong className="text-slate-300">Sessão Segura de 24 Horas:</strong> Acesso direto liberado com expiração automática após 24 horas.
+            <strong className="text-slate-300">Sessão Segura de 24 Horas:</strong> Acesso direto via PIN liberado com expiração em 24h.
           </p>
         </div>
       </div>

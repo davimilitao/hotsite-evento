@@ -406,13 +406,17 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     onRefresh();
   };
 
-  // Helper para gerar mensagem padrão para convites de função especial
+  // Helper para gerar mensagem padrão para convites de função especial com PIN de 4 dígitos
   const getDefaultSpecialMessage = (role: SpecialRole, name: string, time: string, token: string) => {
     const siteUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : '';
     const link = token ? `${siteUrl}/convite/${token}` : `${siteUrl}/convite/[link]`;
+    const adminUrl = `${siteUrl}/admin`;
+
+    const birthdayPin = config.birthday_person_pin || '1986';
+    const assessorPin = config.assessor_pin || '2026';
 
     if (role === 'ceremonialist') {
-      return `Olá ${name || 'Cerimonialista'}! Você é a Cerimonialista/Assessora oficial da Festa de 40 Anos da Fernanda Seppi ✨.\n\nSeu horário recomendado de chegada é às ${time || '16:00'}.\n\nAcesse todos os detalhes do evento pelo link:\n👉 ${link}\n\nContamos com você!`;
+      return `Olá ${name || 'Cerimonialista'}! Você é a Cerimonialista/Assessora oficial da Festa de 40 Anos da Fernanda Seppi ✨.\n\nHorário de chegada: ${time || '16:00'}.\n\n👉 Painel de Gestão (Assessoria):\n${adminUrl}\n🔑 Seu PIN de Acesso (4 dígitos): ${assessorPin}\n\n👉 Link Hotsite do Evento:\n${link}\n\nContamos com você!`;
     }
     if (role === 'musician') {
       return `Olá ${name || 'Músico'}! Confirmamos sua apresentação na Festa de 40 Anos da Fernanda Seppi ✨.\n\nO horário recomendado para montagem e passagem de som é às ${time || '15:30'}.\n\nAcesse o link exclusivo do evento:\n👉 ${link}\n\nNos vemos lá!`;
@@ -421,7 +425,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
       return `Olá ${name || 'Equipe'}! Convite de equipe/colaborador para a Festa de 40 Anos da Fernanda Seppi ✨.\n\nHorário de chegada: ${time || '16:00'}.\n\nAcesse os detalhes pelo link:\n👉 ${link}`;
     }
     if (role === 'birthday_person') {
-      return `Fernanda! Seu convite oficial de Aniversariante para a sua Festa de 40 Anos ✨.\n\nAcesse seu hotsite e painel exclusivo:\n👉 ${link}`;
+      return `Fernanda! Seu convite oficial e acesso exclusivo ao Painel da Festa de 40 Anos ✨.\n\n👉 Painel de Aniversariante:\n${adminUrl}\n🔑 Seu PIN de Acesso (4 dígitos): ${birthdayPin}\n\n👉 Hotsite do Evento:\n${link}`;
     }
     return `Olá ${name}! Você tem um convite especial para a Festa de 40 Anos da Fernanda Seppi ✨.\n\nAcesse: ${link}`;
   };

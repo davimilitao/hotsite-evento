@@ -32,6 +32,9 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   show_digital_invite: true,
   access_token: 'FERNANDA40',
   allowed_emails: [],
+  admin_pin: '4040',
+  birthday_person_pin: '1986',
+  assessor_pin: '2026',
   theme: {
     preset: 'lavender_floral',
     invite_mode: 'custom', // 'off' | 'upload' | 'custom'

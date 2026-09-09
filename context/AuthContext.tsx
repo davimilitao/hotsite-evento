@@ -18,6 +18,11 @@ interface AuthContextType {
   sessionTimeLeft: string;
   loginWithGoogle: (role?: UserRole) => Promise<void>;
   loginWithDemo: (role?: UserRole, customEmail?: string) => Promise<void>;
+  loginWithPin: (
+    pin: string,
+    selectedRole: UserRole,
+    pinsConfig?: { admin_pin?: string; birthday_person_pin?: string; assessor_pin?: string }
+  ) => Promise<AppUser>;
   verifyOTP: (inputCode: string) => Promise<boolean>;
   resendOTP: () => Promise<string>;
   cancelOTP: () => void;
@@ -223,6 +228,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithPin = async (
+    pin: string,
+    selectedRole: UserRole,
+    pinsConfig?: { admin_pin?: string; birthday_person_pin?: string; assessor_pin?: string }
+  ): Promise<AppUser> => {
+    setLoading(true);
+    const now = Date.now();
+    const expiresAt = now + TWENTY_FOUR_HOURS_MS;
+
+    const adminPin = pinsConfig?.admin_pin || '4040';
+    const birthdayPin = pinsConfig?.birthday_person_pin || '1986';
+    const assessorPin = pinsConfig?.assessor_pin || '2026';
+
+    const cleanPin = pin.trim();
+
+    let targetRole: UserRole | null = null;
+    let userName = '';
+
+    if (cleanPin === adminPin) {
+      targetRole = 'admin';
+      userName = 'Administrador Geral';
+    } else if (cleanPin === birthdayPin) {
+      if (selectedRole === 'admin') {
+        setLoading(false);
+        throw new Error('PIN de Aniversariante digitado. Você não possui permissão de Admin Geral.');
+      }
+      targetRole = 'birthday_person';
+      userName = 'Fernanda Seppi (Dona Festa)';
+    } else if (cleanPin === assessorPin) {
+      if (selectedRole === 'admin') {
+        setLoading(false);
+        throw new Error('PIN de Cerimonial/Assessoria digitado. Você não possui permissão de Admin Geral.');
+      }
+      targetRole = 'assessor';
+      userName = 'Cerimonial / Assessoria';
+    } else {
+      setLoading(false);
+      throw new Error('PIN de 4 dígitos incorreto.');
+    }
+
+    const candidateUser: AppUser = {
+      id: `user-${targetRole}-${Date.now()}`,
+      name: userName,
+      email: targetRole === 'admin' ? 'militao46@gmail.com' : `${targetRole}@festa.com`,
+      role: targetRole,
+      avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
+      authenticatedAt: now,
+      expiresAt: expiresAt,
+    };
+
+    completeLogin(candidateUser);
+    setLoading(false);
+    return candidateUser;
+  };
+
   /**
    * ETAPA 2: Valida o Código OTP de 6 Dígitos digitado pelo usuário
    */
@@ -314,6 +374,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionTimeLeft,
         loginWithGoogle,
         loginWithDemo,
+        loginWithPin,
         verifyOTP,
         resendOTP,
         cancelOTP,
