@@ -73,7 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(STORAGE_KEY);
         setUser(null);
       } else {
-        setUser(session);
+        const normalizedSession: AppUser = {
+          ...session,
+          authenticatedRole: session.authenticatedRole || session.role,
+        };
+        setUser(normalizedSession);
         setSessionTimeLeft(calculateTimeLeft(session.expiresAt));
       }
     } catch (err) {
@@ -161,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: fbUser.displayName || 'Usuário Google',
             email: fbUser.email || 'militao46@gmail.com',
             role: selectedRole,
+            authenticatedRole: selectedRole,
             avatar_url: fbUser.photoURL || undefined,
             authenticatedAt: now,
             expiresAt: expiresAt,
@@ -172,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: 'Administrador (Google)',
             email: 'militao46@gmail.com',
             role: selectedRole,
+            authenticatedRole: selectedRole,
             avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
             authenticatedAt: now,
             expiresAt: expiresAt,
@@ -184,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: 'Administrador Evento',
           email: 'militao46@gmail.com',
           role: selectedRole,
+          authenticatedRole: selectedRole,
           avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
           authenticatedAt: now,
           expiresAt: expiresAt,
@@ -214,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: 'Administrador (Acesso Direto)',
         email: emailToUse,
         role: selectedRole,
+        authenticatedRole: selectedRole,
         avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
         authenticatedAt: now,
         expiresAt: expiresAt,
@@ -273,6 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: userName,
       email: targetRole === 'admin' ? 'militao46@gmail.com' : `${targetRole}@festa.com`,
       role: targetRole,
+      authenticatedRole: targetRole,
       avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
       authenticatedAt: now,
       expiresAt: expiresAt,
@@ -358,7 +367,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const switchRole = (newRole: UserRole) => {
     if (!user) return;
-    const updatedUser = { ...user, role: newRole };
+    const authRole = user.authenticatedRole || user.role;
+    const updatedUser = { ...user, role: newRole, authenticatedRole: authRole };
     setUser(updatedUser);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
   };

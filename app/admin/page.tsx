@@ -98,15 +98,22 @@ export default function AdminPage() {
     loadAll();
   }, []);
 
+  const handleRoleChange = (newRole: UserRole) => {
+    setCurrentRole(newRole);
+    if (newRole === 'birthday_person') {
+      setShowBirthdayOnboarding(true);
+    }
+  };
+
   // Se a aniversariante estiver na aba surpresa ou um não-admin na aba de configurações, força redirecionamento para convidados
   useEffect(() => {
     if (currentRole === 'birthday_person' && activeTab === 'surprise') {
       setActiveTab('guests');
     }
-    if (user?.role !== 'admin' && activeTab === 'settings') {
+    if (currentRole !== 'admin' && activeTab === 'settings') {
       setActiveTab('guests');
     }
-  }, [currentRole, activeTab, user]);
+  }, [currentRole, activeTab]);
 
   if (authLoading) {
     return (
@@ -153,7 +160,7 @@ export default function AdminPage() {
           {/* Header do Usuário Logado & Ações do Sistema */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex-1">
-              <AdminUserHeader currentRole={currentRole} onRoleChange={(role) => setCurrentRole(role)} />
+              <AdminUserHeader currentRole={currentRole} onRoleChange={handleRoleChange} />
             </div>
 
             {/* Ações de Dados (Atualizar + Onboarding Aniversariante) */}
@@ -234,7 +241,7 @@ export default function AdminPage() {
             )}
 
             {/* ABA CONFIGURAÇÕES (EXCLUSIVA ADMIN GERAL) */}
-            {user?.role === 'admin' ? (
+            {currentRole === 'admin' ? (
               <button
                 onClick={() => setActiveTab('settings')}
                 className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
@@ -271,7 +278,7 @@ export default function AdminPage() {
             {activeTab === 'surprise' && currentRole !== 'birthday_person' && (
               <SurpriseDashboard invites={invites} onRefresh={loadAll} />
             )}
-            {activeTab === 'settings' && user?.role === 'admin' && config && (
+            {activeTab === 'settings' && currentRole === 'admin' && config && (
               <SettingsForm
                 config={config}
                 onRefresh={loadAll}

@@ -47,7 +47,11 @@ export function AdminUserHeader({ currentRole, onRoleChange }: AdminUserHeaderPr
             </h3>
             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-400 uppercase tracking-wide truncate">
               <ShieldCheck className="w-3 h-3 shrink-0" />
-              {user.role === 'admin' ? 'Admin Geral' : user.role === 'birthday_person' ? 'Aniversariante' : 'Assessoria'}
+              {currentRole === 'admin'
+                ? 'Admin Geral'
+                : currentRole === 'birthday_person'
+                ? (user.authenticatedRole === 'admin' ? 'Aniversariante (Impersonar)' : 'Aniversariante')
+                : (user.authenticatedRole === 'admin' ? 'Assessoria (Impersonar)' : 'Assessoria')}
             </span>
           </div>
         </div>
@@ -78,7 +82,7 @@ export function AdminUserHeader({ currentRole, onRoleChange }: AdminUserHeaderPr
           { id: 'birthday_person', label: 'Aniversariante', icon: Sparkles },
           { id: 'assessor', label: 'Cerimonial / Assessora', icon: UserCheck },
         ]
-          .filter((role) => user.role === 'admin' || role.id === user.role)
+          .filter((role) => user.authenticatedRole === 'admin' || user.role === 'admin' || role.id === user.role)
           .map((role) => {
             const Icon = role.icon;
             const isSelected = currentRole === role.id;
