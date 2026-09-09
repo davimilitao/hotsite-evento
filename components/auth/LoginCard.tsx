@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
 import { getEventConfig } from '@/lib/db';
-import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Key, ArrowRight } from 'lucide-react';
+import { Crown, Clock, Sparkles, Loader2, Lock, UserCheck, Key, ArrowRight, Delete } from 'lucide-react';
 
 export function LoginCard() {
   const { loginWithPin, loading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
   const [pinDigits, setPinDigits] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [eventConfigPins, setEventConfigPins] = useState<{
     admin_pin?: string;
     birthday_person_pin?: string;
@@ -34,6 +35,17 @@ export function LoginCard() {
 
     if (clean.length === 4) {
       executePinLogin(clean);
+    }
+  };
+
+  const handleKeypadPress = (num: string) => {
+    if (pinDigits.length < 4) {
+      const nextPin = pinDigits + num;
+      setPinDigits(nextPin);
+      setErrorMsg(null);
+      if (nextPin.length === 4) {
+        executePinLogin(nextPin);
+      }
     }
   };
 
@@ -96,6 +108,7 @@ export function LoginCard() {
                   onClick={() => {
                     setSelectedRole(role.id as UserRole);
                     setErrorMsg(null);
+                    setPinDigits('');
                   }}
                   className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center gap-1 cursor-pointer ${
                     isSelected
@@ -112,41 +125,69 @@ export function LoginCard() {
           </div>
         </div>
 
-        {/* Formulário do Teclado PIN de 4 Dígitos */}
+        {/* Formulário do PIN com Entrada Direta + Teclado Onscreen */}
         <form onSubmit={handleFormSubmit} className="space-y-4">
-          <div className="space-y-2 text-center">
+          <div className="space-y-3 text-center">
             <label className="block text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">
               PIN de Acesso (4 Dígitos)
             </label>
 
-            {/* Inputs visuais de 4 Caixas com Foco Unificado */}
-            <div className="relative flex justify-center items-center gap-2">
-              {[0, 1, 2, 3].map((idx) => {
-                const char = pinDigits[idx] || '';
-                return (
-                  <div
-                    key={idx}
-                    className={`w-12 h-14 rounded-2xl border flex items-center justify-center font-black text-xl transition-all ${
-                      char
-                        ? 'bg-purple-950/60 border-purple-500 text-amber-300 shadow-md scale-105'
-                        : 'bg-slate-950 border-slate-800 text-slate-600'
-                    }`}
-                  >
-                    {char ? '•' : ''}
-                  </div>
-                );
-              })}
-
-              {/* Campo oculto com foco para digitação no mobile/desktop */}
+            {/* Campo Visível & Totalmente Digitável */}
+            <div className="relative max-w-[240px] mx-auto">
               <input
-                type="tel"
+                ref={inputRef}
+                type="password"
+                inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={4}
+                placeholder="••••"
                 autoFocus
                 value={pinDigits}
                 onChange={(e) => handleDigitChange(e.target.value)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-center text-transparent"
+                className="w-full text-center text-3xl font-black font-mono tracking-[0.6em] pl-4 py-3 bg-slate-950 border-2 border-purple-500/80 focus:border-purple-400 rounded-2xl text-amber-300 shadow-inner focus:outline-none focus:ring-4 focus:ring-purple-500/30 transition-all placeholder:text-slate-700"
               />
+            </div>
+
+            {/* Teclado Numérico Visual para Cliques Rápidos */}
+            <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto pt-2">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleKeypadPress(num)}
+                  className="h-11 rounded-xl bg-slate-950 border border-slate-800 hover:border-purple-500 text-white font-extrabold text-base transition-all active:scale-95 active:bg-purple-900/50 cursor-pointer"
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setPinDigits('');
+                  setErrorMsg(null);
+                }}
+                className="h-11 rounded-xl bg-slate-950 border border-slate-800 hover:border-rose-500 text-rose-400 font-extrabold text-xs transition-all active:scale-95 cursor-pointer"
+              >
+                Limpar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleKeypadPress('0')}
+                className="h-11 rounded-xl bg-slate-950 border border-slate-800 hover:border-purple-500 text-white font-extrabold text-base transition-all active:scale-95 active:bg-purple-900/50 cursor-pointer"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPinDigits((prev) => prev.slice(0, -1));
+                  setErrorMsg(null);
+                }}
+                className="h-11 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500 text-amber-400 font-extrabold text-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                title="Apagar dígito"
+              >
+                <Delete className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
