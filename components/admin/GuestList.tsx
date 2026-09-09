@@ -944,7 +944,12 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                     {wizardStep}
                   </span>
                   <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
-                    {editingInvite ? 'Editar Convite' : 'Criar Convite (Wizard)'}
+                    {(() => {
+                      const selP = persons.find((p) => p.id === headPersonId);
+                      const isSent = editingInvite && editingInvite.sent_status === 'sent';
+                      const prefix = isSent ? 'Editar Convite' : 'Gerar Convite';
+                      return selP ? `${prefix} - ${selP.name}` : prefix;
+                    })()}
                   </h3>
                 </div>
                 <button
@@ -1360,7 +1365,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               {wizardStep > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setWizardStep(wizardStep - 1)}
+                  onClick={() => setWizardStep((wizardStep === 3 && inviteType === 'individual' && headPersonId) ? 1 : wizardStep - 1)}
                   className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" /> Voltar
@@ -1378,7 +1383,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       (wizardStep === 3 && phone.replace(/\D/g, '').length < 8) ||
                       (wizardStep === 4 && inviteType === 'family' && companionPersonIds.filter(Boolean).length < (familySlotsCount - 1))
                     }
-                    onClick={() => setWizardStep(wizardStep + 1)}
+                    onClick={() => setWizardStep((wizardStep === 1 && inviteType === 'individual' && headPersonId) ? 3 : wizardStep + 1)}
                     className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
                   >
                     <span>Avançar</span>

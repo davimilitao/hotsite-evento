@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Invite, Guest, EventConfig, Person } from '@/types';
 import { saveInvite, savePerson } from '@/lib/db';
 import { isInviteExpired, formatDateShort } from '@/lib/utils';
-import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle } from 'lucide-react';
+import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RSVPFormProps {
@@ -379,10 +379,13 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-base rounded-2xl shadow-lg hover:shadow-purple-500/25 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-base rounded-2xl shadow-lg hover:shadow-purple-500/25 transition-all duration-200 active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
-                <span>Salvando respostas...</span>
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin text-white shrink-0" />
+                  <span>Enviando confirmação...</span>
+                </>
               ) : (
                 <>
                   <Send className="w-5 h-5" />
