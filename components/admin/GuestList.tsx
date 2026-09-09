@@ -1062,37 +1062,6 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         )}
                       </td>
 
-                      {/* COLUNA 6: CONVIDAR (Ação de Convite) */}
-                      <td className="py-3.5 px-4 text-center">
-                        {invite ? (
-                          rsvpStatus === 'confirmed' ? (
-                            <span
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-xl font-extrabold text-xs cursor-not-allowed opacity-90"
-                              title="Convite com presença confirmada. Não é permitido editar, apenas alterar a mesa."
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                              <span>🟢 Confirmado</span>
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleOpenEdit(invite)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
-                            >
-                              <Edit className="w-3.5 h-3.5 text-white shrink-0" />
-                              <span>Editar Convite</span>
-                            </button>
-                          )
-                        ) : (
-                          <button
-                            onClick={() => handleOpenAddForPerson(person)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-white" />
-                            <span>Gerar Convite</span>
-                          </button>
-                        )}
-                      </td>
-
                       {/* COLUNA 7: AÇÕES */}
                       <td className="py-3.5 px-4 text-right relative">
                         <div className="relative inline-block text-left">
