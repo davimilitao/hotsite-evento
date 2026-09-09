@@ -37,6 +37,7 @@ import {
   Crown,
   Briefcase,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -621,6 +622,16 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
+            <a
+              href="/og-save-the-date.jpg"
+              download="save-the-date-fernanda-seppi.jpg"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-600 shadow-sm active:scale-95 cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-purple-500" /> <span>Baixar Save The Date</span>
+            </a>
+
             <button
               onClick={handleOpenSpecialModal}
               className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"

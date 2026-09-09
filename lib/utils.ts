@@ -58,7 +58,7 @@ export function buildWhatsAppLink(
 
   const inviteUrl = `${siteUrl}/convite/${token}`;
 
-  const defaultMessage = `Olá ${headName}! You're invited to celebrate Fernanda Seppi's 40th Birthday!\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você!`;
+  const defaultMessage = `Olá ${headName}! Você é nosso(a) convidado(a) especial para celebrar os 40 Anos da Fernanda Seppi! 🌸✨\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você!`;
   
   const message = customTemplate
     ? customTemplate.replace('{nome}', headName).replace('{link}', inviteUrl)
