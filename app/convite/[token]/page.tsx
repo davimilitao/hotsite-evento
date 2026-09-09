@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { getInviteByToken, getEventConfig, getAllTables } from '@/lib/db';
-import { Invite, EventConfig, Table, EventTheme } from '@/types';
+import { getInviteByToken, getEventConfig, getAllTables, getAllPersons } from '@/lib/db';
+import { Invite, EventConfig, Table, EventTheme, Person } from '@/types';
 import { HeaderHero } from '@/components/guest/HeaderHero';
 import { EventLocationCard } from '@/components/guest/EventLocationCard';
 import { RSVPForm } from '@/components/guest/RSVPForm';
@@ -22,6 +22,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const [invite, setInvite] = useState<Invite | null>(null);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [tables, setTables] = useState<Table[]>([]);
+  const [allPersons, setAllPersons] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTabType>('rsvp');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -29,15 +30,17 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [inviteData, configData, tablesData] = await Promise.all([
+      const [inviteData, configData, tablesData, personsData] = await Promise.all([
         getInviteByToken(token),
         getEventConfig(),
         getAllTables(),
+        getAllPersons(),
       ]);
 
       setInvite(inviteData);
       setConfig(configData);
       setTables(tablesData);
+      setAllPersons(personsData);
     } catch (err) {
       console.error('Erro ao carregar convite:', err);
     } finally {
@@ -128,6 +131,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
                 <RSVPForm
                   invite={invite}
                   config={config}
+                  allPersons={allPersons}
                   onUpdate={(updated) => setInvite(updated)}
                   onSubmittedFeedback={() => setShowFeedbackModal(true)}
                 />
@@ -167,6 +171,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
             <RSVPForm
               invite={invite}
               config={config}
+              allPersons={allPersons}
               onUpdate={(updated) => setInvite(updated)}
               onSubmittedFeedback={() => setShowFeedbackModal(true)}
             />
