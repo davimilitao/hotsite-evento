@@ -684,56 +684,68 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
-      {/* Barra de Busca & Ações */}
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar mandante, acompanhante ou fone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 min-h-[44px]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
-            <button
-              onClick={() => setIsQuickAddOpen(true)}
-              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4 text-emerald-100" /> <span>Adicionar Nome à Lista</span>
-            </button>
-
-            <a
-              href="/og-save-the-date.jpg"
-              download="save-the-date-fernanda-seppi.jpg"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-600 shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-purple-500" /> <span>Baixar Save The Date</span>
-            </a>
-
-            <button
-              onClick={handleOpenSpecialModal}
-              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Star className="w-4 h-4 text-amber-100" /> <span>Convite Especial (Função)</span>
-            </button>
-
-            <button
-              onClick={handleOpenAdd}
-              className="min-h-[44px] col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> <span>Novo Convite (Wizard)</span>
-            </button>
-          </div>
+      {/* CARD 1: PAINEL SUPERIOR DE AÇÕES E CRIAÇÃO (CTAs) */}
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-500" />
+            <span>Gestão da Lista de Convidados</span>
+          </h2>
+          <p className="text-[11px] text-slate-400 font-medium">
+            Cadastre nomes, organize grupos e envie convites pelo WhatsApp
+          </p>
         </div>
 
-        {/* Filtros */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-700/60 pt-3 pb-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsQuickAddOpen(true)}
+            className="min-h-[42px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <UserPlus className="w-4 h-4 text-emerald-100" /> <span>+ Adicionar Nome à Lista</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="min-h-[42px] px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" /> <span>Novo Convite (Wizard)</span>
+          </button>
+
+          <button
+            onClick={handleOpenSpecialModal}
+            className="min-h-[42px] px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <Star className="w-4 h-4 text-amber-900" /> <span>Convite Especial</span>
+          </button>
+
+          <a
+            href="/og-save-the-date.jpg"
+            download="save-the-date-fernanda-seppi.jpg"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-h-[42px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-600 shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4 text-purple-500" /> <span>Save The Date</span>
+          </a>
+        </div>
+      </div>
+
+      {/* CARD 2: FAIXA DEDICADA DE BUSCA E FILTROS */}
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Lado Esquerdo: Campo de Busca */}
+        <div className="relative w-full md:w-80 shrink-0">
+          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nome, telefone ou mesa..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 min-h-[42px]"
+          />
+        </div>
+
+        {/* Lado Direito: Filtros de Status */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
           <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Filtrar:</span>
           {[
             { id: 'all', label: 'Todos' },
@@ -746,7 +758,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
             <button
               key={item.id}
               onClick={() => setStatusFilter(item.id as any)}
-              className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 statusFilter === item.id
                   ? 'bg-purple-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-800'

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData, getAllPersons } from '@/lib/db';
+import { getAllInvites, getAllTables, getEventConfig, seedFirestoreData, getAllPersons, saveEventConfig } from '@/lib/db';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { Invite, Table, EventConfig, UserRole, Person } from '@/types';
 import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
 import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
 import { SettingsForm } from '@/components/admin/SettingsForm';
+import { BirthdayOnboardingModal } from '@/components/admin/BirthdayOnboardingModal';
 import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -25,6 +26,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [seedSuccess, setSeedSuccess] = useState(false);
+  const [showBirthdayOnboarding, setShowBirthdayOnboarding] = useState(false);
 
   // Sincroniza a role do usuário logado
   useEffect(() => {
@@ -32,6 +34,24 @@ export default function AdminPage() {
       setCurrentRole(user.role);
     }
   }, [user]);
+
+  // Exibe o Onboarding automaticamente quando a aniversariante logar pela primeira vez
+  useEffect(() => {
+    if (user?.role === 'birthday_person' || currentRole === 'birthday_person') {
+      const isDone = typeof window !== 'undefined' ? localStorage.getItem('birthday_onboarding_done_v1') : 'true';
+      if (!isDone) {
+        setShowBirthdayOnboarding(true);
+      }
+    }
+  }, [user, currentRole]);
+
+  const handleSaveOnboarding = async (updatedConfig: EventConfig) => {
+    await saveEventConfig(updatedConfig);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('birthday_onboarding_done_v1', 'true');
+    }
+    await loadAll();
+  };
 
   const loadAll = async () => {
     setLoading(true);
@@ -136,8 +156,19 @@ export default function AdminPage() {
               <AdminUserHeader currentRole={currentRole} onRoleChange={(role) => setCurrentRole(role)} />
             </div>
 
-            {/* Ações de Dados (Atualizar) */}
+            {/* Ações de Dados (Atualizar + Onboarding Aniversariante) */}
             <div className="flex items-center justify-end gap-2 shrink-0">
+              {(currentRole === 'birthday_person' || user?.role === 'birthday_person') && (
+                <button
+                  onClick={() => setShowBirthdayOnboarding(true)}
+                  className="min-h-[40px] px-3.5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  title="Revisar e alterar os dados da festa"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Revisar Dados da Festa</span>
+                </button>
+              )}
+
               <button
                 onClick={loadAll}
                 className="min-h-[40px] px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
@@ -251,6 +282,16 @@ export default function AdminPage() {
           </>
         )}
       </div>
+
+      {/* Modal de Onboarding / Boas-Vindas da Aniversariante */}
+      {config && (
+        <BirthdayOnboardingModal
+          isOpen={showBirthdayOnboarding}
+          config={config}
+          onClose={() => setShowBirthdayOnboarding(false)}
+          onSave={handleSaveOnboarding}
+        />
+      )}
     </main>
   );
 }
