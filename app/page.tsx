@@ -118,31 +118,6 @@ export default function LandingPage() {
               <span>Agendar uma Apresentação</span>
             </button>
           </div>
-
-          {/* Links Rápidos de Demonstração do Hotsite de Convidado */}
-          <div className="pt-8 border-t border-slate-800/80 max-w-xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Veja um Exemplo do Convite Digital no Celular:
-            </span>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/convite/carlos-silva-8a2"
-                target="_blank"
-                className="flex-1 p-3 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 rounded-2xl text-left text-xs font-bold text-slate-200 flex items-center justify-between transition-all group"
-              >
-                <span>/convite/carlos-silva-8a2 (Carlos Silva)</span>
-                <ExternalLink className="w-4 h-4 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-              <Link
-                href="/convite/fernanda-lima-3k9"
-                target="_blank"
-                className="flex-1 p-3 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 rounded-2xl text-left text-xs font-bold text-slate-200 flex items-center justify-between transition-all group"
-              >
-                <span>/convite/fernanda-lima-3k9 (Fernanda Lima)</span>
-                <ExternalLink className="w-4 h-4 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
-          </div>
         </div>
       </section>
 

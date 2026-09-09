@@ -38,6 +38,10 @@ import {
   Briefcase,
   ShieldCheck,
   Download,
+  UserPlus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -81,6 +85,16 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   const [specialPhone, setSpecialPhone] = useState('');
   const [specialArrivalTime, setSpecialArrivalTime] = useState('16:00');
   const [specialCustomMessage, setSpecialCustomMessage] = useState('');
+
+  // Estados do Modal Rápido: Adicionar Nome à Lista
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickPhone, setQuickPhone] = useState('');
+  const [quickLoading, setQuickLoading] = useState(false);
+
+  // Estados de Ordenação por Coluna
+  const [sortField, setSortField] = useState<'name' | 'invite_type' | 'table' | 'status'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Métricas 1:1 de Pessoas & Assentos
   const buffetCapacity = config.buffet_capacity || 100;
@@ -180,6 +194,69 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
     return true;
   });
+
+  const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status') => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedPersons = [...filteredPersons].sort((a, b) => {
+    let valA = '';
+    let valB = '';
+
+    if (sortField === 'name') {
+      valA = a.name.toLowerCase();
+      valB = b.name.toLowerCase();
+    } else if (sortField === 'invite_type') {
+      const invA = invites.find((i) => i.id === a.invite_id || i.head_person_id === a.id || i.companion_person_ids?.includes(a.id));
+      const invB = invites.find((i) => i.id === b.invite_id || i.head_person_id === b.id || i.companion_person_ids?.includes(b.id));
+      valA = invA ? (invA.invite_type || 'família') : 'z_sem_convite';
+      valB = invB ? (invB.invite_type || 'família') : 'z_sem_convite';
+    } else if (sortField === 'table') {
+      const tableA = tables.find((t) => t.id === a.table_id);
+      const tableB = tables.find((t) => t.id === b.table_id);
+      valA = tableA ? tableA.name.toLowerCase() : 'z_sem_mesa';
+      valB = tableB ? tableB.name.toLowerCase() : 'z_sem_mesa';
+    } else if (sortField === 'status') {
+      const invA = invites.find((i) => i.id === a.invite_id || i.head_person_id === a.id || i.companion_person_ids?.includes(a.id));
+      const invB = invites.find((i) => i.id === b.invite_id || i.head_person_id === b.id || i.companion_person_ids?.includes(b.id));
+      const guestObjA = invA?.guests?.find((g) => g.name.trim().toLowerCase() === a.name.trim().toLowerCase());
+      const guestObjB = invB?.guests?.find((g) => g.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+      valA = guestObjA?.status || invA?.status || 'z_sem_convite';
+      valB = guestObjB?.status || invB?.status || 'z_sem_convite';
+    }
+
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleQuickAddPerson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickName.trim()) {
+      alert('O Nome Completo é obrigatório para cadastrar um novo convidado.');
+      return;
+    }
+    setQuickLoading(true);
+    try {
+      await savePerson({
+        name: quickName.trim(),
+        phone: quickPhone.trim(),
+      });
+      setQuickName('');
+      setQuickPhone('');
+      setIsQuickAddOpen(false);
+      onRefresh();
+    } catch (err) {
+      console.error('Erro ao cadastrar pessoa:', err);
+    } finally {
+      setQuickLoading(false);
+    }
+  };
 
   const handleOpenAdd = () => {
     if (seatedPersonsEligibleForInvite.length === 0) {
@@ -622,6 +699,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={() => setIsQuickAddOpen(true)}
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 text-emerald-100" /> <span>Adicionar Nome à Lista</span>
+            </button>
+
             <a
               href="/og-save-the-date.jpg"
               download="save-the-date-fernanda-seppi.jpg"
@@ -680,24 +764,72 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                <th className="py-3.5 px-4">Nome</th>
+                <th
+                  onClick={() => handleSort('name')}
+                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Nome</span>
+                    {sortField === 'name' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                    )}
+                  </div>
+                </th>
                 <th className="py-3.5 px-4">Telefone</th>
-                <th className="py-3.5 px-4">Tipo de Convite</th>
-                <th className="py-3.5 px-4">Mesa</th>
-                <th className="py-3.5 px-4">Status da Confirmação</th>
-                <th className="py-3.5 px-4 text-center">Convidar</th>
+                <th
+                  onClick={() => handleSort('invite_type')}
+                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Tipo de Convite</span>
+                    {sortField === 'invite_type' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('table')}
+                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Mesa</span>
+                    {sortField === 'table' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                    )}
+                  </div>
+                </th>
+                <th className="py-3.5 px-4 text-center">Convite</th>
+                <th
+                  onClick={() => handleSort('status')}
+                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Status da Confirmação</span>
+                    {sortField === 'status' ? (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                    )}
+                  </div>
+                </th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
-              {filteredPersons.length === 0 ? (
+              {sortedPersons.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
                     Nenhum convidado encontrado na busca ou filtro selecionado.
                   </td>
                 </tr>
               ) : (
-                filteredPersons.map((person) => {
+                sortedPersons.map((person) => {
                   const invite = invites.find(
                     (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
                   );
@@ -866,42 +998,63 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         </select>
                       </td>
 
-                      {/* COLUNA 5: STATUS DA CONFIRMAÇÃO */}
+                      {/* COLUNA 5: CONVITE (Header "Convite" - Enviar / Enviado / Reenviar) */}
+                      <td className="py-3.5 px-4 text-center min-w-[130px]">
+                        {invite ? (
+                          isSent ? (
+                            <button
+                              onClick={() => handleWhatsAppDispatch(invite)}
+                              className="group relative inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-amber-500/20 text-emerald-600 hover:text-amber-700 dark:text-emerald-400 dark:hover:text-amber-300 border border-emerald-500/30 hover:border-amber-500/40 rounded-xl font-extrabold text-xs transition-all cursor-pointer shadow-sm"
+                              title="Clique para reenviar a mensagem de convite no WhatsApp"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 group-hover:hidden shrink-0" />
+                              <Send className="w-3.5 h-3.5 text-amber-500 hidden group-hover:inline shrink-0" />
+                              <span className="group-hover:hidden">Enviado</span>
+                              <span className="hidden group-hover:inline font-black">Reenviar</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleWhatsAppDispatch(invite)}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                              title="Disparar mensagem de convite pelo WhatsApp"
+                            >
+                              <Send className="w-3.5 h-3.5 text-emerald-100 shrink-0" />
+                              <span>Enviar</span>
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => handleOpenAddForPerson(person)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-white" />
+                            <span>Gerar Convite</span>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* COLUNA 6: STATUS DA CONFIRMAÇÃO */}
                       <td className="py-3.5 px-4 space-y-1">
                         {invite ? (
-                          <>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {rsvpStatus === 'confirmed' ? (
-                                <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  🟢 Confirmado {isCompanion ? '(via Família)' : ''}
-                                </span>
-                              ) : rsvpStatus === 'declined' ? (
-                                <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  🔴 Não Poderá Ir
-                                </span>
-                              ) : rsvpStatus === 'pending_date' ? (
-                                <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  🟡 Pediu Prazo {guestObj?.requested_date ? `(${guestObj.requested_date})` : ''}
-                                </span>
-                              ) : (
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
-                                  {deadlineInfo?.label || 'Pendente'}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                              {isSent ? (
-                                <span className="text-emerald-500 flex items-center gap-1 font-semibold">
-                                  <Send className="w-3 h-3" /> Enviado {invite?.sent_at ? `(${formatDateShort(invite.sent_at)})` : ''}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" /> Não enviado ainda
-                                </span>
-                              )}
-                            </div>
-                          </>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {rsvpStatus === 'confirmed' ? (
+                              <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
+                                🟢 Confirmado {isCompanion ? '(via Família)' : ''}
+                              </span>
+                            ) : rsvpStatus === 'declined' ? (
+                              <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
+                                🔴 Não Poderá Ir
+                              </span>
+                            ) : rsvpStatus === 'pending_date' ? (
+                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
+                                🟡 Pediu Prazo {guestObj?.requested_date ? `(${guestObj.requested_date})` : ''}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                                {deadlineInfo?.label || 'Pendente'}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-[10px] font-medium text-slate-400 italic">
                             -- Sem Convite --
@@ -1775,6 +1928,82 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Rápido: Adicionar Nome à Lista */}
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                    Adicionar Nome à Lista
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Cadastre um novo convidado na lista de presença do evento
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsQuickAddOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickAddPerson} className="space-y-4">
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">
+                  Nome Completo <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Mariana Silva"
+                  value={quickName}
+                  onChange={(e) => setQuickName(e.target.value)}
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Telefone WhatsApp <span className="text-slate-400 font-normal">(Opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 11999998888"
+                  value={quickPhone}
+                  onChange={(e) => setQuickPhone(e.target.value)}
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none text-slate-800 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAddOpen(false)}
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickLoading || !quickName.trim()}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-extrabold rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4 text-emerald-100" />
+                  <span>Adicionar à Lista</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
