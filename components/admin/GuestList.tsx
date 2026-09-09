@@ -94,6 +94,43 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   );
   const unseatedPersons = persons.filter((p) => !p.table_id);
 
+  // Métricas para os 3 Cards Matemáticos Sincronizados
+  const sentInvitesPersonsCount = persons.filter((p) => {
+    const inv = invites.find((i) => i.id === p.invite_id || i.head_person_id === p.id || i.companion_person_ids?.includes(p.id));
+    return inv?.sent_status === 'sent';
+  }).length;
+
+  const uninvitedSeatedCount = persons.filter((p) => {
+    if (!p.table_id) return false;
+    const inv = invites.find((i) => i.id === p.invite_id || i.head_person_id === p.id || i.companion_person_ids?.includes(p.id));
+    return !inv;
+  }).length;
+
+  const unseatedPersonsCount = unseatedPersons.length;
+
+  const confirmedPersonsCount = persons.filter((p) => {
+    const inv = invites.find((i) => i.id === p.invite_id || i.head_person_id === p.id || i.companion_person_ids?.includes(p.id));
+    if (!inv) return false;
+    const guestObj = inv.guests?.find((g) => g.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+    return (guestObj && guestObj.status === 'confirmed') || inv.status === 'confirmed';
+  }).length;
+
+  const declinedPersonsCount = persons.filter((p) => {
+    const inv = invites.find((i) => i.id === p.invite_id || i.head_person_id === p.id || i.companion_person_ids?.includes(p.id));
+    if (!inv) return false;
+    const guestObj = inv.guests?.find((g) => g.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+    return (guestObj && guestObj.status === 'declined') || inv.status === 'declined';
+  }).length;
+
+  const pendingRsvpCount = persons.filter((p) => {
+    const inv = invites.find((i) => i.id === p.invite_id || i.head_person_id === p.id || i.companion_person_ids?.includes(p.id));
+    if (!inv) return false;
+    const guestObj = inv.guests?.find((g) => g.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+    const isConf = (guestObj && guestObj.status === 'confirmed') || inv.status === 'confirmed';
+    const isDecl = (guestObj && guestObj.status === 'declined') || inv.status === 'declined';
+    return !isConf && !isDecl;
+  }).length;
+
   const mainInvites = invites.filter((i) => !i.tier || i.tier === 'main');
   const reserveInvites = invites.filter((i) => i.tier === 'reserve');
   const confirmedInvites = invites.filter((i) => i.status === 'confirmed');
@@ -274,6 +311,36 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     onRefresh();
   };
 
+  const handleDeleteInviteForPerson = async (person: Person, invite: Invite) => {
+    const isHead = invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase());
+    const isCompanion = !isHead && (invite.companion_person_ids?.includes(person.id) || false);
+
+    if (isCompanion) {
+      if (!confirm(`Tem certeza que deseja excluir o convite de "${person.name}"? Ela será removida da família e retornará ao status sem convite (mantendo sua mesa).`)) return;
+
+      const newCompanions = (invite.companion_person_ids || []).filter((id) => id !== person.id);
+      const newMaxGuests = Math.max(1, 1 + newCompanions.length);
+
+      await saveInvite({
+        ...invite,
+        companion_person_ids: newCompanions,
+        max_guests: newMaxGuests,
+      });
+
+      await savePerson({
+        ...person,
+        invite_id: null,
+        role_in_invite: null,
+      });
+
+      onRefresh();
+    } else {
+      if (!confirm(`Tem certeza que deseja excluir o convite de "${person.name}"? As pessoas associadas voltarão ao status sem convite gerado e manterão suas mesas.`)) return;
+      await deleteInvite(invite.id);
+      onRefresh();
+    }
+  };
+
   const handleCopyLink = (token: string) => {
     const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const link = `${siteUrl}/convite/${token}`;
@@ -431,60 +498,113 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
   return (
     <div className="space-y-6">
-      {/* Dashboard de Métricas Solicitado (Print 1, 2, 3, 4) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {/* PRINT 1: Lista Total de Convidados */}
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
+      {/* Dashboard de Métricas Solicitado (3 Cards Perfeitamente Sincronizados) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* CARD 1: LISTA TOTAL DE CONVIDADOS */}
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lista Total de Convidados</span>
-            <Users className="w-4 h-4 text-purple-500" />
+            <span className="text-xs font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+              LISTA TOTAL DE CONVIDADOS
+            </span>
+            <Users className="w-5 h-5 text-purple-500" />
           </div>
           <div>
-            <span className="text-2xl font-black text-slate-800 dark:text-slate-100">{totalPersons}</span>
-            <span className="text-xs text-slate-400 ml-1">pessoas</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-slate-800 dark:text-slate-100">{totalPersons}</span>
+              <span className="text-sm font-bold text-slate-500 dark:text-slate-400">pessoas</span>
+            </div>
           </div>
-          <p className="text-[10px] text-slate-400">119 nomes cadastrados</p>
+          <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5 text-sky-500 shrink-0" /> WhatsApp Enviado:
+              </span>
+              <span className="font-extrabold text-slate-800 dark:text-slate-100">{sentInvitesPersonsCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Armchair className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Na mesa, a enviar convite:
+              </span>
+              <span className="font-extrabold text-amber-600 dark:text-amber-400">{uninvitedSeatedCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Sem mesa (reserva):
+              </span>
+              <span className="font-extrabold text-slate-500">{unseatedPersonsCount}</span>
+            </div>
+          </div>
         </div>
 
-        {/* PRINT 2: Convidados Já Com Mesa */}
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
+        {/* CARD 2: CAPACIDADE DO BUFFET */}
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Convidados Já Com Mesa</span>
-            <Armchair className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              CAPACIDADE DO BUFFET
+            </span>
+            <Armchair className="w-5 h-5 text-emerald-500" />
           </div>
           <div>
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{seatedPersons.length}</span>
-            <span className="text-xs text-slate-400 ml-1">/ {buffetCapacity} buffet</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{seatedBuffetPersons.length}</span>
+              <span className="text-sm font-bold text-slate-500 dark:text-slate-400">/ {buffetCapacity} lugares</span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden mt-2">
+              <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${buffetOccupancyPercent}%` }} />
+            </div>
           </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-900 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full" style={{ width: `${buffetOccupancyPercent}%` }} />
+          <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Lugares ocupados:
+              </span>
+              <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{seatedBuffetPersons.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Lugares vagos buffet:
+              </span>
+              <span className="font-extrabold text-slate-700 dark:text-slate-200">
+                {Math.max(0, buffetCapacity - seatedBuffetPersons.length)}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* PRINT 3: Convidados Ainda Sem Mesa */}
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
+        {/* CARD 3: CONFIRMAÇÕES DE PRESENÇA */}
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Convidados Ainda Sem Mesa</span>
-            <CalendarClock className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-extrabold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              CONFIRMAÇÕES DE PRESENÇA
+            </span>
+            <CheckCircle2 className="w-5 h-5 text-sky-500" />
           </div>
           <div>
-            <span className="text-2xl font-black text-amber-500">{unseatedPersons.length}</span>
-            <span className="text-xs text-slate-400 ml-1">pessoas</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-black text-sky-600 dark:text-sky-400">{confirmedPersonsCount}</span>
+              <span className="text-sm font-bold text-slate-500 dark:text-slate-400">presenças confirmadas</span>
+            </div>
           </div>
-          <p className="text-[10px] text-amber-400 font-semibold">Fila de Espera (Reserva)</p>
-        </div>
-
-        {/* PRINT 4: Disparos de Convites */}
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Disparos de Convites</span>
-            <Send className="w-4 h-4 text-sky-500" />
+          <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5 text-sky-500 shrink-0" /> Disparados no WhatsApp:
+              </span>
+              <span className="font-extrabold text-slate-800 dark:text-slate-100">{sentInvitesPersonsCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Pendentes / Pediram prazo:
+              </span>
+              <span className="font-extrabold text-amber-600 dark:text-amber-400">{pendingRsvpCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <UserX className="w-3.5 h-3.5 text-rose-500 shrink-0" /> Não poderão comparecer:
+              </span>
+              <span className="font-extrabold text-rose-600 dark:text-rose-400">{declinedPersonsCount}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-2xl font-black text-sky-500">{invites.length}</span>
-            <span className="text-xs text-slate-400 ml-1">criados ({sentInvites.length} env)</span>
-          </div>
-          <p className="text-[10px] text-slate-400">Disparos pelo WhatsApp</p>
         </div>
       </div>
 
@@ -811,13 +931,23 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       {/* COLUNA 6: CONVIDAR (Ação de Convite) */}
                       <td className="py-3.5 px-4 text-center">
                         {invite ? (
-                          <button
-                            onClick={() => handleOpenEdit(invite)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
-                          >
-                            <Edit className="w-3.5 h-3.5 text-white shrink-0" />
-                            <span>Editar Convite</span>
-                          </button>
+                          rsvpStatus === 'confirmed' ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-xl font-extrabold text-xs cursor-not-allowed opacity-90"
+                              title="Convite com presença confirmada. Não é permitido editar, apenas alterar a mesa."
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>🟢 Confirmado</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenEdit(invite)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-white shrink-0" />
+                              <span>Editar Convite</span>
+                            </button>
+                          )
                         ) : (
                           <button
                             onClick={() => handleOpenAddForPerson(person)}
@@ -908,9 +1038,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                                   <button
                                     onClick={async () => {
                                       setOpenDropdownId(null);
-                                      if (!confirm(`Tem certeza que deseja excluir o convite de "${person.name}"? As pessoas associadas voltarão ao status sem convite gerado e manterão suas mesas.`)) return;
-                                      await deleteInvite(invite.id);
-                                      onRefresh();
+                                      await handleDeleteInviteForPerson(person, invite);
                                     }}
                                     className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
                                   >
