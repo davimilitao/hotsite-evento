@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, resetAllInvitesData } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, exportInvitesToCSV, downloadExcelTemplate, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import {
@@ -646,6 +646,19 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
               className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
             >
               <Download className="w-4 h-4 text-purple-500" /> <span>Modelo Excel</span>
+            </button>
+
+            <button
+              onClick={async () => {
+                if (confirm('Atenção: Tem certeza que deseja zerar todos os convites de teste e presenças confirmadas?\n\nA lista máster de 119 pessoas e a alocação de mesas continuarão intactas.')) {
+                  await resetAllInvitesData();
+                  onRefresh();
+                }
+              }}
+              className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition-all border border-rose-200 dark:border-rose-800 cursor-pointer"
+              title="Zerar convites de teste e presenças sem apagar as pessoas e mesas"
+            >
+              <Trash2 className="w-4 h-4 text-rose-500" /> <span>Zerar Convites de Teste</span>
             </button>
 
             <button

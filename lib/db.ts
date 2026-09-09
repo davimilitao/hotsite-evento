@@ -1011,5 +1011,42 @@ export async function bulkImportInvites(
   return count;
 }
 
+/**
+ * Zera todos os convites criados, envios de WhatsApp e presenças confirmadas de teste.
+ * Mantém a lista máster de 119 pessoas e suas alocações nas mesas intactas.
+ */
+export async function resetAllInvitesData(): Promise<void> {
+  const invites = await getAllInvites();
+  if (isFirebaseConfigured) {
+    for (const inv of invites) {
+      try {
+        await deleteDoc(doc(db, 'invites', inv.id));
+      } catch (err) {
+        console.warn(`Erro ao deletar convite ${inv.id} do Firestore:`, err);
+      }
+    }
+  }
+  setLS(LS_KEYS.INVITES, []);
+
+  const persons = await getAllPersons();
+  const resetPersons: Person[] = persons.map((p) => ({
+    ...p,
+    invite_id: null,
+    role_in_invite: null,
+  }));
+
+  if (isFirebaseConfigured) {
+    for (const person of resetPersons) {
+      try {
+        await setDoc(doc(db, 'persons', person.id), person);
+      } catch (err) {
+        console.warn(`Erro ao atualizar pessoa ${person.id} no Firestore:`, err);
+      }
+    }
+  }
+
+  setLS(LS_KEYS.PERSONS, resetPersons);
+}
+
 
 
