@@ -383,6 +383,16 @@ export function getInverseRelationshipType(relType: RelationshipType): Relations
   }
 }
 
+function cleanUndefinedForFirestore<T extends Record<string, any>>(obj: T): T {
+  const clean: any = {};
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] !== undefined) {
+      clean[key] = obj[key];
+    }
+  });
+  return clean as T;
+}
+
 export async function savePerson(person: Partial<Person> & { id?: string }): Promise<Person> {
   const persons = await getAllPersons();
   let fullPerson: Person;
@@ -395,10 +405,10 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
         ...existing,
         ...person,
         age: person.age !== undefined ? person.age : existing.age,
-        child_category: person.child_category || existing.child_category,
+        child_category: person.child_category !== undefined ? person.child_category : existing.child_category,
         family_id: person.family_id !== undefined ? person.family_id : existing.family_id,
         family_name: person.family_name !== undefined ? person.family_name : existing.family_name,
-        relationships: person.relationships || existing.relationships || [],
+        relationships: person.relationships !== undefined ? person.relationships : (existing.relationships || []),
       };
       persons[existingIndex] = fullPerson;
     } else {
@@ -449,7 +459,7 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'persons', fullPerson.id), fullPerson);
+      await setDoc(doc(db, 'persons', fullPerson.id), cleanUndefinedForFirestore(fullPerson));
     } catch (err) {
       console.error('Erro ao salvar pessoa no Firestore:', err);
     }
@@ -576,6 +586,66 @@ export async function updatePersonFamilyName(personId: string, newFamilyName: st
     family_id: familyId,
     family_name: newFamilyName,
   });
+}
+
+export async function savePersonFamilyAndRelationships(
+  mainPersonId: string,
+  familyName: string,
+  stagedRelationships: Array<{ target_person_id: string; relationship_type: RelationshipType }>
+): Promise<Person> {
+  const persons = await getAllPersons();
+  const mainP = persons.find((p) => p.id === mainPersonId);
+  if (!mainP) throw new Error('Pessoa principal não encontrada.');
+
+  const sharedFamilyId = mainP.family_id || `fam-${Date.now()}`;
+  const finalFamilyName = familyName.trim() || mainP.family_name || `Família ${mainP.name.split(' ')[0]}`;
+
+  // 1. Atualizar a pessoa principal com todos os relacionamentos empilhados
+  const updatedMainP = await savePerson({
+    ...mainP,
+    family_id: sharedFamilyId,
+    family_name: finalFamilyName,
+    relationships: stagedRelationships,
+  });
+
+  // 2. Atualizar todas as pessoas que estão na lista empilhada (vínculos bilaterais)
+  const targetIds = new Set(stagedRelationships.map((r) => r.target_person_id));
+
+  for (const rel of stagedRelationships) {
+    const target = persons.find((p) => p.id === rel.target_person_id);
+    if (!target) continue;
+
+    const inverseRelType = getInverseRelationshipType(rel.relationship_type);
+    const existingTargetRels = (target.relationships || []).filter((r) => r.target_person_id !== mainPersonId);
+    existingTargetRels.push({ target_person_id: mainPersonId, relationship_type: inverseRelType });
+
+    await savePerson({
+      ...target,
+      family_id: sharedFamilyId,
+      family_name: finalFamilyName,
+      relationships: existingTargetRels,
+    });
+  }
+
+  // 3. Limpar relacionamentos de pessoas que foram desvinculadas
+  const oldTargetIds = (mainP.relationships || []).map((r) => r.target_person_id);
+  const removedTargetIds = oldTargetIds.filter((id) => !targetIds.has(id));
+
+  for (const removedId of removedTargetIds) {
+    const target = persons.find((p) => p.id === removedId);
+    if (!target) continue;
+
+    const cleanTargetRels = (target.relationships || []).filter((r) => r.target_person_id !== mainPersonId);
+    await savePerson({
+      ...target,
+      relationships: cleanTargetRels,
+    });
+  }
+
+  // 4. Garantir que todos do grupo familiar recebam o novo nome de família
+  await updateFamilyGroupName(sharedFamilyId, finalFamilyName);
+
+  return updatedMainP;
 }
 
 export async function deletePerson(id: string): Promise<void> {
