@@ -150,9 +150,9 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   const declinedInvites = invites.filter((i) => i.status === 'declined');
   const sentInvites = invites.filter((i) => i.sent_status === 'sent');
 
-  // Pessoas elegíveis para convite (Com mesa atribuída)
-  const seatedPersonsEligibleForInvite = persons.filter(
-    (p) => p.table_id && (!p.invite_id || p.invite_id === editingInvite?.id)
+  // Pessoas elegíveis para convite (Qualquer pessoa sem convite ou em edição)
+  const eligiblePersonsForInvite = persons.filter(
+    (p) => (!p.invite_id || p.invite_id === editingInvite?.id)
   );
 
   const buffetOccupancyPercent = Math.min(
@@ -258,18 +258,22 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     }
   };
 
+  const handleDeletePerson = async (person: Person) => {
+    if (!confirm(`Tem certeza que deseja excluir "${person.name}" da lista de convidados? Essa pessoa será permanentemente removida do evento.`)) return;
+    await deletePerson(person.id);
+    onRefresh();
+  };
+
   const handleOpenAdd = () => {
-    if (seatedPersonsEligibleForInvite.length === 0) {
-      alert(
-        'Nenhuma pessoa com assento livre encontrada! Regra do Sistema: Você precisa alocar pelo menos 1 pessoa em uma mesa na aba "Gestão de Mesas" antes de criar um convite.'
-      );
+    if (eligiblePersonsForInvite.length === 0) {
+      alert('Todas as pessoas da lista já possuem um convite gerado!');
       return;
     }
 
     setEditingInvite(null);
     setWizardStep(1);
     setInviteType('family');
-    const firstEligible = seatedPersonsEligibleForInvite[0];
+    const firstEligible = eligiblePersonsForInvite[0];
     setHeadPersonId(firstEligible ? firstEligible.id : '');
     setCompanionPersonIds([]);
     setFamilySlotsCount(2);
@@ -310,7 +314,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
 
   const handleSaveInviteForm = async (dispatchWhatsApp: boolean = false) => {
     if (!headPersonId) {
-      alert('Selecione o Mandante (titular) do convite entre as pessoas com assento na mesa!');
+      alert('Selecione o Mandante (titular) do convite para continuar!');
       return;
     }
 
@@ -771,11 +775,11 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
       </div>
 
       {/* TABELA DE CONVITES CRIADOS (DATATABLE 360º) */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[380px]">
+        <div className="overflow-x-auto pb-24 scrollbar-none">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
+              <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
                 <th
                   onClick={() => handleSort('name')}
                   className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
@@ -863,7 +867,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   return (
                     <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
                       {/* COLUNA 1: NOME (Edição Inline por Pessoa Física 1:1) */}
-                      <td className="py-3.5 px-4 min-w-[180px]">
+                      <td className="py-3.5 px-4 min-w-[180px] whitespace-nowrap">
                         {isEditingName ? (
                           <div className="flex items-center gap-1">
                             <input
@@ -926,7 +930,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 2: TELEFONE */}
-                      <td className="py-3.5 px-4 min-w-[140px]">
+                      <td className="py-3.5 px-4 min-w-[140px] whitespace-nowrap">
                         {isEditingPhone ? (
                           <div className="flex items-center gap-1">
                             <input
@@ -966,7 +970,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 3: TIPO DE CONVITE */}
-                      <td className="py-3.5 px-4 space-y-1">
+                      <td className="py-3.5 px-4 space-y-1 whitespace-nowrap">
                         {isHead && (
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${
                             invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
@@ -991,7 +995,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 4: MESA (Seletor Inline 360º) */}
-                      <td className="py-3.5 px-4 min-w-[150px]">
+                      <td className="py-3.5 px-4 min-w-[150px] whitespace-nowrap">
                         <select
                           value={currentTableId}
                           onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
@@ -1011,7 +1015,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 5: CONVITE (Header "Convite" - Enviar / Enviado / Reenviar) */}
-                      <td className="py-3.5 px-4 text-center min-w-[130px]">
+                      <td className="py-3.5 px-4 text-center min-w-[130px] whitespace-nowrap">
                         {invite ? (
                           isSent ? (
                             <button
@@ -1046,7 +1050,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 6: STATUS DA CONFIRMAÇÃO */}
-                      <td className="py-3.5 px-4 space-y-1">
+                      <td className="py-3.5 px-4 space-y-1 whitespace-nowrap">
                         {invite ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {rsvpStatus === 'confirmed' ? (
@@ -1075,7 +1079,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 7: AÇÕES */}
-                      <td className="py-3.5 px-4 text-right relative">
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap relative">
                         <div className="relative inline-block text-left">
                           <button
                             onClick={() => setOpenDropdownId(openDropdownId === person.id ? null : person.id)}
@@ -1086,46 +1090,50 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           </button>
 
                           {openDropdownId === person.id && (
-                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-30 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in">
+                            <div className="absolute right-0 mt-1 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in">
+                              {/* 1. EDITAR CONVITE (se houver) */}
                               {invite && (
                                 <button
                                   onClick={() => {
                                     setOpenDropdownId(null);
                                     handleOpenEdit(invite);
                                   }}
-                                  className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                                  className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
                                 >
                                   <Edit className="w-4 h-4 text-purple-500" />
                                   <span>Editar Convite (Wizard)</span>
                                 </button>
                               )}
 
+                              {/* 2. COPIAR LINK HOTSITE */}
                               {invite && (
                                 <button
                                   onClick={() => {
                                     setOpenDropdownId(null);
                                     handleCopyLink(invite.id);
                                   }}
-                                  className="w-full text-left px-3.5 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                                  className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
                                 >
                                   {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-purple-500" />}
                                   <span>{copiedToken === invite.id ? 'Link Copiado!' : 'Copiar Link Hotsite'}</span>
                                 </button>
                               )}
 
+                              {/* 3. ACESSAR HOTSITE */}
                               {invite && (
                                 <a
                                   href={`/convite/${invite.id}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={() => setOpenDropdownId(null)}
-                                  className="w-full text-left px-3.5 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
+                                  className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
                                 >
                                   <ExternalLink className="w-4 h-4 text-blue-500" />
                                   <span>Acessar Hotsite</span>
                                 </a>
                               )}
 
+                              {/* 4. DESALOCAR DA MESA */}
                               {person.table_id && (
                                 <button
                                   onClick={async () => {
@@ -1133,35 +1141,38 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                                     await unassignPersonSeat(person.id);
                                     onRefresh();
                                   }}
-                                  className="w-full text-left px-3.5 py-2 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
+                                  className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
                                 >
                                   <Armchair className="w-4 h-4 text-amber-500" />
                                   <span>Desalocar da Mesa</span>
                                 </button>
                               )}
 
+                              {/* 5. EXCLUIR APENAS O CONVITE (mantém o convidado na lista) */}
                               {invite && (
-                                rsvpStatus === 'confirmed' ? (
-                                  <div
-                                    className="w-full text-left px-3.5 py-2 text-slate-400 font-medium flex items-center gap-2 cursor-not-allowed opacity-50"
-                                    title="Presença confirmada — não é permitido excluir o convite (apenas trocar de mesa)"
-                                  >
-                                    <Trash2 className="w-4 h-4 text-slate-400" />
-                                    <span>Excluir Convite (Bloqueado)</span>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={async () => {
-                                      setOpenDropdownId(null);
-                                      await handleDeleteInviteForPerson(person, invite);
-                                    }}
-                                    className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-4 h-4 text-rose-500" />
-                                    <span>Excluir Convite</span>
-                                  </button>
-                                )
+                                <button
+                                  onClick={async () => {
+                                    setOpenDropdownId(null);
+                                    await handleDeleteInviteForPerson(person, invite);
+                                  }}
+                                  className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
+                                >
+                                  <X className="w-4 h-4 text-amber-500" />
+                                  <span>Excluir Apenas Convite</span>
+                                </button>
                               )}
+
+                              {/* 6. EXCLUIR CONVIDADO DA LISTA (Pessoa Física no Banco de Dados) */}
+                              <button
+                                onClick={async () => {
+                                  setOpenDropdownId(null);
+                                  await handleDeletePerson(person);
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold flex items-center gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4 text-rose-500" />
+                                <span>Excluir Convidado da Lista</span>
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1367,45 +1378,40 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   })()}
                 </div>
 
-                {/* Seleção Dinâmica de Mesa caso o Mandante escolhido não tenha mesa ainda */}
+                {/* Atribuição Opcional de Mesa no Wizard */}
                 {headPersonId && (() => {
                   const selectedHeadP = persons.find((p) => p.id === headPersonId);
                   const selectedHeadTable = tables.find((t) => t.id === selectedHeadP?.table_id);
 
-                  if (!selectedHeadP?.table_id) {
-                    return (
-                      <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-2">
-                        <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
-                          <AlertTriangle className="w-4 h-4 shrink-0" />
-                          <span>⚠️ Este convidado não tem mesa atribuída. Selecione a mesa para continuar:</span>
-                        </div>
-                        <select
-                          required
-                          value=""
-                          onChange={async (e) => {
-                            const newTId = e.target.value;
-                            if (newTId) {
-                              await savePerson({ ...selectedHeadP, table_id: newTId });
-                              onRefresh();
-                            }
-                          }}
-                          className="w-full p-2.5 bg-slate-900 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-200 focus:outline-none cursor-pointer"
-                        >
-                          <option value="">-- Selecionar Mesa para {selectedHeadP?.name} --</option>
-                          {tables.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name} ({t.capacity} lugares)
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
                   return (
-                    <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-400 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>Mesa Atribuída: {selectedHeadTable?.name}</span>
+                    <div className="p-3 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <Armchair className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span>Mesa do Convidado (Opcional):</span>
+                        </span>
+                        {selectedHeadTable ? (
+                          <span className="text-emerald-500 font-extrabold">{selectedHeadTable.name}</span>
+                        ) : (
+                          <span className="text-amber-400 font-medium italic">Sem Mesa (Reserva)</span>
+                        )}
+                      </div>
+                      <select
+                        value={selectedHeadP?.table_id || ''}
+                        onChange={async (e) => {
+                          const newTId = e.target.value;
+                          await savePerson({ ...selectedHeadP, table_id: newTId || null });
+                          onRefresh();
+                        }}
+                        className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer"
+                      >
+                        <option value="">-- Sem Mesa (Reserva) --</option>
+                        {tables.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.capacity} lugares)
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   );
                 })()}
@@ -1622,7 +1628,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   <button
                     type="button"
                     disabled={
-                      (wizardStep === 2 && (!headPersonId || !persons.find((p) => p.id === headPersonId)?.table_id)) ||
+                      (wizardStep === 2 && !headPersonId) ||
                       (wizardStep === 3 && phone.replace(/\D/g, '').length < 8) ||
                       (wizardStep === 4 && inviteType === 'family' && companionPersonIds.filter(Boolean).length < (familySlotsCount - 1))
                     }
