@@ -545,6 +545,39 @@ export async function unlinkPeopleRelationship(
   return { person1: updatedP1, person2: updatedP2 };
 }
 
+export async function updateFamilyGroupName(familyId: string, newFamilyName: string): Promise<Person[]> {
+  const persons = await getAllPersons();
+  const updatedPersons: Person[] = [];
+  for (const member of persons) {
+    if (member.family_id === familyId) {
+      const updated = await savePerson({
+        ...member,
+        family_name: newFamilyName,
+      });
+      updatedPersons.push(updated);
+    }
+  }
+  return updatedPersons;
+}
+
+export async function updatePersonFamilyName(personId: string, newFamilyName: string): Promise<Person> {
+  const persons = await getAllPersons();
+  const target = persons.find((p) => p.id === personId);
+  if (!target) throw new Error('Pessoa não encontrada.');
+
+  const familyId = target.family_id || `fam-${Date.now()}`;
+
+  if (target.family_id) {
+    await updateFamilyGroupName(target.family_id, newFamilyName);
+  }
+
+  return await savePerson({
+    ...target,
+    family_id: familyId,
+    family_name: newFamilyName,
+  });
+}
+
 export async function deletePerson(id: string): Promise<void> {
   const persons = await getAllPersons();
   const filtered = persons.filter((p) => p.id !== id);
