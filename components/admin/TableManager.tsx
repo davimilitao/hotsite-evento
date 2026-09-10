@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Table, Invite, Person } from '@/types';
 import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition } from '@/lib/db';
+import { FreeformCanvasDesigner } from '@/components/admin/FreeformCanvasDesigner';
 import {
   Plus,
   Trash2,
@@ -27,7 +28,7 @@ interface TableManagerProps {
 }
 
 export function TableManager({ tables, invites, persons, onRefresh }: TableManagerProps) {
-  const [viewMode, setViewMode] = useState<'cards' | 'floorplan'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'floorplan' | 'canvas'>('cards');
   const [activeFloorplanTable, setActiveFloorplanTable] = useState<Table | null>(tables[0] || null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -153,7 +154,23 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
               }`}
             >
               <Map className="w-4 h-4" />
-              <span>Planta Baixa do Salão</span>
+              <span>Planta Baixa Oficial</span>
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('canvas');
+                if (tables.length > 0 && !activeFloorplanTable) {
+                  setActiveFloorplanTable(tables[0]);
+                }
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                viewMode === 'canvas'
+                  ? 'bg-amber-500 text-slate-950 shadow-md'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Canvas 2D (Livre)</span>
             </button>
           </div>
 
@@ -208,108 +225,120 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
         </div>
       )}
 
-      {/* MODO PLANTA BAIXA INTERATIVA DO SALÃO */}
-      {viewMode === 'floorplan' && (
+      {/* MODO PLANTA BAIXA OFICIAL OU CANVAS 2D LIVRE */}
+      {(viewMode === 'floorplan' || viewMode === 'canvas') && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Lado Esquerdo: Planta Baixa Interativa com Imagem do Salão */}
-          <div className="lg:col-span-7 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-lg space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
-              <div className="flex items-center gap-2">
-                <Map className="w-5 h-5 text-purple-500" />
-                <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
-                  Planta Baixa Interativa do Salão
-                </h3>
-              </div>
-              <span className="text-xs font-bold text-slate-400">
-                Clique nas mesas para gerenciar cadeiras
-              </span>
-            </div>
-
-            {/* Imagem do Salão com Overlays das Mesas */}
-            <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
-              <img
-                src="/salao-planta-baixa.jpg"
-                alt="Planta Baixa Interativa do Salão"
-                className="w-full h-auto object-cover select-none"
+          {/* Lado Esquerdo: Canvas Designer (Livre) ou Planta Baixa Oficial */}
+          <div className="lg:col-span-7">
+            {viewMode === 'canvas' ? (
+              <FreeformCanvasDesigner
+                tables={tables}
+                persons={persons}
+                activeTable={activeFloorplanTable}
+                onSelectTable={(table) => setActiveFloorplanTable(table)}
+                onRefresh={onRefresh}
               />
-
-              {tables.map((table, idx) => {
-                const tablePersons = persons.filter((p) => p.table_id === table.id);
-                const isSelected = inspectorTable?.id === table.id;
-                const isFull = tablePersons.length >= table.capacity;
-                const isHalf = tablePersons.length > 0 && tablePersons.length < table.capacity;
-
-                const pos = getTablePosition(table, idx);
-
-                return (
-                  <div
-                    key={table.id}
-                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
-                  >
-                    <button
-                      onClick={() => setActiveFloorplanTable(table)}
-                      className={`relative flex items-center justify-center transition-all cursor-pointer ${
-                        isSelected
-                          ? 'w-9 h-9 sm:w-11 sm:h-11 scale-110'
-                          : 'w-7 h-7 sm:w-9 sm:h-9 hover:scale-115'
-                      }`}
-                      title={`${table.name} (${tablePersons.length}/${table.capacity})`}
-                    >
-                      {isSelected && (
-                        <span className="absolute -inset-2 rounded-full border-2 border-purple-400 animate-pulse" />
-                      )}
-
-                      <span
-                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[9px] sm:text-[10px] font-black leading-none ${
-                          isSelected
-                            ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
-                            : isFull
-                            ? 'bg-emerald-600 text-white border-emerald-300'
-                            : isHalf
-                            ? 'bg-amber-500 text-slate-950 border-amber-300'
-                            : 'bg-slate-950/85 text-amber-300 border-amber-500/70'
-                        }`}
-                      >
-                        <span>
-                          {(() => {
-                            const n = table.name.toLowerCase();
-                            const num = table.name.match(/\d+/)?.[0] || '';
-                            if (n.includes('esquerda')) return `E-${num}`;
-                            if (n.includes('direita')) return `D-${num}`;
-                            if (n.includes('mesa')) return `M-${num}`;
-                            return table.name.substring(0, 5);
-                          })()}
-                        </span>
-                        <span className="text-[8px] opacity-90 mt-0.5 font-bold">
-                          {tablePersons.length}/{table.capacity}
-                        </span>
-                      </span>
-                    </button>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-lg space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Map className="w-5 h-5 text-purple-500" />
+                    <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                      Planta Baixa Oficial do Salão
+                    </h3>
                   </div>
-                );
-              })}
-            </div>
+                  <span className="text-xs font-bold text-slate-400">
+                    Clique nas mesas para gerenciar cadeiras
+                  </span>
+                </div>
 
-            {/* Legenda do Administrador */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-purple-600 border border-purple-300" />
-                <span className="font-bold text-purple-600 dark:text-purple-400">Mesa Selecionada</span>
+                {/* Imagem do Salão com Overlays das Mesas */}
+                <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
+                  <img
+                    src="/salao-planta-baixa.jpg"
+                    alt="Planta Baixa Interativa do Salão"
+                    className="w-full h-auto object-cover select-none"
+                  />
+
+                  {tables.map((table, idx) => {
+                    const tablePersons = persons.filter((p) => p.table_id === table.id);
+                    const isSelected = inspectorTable?.id === table.id;
+                    const isFull = tablePersons.length >= table.capacity;
+                    const isHalf = tablePersons.length > 0 && tablePersons.length < table.capacity;
+
+                    const pos = getTablePosition(table, idx);
+
+                    return (
+                      <div
+                        key={table.id}
+                        style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+                      >
+                        <button
+                          onClick={() => setActiveFloorplanTable(table)}
+                          className={`relative flex items-center justify-center transition-all cursor-pointer ${
+                            isSelected
+                              ? 'w-9 h-9 sm:w-11 sm:h-11 scale-110'
+                              : 'w-7 h-7 sm:w-9 sm:h-9 hover:scale-115'
+                          }`}
+                          title={`${table.name} (${tablePersons.length}/${table.capacity})`}
+                        >
+                          {isSelected && (
+                            <span className="absolute -inset-2 rounded-full border-2 border-purple-400 animate-pulse" />
+                          )}
+
+                          <span
+                            className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[9px] sm:text-[10px] font-black leading-none ${
+                              isSelected
+                                ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
+                                : isFull
+                                ? 'bg-emerald-600 text-white border-emerald-300'
+                                : isHalf
+                                ? 'bg-amber-500 text-slate-950 border-amber-300'
+                                : 'bg-slate-950/85 text-amber-300 border-amber-500/70'
+                            }`}
+                          >
+                            <span>
+                              {(() => {
+                                const n = table.name.toLowerCase();
+                                const num = table.name.match(/\d+/)?.[0] || '';
+                                if (n.includes('esquerda')) return `E-${num}`;
+                                if (n.includes('direita')) return `D-${num}`;
+                                if (n.includes('mesa')) return `M-${num}`;
+                                return table.name.substring(0, 5);
+                              })()}
+                            </span>
+                            <span className="text-[8px] opacity-90 mt-0.5 font-bold">
+                              {tablePersons.length}/{table.capacity}
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legenda do Administrador */}
+                <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-purple-600 border border-purple-300" />
+                    <span className="font-bold text-purple-600 dark:text-purple-400">Mesa Selecionada</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-300" />
+                    <span>Completa (8/8)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-300" />
+                    <span>Parcial</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-slate-900 border border-amber-500/70" />
+                    <span>Vazia</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-300" />
-                <span>Completa (8/8)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-300" />
-                <span>Parcial</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-slate-900 border border-amber-500/70" />
-                <span>Vazia</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Lado Direito: Inspector da Mesa Selecionada com Cadeiras 1:1 */}
