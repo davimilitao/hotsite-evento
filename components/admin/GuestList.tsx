@@ -775,14 +775,14 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
       </div>
 
       {/* TABELA DE CONVITES CRIADOS (DATATABLE 360º) */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[380px]">
-        <div className="overflow-x-auto pb-24 scrollbar-none">
-          <table className="w-full text-left border-collapse">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[350px]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[850px]">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
+              <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
                 <th
                   onClick={() => handleSort('name')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  className="py-3 px-3 cursor-pointer hover:text-purple-600 transition-colors select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Nome</span>
@@ -793,13 +793,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                     )}
                   </div>
                 </th>
-                <th className="py-3.5 px-4">Telefone</th>
+                <th className="py-3 px-2.5">Telefone</th>
                 <th
                   onClick={() => handleSort('invite_type')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Tipo de Convite</span>
+                    <span>Tipo</span>
                     {sortField === 'invite_type' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
                     ) : (
@@ -809,7 +809,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                 </th>
                 <th
                   onClick={() => handleSort('table')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Mesa</span>
@@ -820,13 +820,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                     )}
                   </div>
                 </th>
-                <th className="py-3.5 px-4 text-center">Convite</th>
+                <th className="py-3 px-2 text-center">Convite</th>
                 <th
                   onClick={() => handleSort('status')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Status da Confirmação</span>
+                    <span>Status</span>
                     {sortField === 'status' ? (
                       sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
                     ) : (
@@ -834,7 +834,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                     )}
                   </div>
                 </th>
-                <th className="py-3.5 px-4 text-right">Ações</th>
+                <th className="py-3 px-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
@@ -845,7 +845,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   </td>
                 </tr>
               ) : (
-                sortedPersons.map((person) => {
+                sortedPersons.map((person, index) => {
                   const invite = invites.find(
                     (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
                   );
@@ -864,10 +864,13 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                   const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
                   const rsvpStatus = guestObj?.status || invite?.status || 'pending';
 
+                  // Direção do Dropdown (Abre para cima nas últimas linhas para evitar corte)
+                  const openUpwards = index >= sortedPersons.length - 3 && sortedPersons.length > 2;
+
                   return (
                     <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
                       {/* COLUNA 1: NOME (Edição Inline por Pessoa Física 1:1) */}
-                      <td className="py-3.5 px-4 min-w-[180px] whitespace-nowrap">
+                      <td className="py-2.5 px-3 min-w-[150px]">
                         {isEditingName ? (
                           <div className="flex items-center gap-1">
                             <input
@@ -892,7 +895,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         ) : (
                           <div
                             onClick={() => setEditingCell({ inviteId: person.id, field: 'name', value: person.name })}
-                            className="group flex items-center gap-1.5 cursor-pointer py-1"
+                            className="group flex items-center gap-1.5 cursor-pointer py-0.5 flex-wrap"
                             title="Clique para editar o nome diretamente na tabela"
                           >
                             <span className="font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
@@ -900,37 +903,37 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                             </span>
                             <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                             {person.special_role === 'ceremonialist' && (
-                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5">
+                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5 whitespace-nowrap">
                                 <Star className="w-3 h-3 text-amber-500" /> Cerimonialista
                               </span>
                             )}
                             {person.special_role === 'musician' && (
-                              <span className="bg-sky-500/20 text-sky-600 dark:text-sky-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-0.5">
+                              <span className="bg-sky-500/20 text-sky-600 dark:text-sky-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-0.5 whitespace-nowrap">
                                 <Music className="w-3 h-3 text-sky-500" /> Músico
                               </span>
                             )}
                             {person.special_role === 'staff' && (
-                              <span className="bg-slate-500/20 text-slate-600 dark:text-slate-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-slate-500/30 flex items-center gap-0.5">
+                              <span className="bg-slate-500/20 text-slate-600 dark:text-slate-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-slate-500/30 flex items-center gap-0.5 whitespace-nowrap">
                                 <Briefcase className="w-3 h-3 text-slate-500" /> Staff
                               </span>
                             )}
                             {person.special_role === 'birthday_person' && (
-                              <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-0.5">
+                              <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-0.5 whitespace-nowrap">
                                 <Crown className="w-3 h-3 text-amber-400" /> Aniversariante
                               </span>
                             )}
                             {!person.table_id && (
-                              <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30">
+                              <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
                                 Reserva
                               </span>
                             )}
                           </div>
                         )}
-                        {invite && <div className="text-[10px] font-mono text-purple-500 mt-0.5">/convite/{invite.id}</div>}
+                        {invite && <div className="text-[10px] font-mono text-purple-500 mt-0.5 truncate max-w-[160px]">/convite/{invite.id}</div>}
                       </td>
 
                       {/* COLUNA 2: TELEFONE */}
-                      <td className="py-3.5 px-4 min-w-[140px] whitespace-nowrap">
+                      <td className="py-2.5 px-2.5 min-w-[120px]">
                         {isEditingPhone ? (
                           <div className="flex items-center gap-1">
                             <input
@@ -956,7 +959,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         ) : (
                           <div
                             onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || invite?.phone || '' })}
-                            className="group flex items-center gap-1.5 cursor-pointer py-1 text-slate-600 dark:text-slate-300 font-medium"
+                            className="group flex items-center gap-1.5 cursor-pointer py-1 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap"
                             title="Clique para editar o telefone"
                           >
                             <span>
@@ -970,36 +973,36 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 3: TIPO DE CONVITE */}
-                      <td className="py-3.5 px-4 space-y-1 whitespace-nowrap">
+                      <td className="py-2.5 px-2.5">
                         {isHead && (
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${
+                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border whitespace-nowrap ${
                             invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
                               ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800'
                               : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
                           }`}>
                             {invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
-                              ? `Convite Família - Mandante (${1 + (invite?.companion_person_ids?.length || 0)} pes)`
-                              : 'Convite Individual (Titular)'}
+                              ? `Família (${1 + (invite?.companion_person_ids?.length || 0)} pes)`
+                              : 'Individual'}
                           </span>
                         )}
                         {isCompanion && (
-                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800">
-                            Convite Família - Acompanhante (Titular: {headPerson?.name || 'Titular'})
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 whitespace-nowrap">
+                            Família (Acompanhante)
                           </span>
                         )}
                         {!invite && (
-                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-300 dark:border-slate-800">
-                            Sem Convite (Não Convidado)
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-300 dark:border-slate-800 whitespace-nowrap">
+                            Sem Convite
                           </span>
                         )}
                       </td>
 
                       {/* COLUNA 4: MESA (Seletor Inline 360º) */}
-                      <td className="py-3.5 px-4 min-w-[150px] whitespace-nowrap">
+                      <td className="py-2.5 px-2.5 min-w-[120px]">
                         <select
                           value={currentTableId}
                           onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
-                          className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
+                          className={`w-full px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
                             currentTableId
                               ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800'
                               : 'bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700 italic'
@@ -1015,12 +1018,12 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 5: CONVITE (Header "Convite" - Enviar / Enviado / Reenviar) */}
-                      <td className="py-3.5 px-4 text-center min-w-[130px] whitespace-nowrap">
+                      <td className="py-2.5 px-2 text-center min-w-[110px]">
                         {invite ? (
                           isSent ? (
                             <button
                               onClick={() => handleWhatsAppDispatch(invite)}
-                              className="group relative inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-amber-500/20 text-emerald-600 hover:text-amber-700 dark:text-emerald-400 dark:hover:text-amber-300 border border-emerald-500/30 hover:border-amber-500/40 rounded-xl font-extrabold text-xs transition-all cursor-pointer shadow-sm"
+                              className="group relative inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 hover:bg-amber-500/20 text-emerald-600 hover:text-amber-700 dark:text-emerald-400 dark:hover:text-amber-300 border border-emerald-500/30 hover:border-amber-500/40 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer shadow-sm whitespace-nowrap"
                               title="Clique para reenviar a mensagem de convite no WhatsApp"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 group-hover:hidden shrink-0" />
@@ -1031,7 +1034,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           ) : (
                             <button
                               onClick={() => handleWhatsAppDispatch(invite)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-[11px] shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                               title="Disparar mensagem de convite pelo WhatsApp"
                             >
                               <Send className="w-3.5 h-3.5 text-emerald-100 shrink-0" />
@@ -1041,7 +1044,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                         ) : (
                           <button
                             onClick={() => handleOpenAddForPerson(person)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-[11px] shadow-sm transition-all cursor-pointer whitespace-nowrap"
                           >
                             <Plus className="w-3.5 h-3.5 text-white" />
                             <span>Gerar Convite</span>
@@ -1050,47 +1053,49 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       </td>
 
                       {/* COLUNA 6: STATUS DA CONFIRMAÇÃO */}
-                      <td className="py-3.5 px-4 space-y-1 whitespace-nowrap">
+                      <td className="py-2.5 px-2.5">
                         {invite ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1 flex-wrap">
                             {rsvpStatus === 'confirmed' ? (
-                              <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
-                                🟢 Confirmado {isCompanion ? '(via Família)' : ''}
+                              <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap">
+                                🟢 Confirmado
                               </span>
                             ) : rsvpStatus === 'declined' ? (
-                              <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
-                                🔴 Não Poderá Ir
+                              <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap">
+                                🔴 Não Vai
                               </span>
                             ) : rsvpStatus === 'pending_date' ? (
-                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
-                                🟡 Pediu Prazo {guestObj?.requested_date ? `(${guestObj.requested_date})` : ''}
+                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap">
+                                🟡 Pediu Prazo
                               </span>
                             ) : (
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border whitespace-nowrap ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
                                 {deadlineInfo?.label || 'Pendente'}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[10px] font-medium text-slate-400 italic">
+                          <span className="text-[10px] font-medium text-slate-400 italic whitespace-nowrap">
                             -- Sem Convite --
                           </span>
                         )}
                       </td>
 
                       {/* COLUNA 7: AÇÕES */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap relative">
+                      <td className="py-2.5 px-3 text-right relative">
                         <div className="relative inline-block text-left">
                           <button
                             onClick={() => setOpenDropdownId(openDropdownId === person.id ? null : person.id)}
-                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap"
                           >
                             <span>Ações</span>
                             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                           </button>
 
                           {openDropdownId === person.id && (
-                            <div className="absolute right-0 mt-1 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in">
+                            <div className={`absolute right-0 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in ${
+                              openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+                            }`}>
                               {/* 1. EDITAR CONVITE (se houver) */}
                               {invite && (
                                 <button
