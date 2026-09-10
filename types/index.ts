@@ -105,6 +105,7 @@ export interface Table {
   allocated_count?: number;
   shape?: 'round' | 'square' | 'lounge';
   description?: string;
+  spot_id?: string;
   position?: { x: number; y: number };
 }
 

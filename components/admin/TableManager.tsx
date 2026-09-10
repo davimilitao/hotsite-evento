@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Table, Invite, Person } from '@/types';
-import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition } from '@/lib/db';
+import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition, swapTablesPositions } from '@/lib/db';
 import {
   Plus,
   Trash2,
@@ -17,6 +17,9 @@ import {
   Map,
   LayoutGrid,
   Sparkles,
+  ArrowLeftRight,
+  Move,
+  Check,
 } from 'lucide-react';
 
 interface TableManagerProps {
@@ -37,6 +40,14 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const [shape, setShape] = useState<'round' | 'square' | 'lounge'>('round');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Estados para Drag & Drop e Troca de Posições
+  const [draggedTableId, setDraggedTableId] = useState<string | null>(null);
+  const [dragOverTableId, setDragOverTableId] = useState<string | null>(null);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [targetSwapId, setTargetSwapId] = useState<string>('');
+  const [isSwapping, setIsSwapping] = useState(false);
+  const [swapToast, setSwapToast] = useState<string | null>(null);
 
   // Modal para alocar pessoa 1:1 no assento específico
   const [selectedAssignment, setSelectedAssignment] = useState<{
@@ -105,6 +116,82 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const handleUnassignPerson = async (personId: string) => {
     await unassignPersonSeat(personId);
     onRefresh();
+  };
+
+  // ---- DRAG AND DROP HANDLERS ----
+  const handleDragStart = (e: React.DragEvent, table: Table) => {
+    setDraggedTableId(table.id);
+    e.dataTransfer.setData('text/plain', table.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, table: Table) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverTableId !== table.id) {
+      setDragOverTableId(table.id);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, table: Table) => {
+    if (dragOverTableId === table.id) {
+      setDragOverTableId(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetTable: Table) => {
+    e.preventDefault();
+    setDragOverTableId(null);
+
+    const sourceId = draggedTableId || e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetTable.id) {
+      setDraggedTableId(null);
+      return;
+    }
+
+    const sourceTable = tables.find((t) => t.id === sourceId);
+    if (!sourceTable) {
+      setDraggedTableId(null);
+      return;
+    }
+
+    setIsSwapping(true);
+    try {
+      await swapTablesPositions(sourceTable, targetTable);
+      onRefresh();
+      triggerSwapToast(`"${sourceTable.name}" e "${targetTable.name}" trocaram de posição!`);
+    } catch (err) {
+      console.error('Erro ao trocar mesas:', err);
+    } finally {
+      setIsSwapping(false);
+      setDraggedTableId(null);
+    }
+  };
+
+  // Troca de posição via modal de 1-Clique (para Mobile / Touch)
+  const handleExecuteManualSwap = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inspectorTable || !targetSwapId || inspectorTable.id === targetSwapId) return;
+
+    const targetTable = tables.find((t) => t.id === targetSwapId);
+    if (!targetTable) return;
+
+    setIsSwapping(true);
+    try {
+      await swapTablesPositions(inspectorTable, targetTable);
+      setIsSwapModalOpen(false);
+      onRefresh();
+      triggerSwapToast(`"${inspectorTable.name}" e "${targetTable.name}" trocaram de posição!`);
+    } catch (err) {
+      console.error('Erro ao trocar mesas:', err);
+    } finally {
+      setIsSwapping(false);
+    }
+  };
+
+  const triggerSwapToast = (msg: string) => {
+    setSwapToast(msg);
+    setTimeout(() => setSwapToast(null), 4000);
   };
 
   const inspectorTable = activeFloorplanTable || tables[0];
@@ -196,6 +283,14 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
         </div>
       </div>
 
+      {/* Toast Notificação de Troca de Mesa */}
+      {swapToast && (
+        <div className="bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-bounce border border-emerald-400">
+          <Check className="w-5 h-5 text-emerald-200 shrink-0" />
+          <span>{swapToast}</span>
+        </div>
+      )}
+
       {/* Alerta de Convidados Sem Mesa */}
       {unassignedPersons.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/60 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -208,24 +303,25 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
         </div>
       )}
 
-      {/* MODO PLANTA BAIXA INTERATIVA DO SALÃO */}
+      {/* MODO PLANTA BAIXA INTERATIVA DO SALÃO COM DRAG AND DROP */}
       {viewMode === 'floorplan' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Lado Esquerdo: Planta Baixa Interativa com Imagem do Salão */}
           <div className="lg:col-span-7 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-lg space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
               <div className="flex items-center gap-2">
                 <Map className="w-5 h-5 text-purple-500" />
                 <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
                   Planta Baixa Interativa do Salão
                 </h3>
               </div>
-              <span className="text-xs font-bold text-slate-400">
-                Clique nas mesas para gerenciar cadeiras
-              </span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 self-start sm:self-auto">
+                <Move className="w-3.5 h-3.5" />
+                <span>Drag & Drop: Arraste para inverter mesas!</span>
+              </div>
             </div>
 
-            {/* Imagem do Salão com Overlays das Mesas */}
+            {/* Imagem do Salão com Overlays das Mesas & Handlers Drag/Drop */}
             <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
               <img
                 src="/salao-planta-baixa.jpg"
@@ -236,6 +332,8 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
               {tables.map((table, idx) => {
                 const tablePersons = persons.filter((p) => p.table_id === table.id);
                 const isSelected = inspectorTable?.id === table.id;
+                const isDragging = draggedTableId === table.id;
+                const isDragOver = dragOverTableId === table.id;
                 const isFull = tablePersons.length >= table.capacity;
                 const isHalf = tablePersons.length > 0 && tablePersons.length < table.capacity;
 
@@ -246,23 +344,38 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                     key={table.id}
                     style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                     className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+                    onDragOver={(e) => handleDragOver(e, table)}
+                    onDragLeave={(e) => handleDragLeave(e, table)}
+                    onDrop={(e) => handleDrop(e, table)}
                   >
                     <button
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, table)}
                       onClick={() => setActiveFloorplanTable(table)}
-                      className={`relative flex items-center justify-center transition-all cursor-pointer ${
-                        isSelected
+                      className={`relative flex items-center justify-center transition-all cursor-grab active:cursor-grabbing ${
+                        isDragOver
+                          ? 'scale-125 z-30'
+                          : isSelected
                           ? 'w-9 h-9 sm:w-11 sm:h-11 scale-110'
+                          : isDragging
+                          ? 'opacity-40 scale-90'
                           : 'w-7 h-7 sm:w-9 sm:h-9 hover:scale-115'
                       }`}
-                      title={`${table.name} (${tablePersons.length}/${table.capacity})`}
+                      title={`Arrastar "${table.name}" para trocar de posição com outra mesa (${tablePersons.length}/${table.capacity})`}
                     >
-                      {isSelected && (
+                      {isSelected && !isDragOver && (
                         <span className="absolute -inset-2 rounded-full border-2 border-purple-400 animate-pulse" />
+                      )}
+
+                      {isDragOver && (
+                        <span className="absolute -inset-3 rounded-full border-4 border-emerald-400 bg-emerald-500/40 animate-ping" />
                       )}
 
                       <span
                         className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[9px] sm:text-[10px] font-black leading-none ${
-                          isSelected
+                          isDragOver
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-300 ring-4 ring-emerald-400 shadow-2xl scale-110'
+                            : isSelected
                             ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
                             : isFull
                             ? 'bg-emerald-600 text-white border-emerald-300'
@@ -312,7 +425,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
             </div>
           </div>
 
-          {/* Lado Direito: Inspector da Mesa Selecionada com Cadeiras 1:1 */}
+          {/* Lado Direito: Inspector da Mesa Selecionada com Cadeiras 1:1 & Botão de Troca Rápida */}
           <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-purple-500/40 shadow-xl space-y-5">
             {inspectorTable ? (
               (() => {
@@ -353,6 +466,19 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                         </button>
                       </div>
                     </div>
+
+                    {/* Botão de Trocar Posição do Salão (Mobile/1-Clique) */}
+                    <button
+                      onClick={() => {
+                        const otherTable = tables.find((t) => t.id !== inspectorTable.id);
+                        if (otherTable) setTargetSwapId(otherTable.id);
+                        setIsSwapModalOpen(true);
+                      }}
+                      className="w-full py-2.5 px-4 bg-purple-600/10 hover:bg-purple-600/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                    >
+                      <ArrowLeftRight className="w-4 h-4 text-purple-500" />
+                      <span>Trocar Posição no Salão com Outra Mesa</span>
+                    </button>
 
                     {/* Barra de Progresso */}
                     <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-2">
@@ -579,6 +705,71 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal 1-Clique para Trocar Posição no Salão */}
+      {isSwapModalOpen && inspectorTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <ArrowLeftRight className="w-5 h-5 text-purple-500" />
+                <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                  Trocar Posição no Salão
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsSwapModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Selecione com qual mesa a <strong className="text-purple-500">{inspectorTable.name}</strong> deve inverter de posição geográfica no mapa do salão:
+            </p>
+
+            <form onSubmit={handleExecuteManualSwap} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Mesa de Destino para Troca *
+                </label>
+                <select
+                  value={targetSwapId}
+                  onChange={(e) => setTargetSwapId(e.target.value)}
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100"
+                >
+                  {tables
+                    .filter((t) => t.id !== inspectorTable.id)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({persons.filter((p) => p.table_id === t.id).length}/{t.capacity} pessoas)
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSwapModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSwapping}
+                  className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  <span>{isSwapping ? 'Invertendo Posições...' : 'Confirmar Troca de Posição'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
