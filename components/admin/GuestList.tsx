@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole } from '@/types';
+import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole, ChildCategory } from '@/types';
 import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
@@ -108,8 +108,12 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
   const [quickLoading, setQuickLoading] = useState(false);
 
   // Estados de Ordenação por Coluna
-  const [sortField, setSortField] = useState<'name' | 'invite_type' | 'table' | 'status'>('name');
+  const [sortField, setSortField] = useState<'name' | 'invite_type' | 'table' | 'status' | 'family'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Estado de Edição Inline de Telefone na Lista de Convidados
+  const [editingPhonePersonId, setEditingPhonePersonId] = useState<string | null>(null);
+  const [tempPhone, setTempPhone] = useState<string>('');
 
   // Métricas 1:1 de Pessoas & Assentos
   const buffetCapacity = config.buffet_capacity || 100;
@@ -210,7 +214,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     return true;
   });
 
-  const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status') => {
+  const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status' | 'family') => {
     if (sortField === field) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
@@ -226,6 +230,9 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
     if (sortField === 'name') {
       valA = a.name.toLowerCase();
       valB = b.name.toLowerCase();
+    } else if (sortField === 'family') {
+      valA = (a.family_name || 'z_sem_familia').toLowerCase();
+      valB = (b.family_name || 'z_sem_familia').toLowerCase();
     } else if (sortField === 'invite_type') {
       const invA = invites.find((i) => i.id === a.invite_id || i.head_person_id === a.id || i.companion_person_ids?.includes(a.id));
       const invB = invites.find((i) => i.id === b.invite_id || i.head_person_id === b.id || i.companion_person_ids?.includes(b.id));
@@ -285,31 +292,34 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
       return;
     }
 
-    setEditingInvite(null);
-    setWizardStep(1);
-    setInviteType('family');
     const firstEligible = eligiblePersonsForInvite[0];
-    setHeadPersonId(firstEligible ? firstEligible.id : '');
-    setCompanionPersonIds([]);
-    setFamilySlotsCount(2);
-    setPhone(firstEligible ? firstEligible.phone || '' : '');
-    setTier('main');
-    setIndividualDeadline('');
-    setSearchPersonQuery('');
-    setIsAddOpen(true);
+    handleOpenAddForPerson(firstEligible);
   };
 
   const handleOpenAddForPerson = (person: Person) => {
+    const familyMemberIds = (person.relationships || [])
+      .map((r) => r.target_person_id)
+      .filter((id) => persons.some((p) => p.id === id));
+    const hasFamily = familyMemberIds.length > 0 || Boolean(person.family_id);
+
     setEditingInvite(null);
     setWizardStep(1);
-    setInviteType('family');
     setHeadPersonId(person.id);
-    setCompanionPersonIds([]);
-    setFamilySlotsCount(2);
     setPhone(person.phone || '');
     setTier('main');
     setIndividualDeadline('');
     setSearchPersonQuery('');
+
+    if (hasFamily && familyMemberIds.length > 0) {
+      setInviteType('family');
+      setCompanionPersonIds(familyMemberIds);
+      setFamilySlotsCount(1 + familyMemberIds.length);
+    } else {
+      setInviteType('individual');
+      setCompanionPersonIds([]);
+      setFamilySlotsCount(1);
+    }
+
     setIsAddOpen(true);
   };
 
@@ -842,31 +852,28 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
-                  <th onClick={() => handleSort('name')} className="py-3 px-3 cursor-pointer hover:text-amber-500">
-                    Convidado(a)
+                  <th onClick={() => handleSort('name')} className="py-3 px-3 cursor-pointer hover:text-purple-500">
+                    Convidado(a) {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="py-3 px-2.5">Telefone (WhatsApp)</th>
-                  <th className="py-3 px-2.5">Idade & Categoria Buffet</th>
-                  <th className="py-3 px-2.5">Família & Parentescos</th>
-                  <th className="py-3 px-2.5">Mesa & Assento</th>
-                  <th className="py-3 px-2 text-center">Status Convite</th>
+                  <th className="py-3 px-2.5">Faixa Etária</th>
+                  <th onClick={() => handleSort('family')} className="py-3 px-2.5 cursor-pointer hover:text-purple-500">
+                    Família & Parentescos {sortField === 'family' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th className="py-3 px-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
                 {sortedPersons.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                    <td colSpan={5} className="py-8 text-center text-slate-400 font-medium">
                       Nenhum convidado encontrado na busca ou filtro selecionado.
                     </td>
                   </tr>
                 ) : (
                   sortedPersons.map((person) => {
-                    const invite = invites.find(
-                      (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
-                    );
                     const childCat = calculateChildCategory(person.age, config);
-                    const table = tables.find((t) => t.id === person.table_id);
+                    const hasFamily = Boolean(person.family_name || person.family_id || (person.relationships && person.relationships.length > 0));
 
                     return (
                       <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
@@ -882,106 +889,109 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           </div>
                         </td>
 
-                        {/* Telefone */}
+                        {/* Telefone (Editável Inline) */}
                         <td className="py-3 px-2.5 font-medium text-slate-600 dark:text-slate-300">
-                          {person.phone ? (
-                            <span className="flex items-center gap-1 font-mono text-[11px]">
-                              <MessageCircle className="w-3 h-3 text-emerald-500" />
-                              {formatPhoneDisplay(person.phone)}
-                            </span>
+                          {editingPhonePersonId === person.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={tempPhone}
+                                onChange={(e) => setTempPhone(e.target.value)}
+                                placeholder="(11) 99999-9999"
+                                className="w-32 px-2 py-1 bg-slate-900 border border-purple-500 rounded text-[11px] font-mono text-white focus:outline-none"
+                                autoFocus
+                              />
+                              <button
+                                onClick={async () => {
+                                  await savePerson({ ...person, phone: tempPhone });
+                                  setEditingPhonePersonId(null);
+                                  onRefresh();
+                                }}
+                                className="p-1 text-emerald-400 hover:bg-emerald-950 rounded cursor-pointer"
+                                title="Salvar Telefone"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setEditingPhonePersonId(null)}
+                                className="p-1 text-slate-400 hover:bg-slate-800 rounded cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           ) : (
-                            <span className="text-slate-400 text-[10px] italic">Sem Celular</span>
+                            <div
+                              onClick={() => {
+                                setEditingPhonePersonId(person.id);
+                                setTempPhone(person.phone || '');
+                              }}
+                              className="inline-flex items-center gap-1.5 font-mono text-[11px] cursor-pointer hover:text-purple-400 transition-colors group"
+                              title="Clique para editar o telefone"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              <span>{person.phone ? formatPhoneDisplay(person.phone) : 'Sem Celular'}</span>
+                              <Edit className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
                           )}
                         </td>
 
-                        {/* Idade & Categoria Buffet */}
+                        {/* Faixa Etária (Select Inline) */}
                         <td className="py-3 px-2.5">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px]">
-                              {person.age !== undefined && person.age !== null ? `${person.age} anos` : 'Idade N/I'}
-                            </span>
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border w-fit ${
-                                childCat === 'isento'
-                                  ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'
-                                  : childCat === 'meia'
-                                  ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
-                                  : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
-                              }`}
-                            >
-                              {childCat === 'isento' && `Isento (0-${config.child_free_max_age || 5})`}
-                              {childCat === 'meia' && `Meia (${(config.child_free_max_age || 5) + 1}-${config.child_half_max_age || 11})`}
-                              {childCat === 'inteira' && 'Inteira (12+)'}
-                            </span>
-                          </div>
+                          <select
+                            value={childCat}
+                            onChange={async (e) => {
+                              const newCat = e.target.value as ChildCategory;
+                              let targetAge = person.age;
+                              if (newCat === 'isento') targetAge = config.child_free_max_age || 3;
+                              else if (newCat === 'meia') targetAge = config.child_half_max_age || 8;
+                              else if (newCat === 'inteira') targetAge = person.age && person.age >= 12 ? person.age : 30;
+
+                              await savePerson({
+                                ...person,
+                                child_category: newCat,
+                                age: targetAge,
+                                type: newCat === 'inteira' ? 'adult' : 'child',
+                              });
+                              onRefresh();
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none transition-all ${
+                              childCat === 'isento'
+                                ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'
+                                : childCat === 'meia'
+                                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                            }`}
+                          >
+                            <option value="isento">Isento (0-{config.child_free_max_age || 5} anos)</option>
+                            <option value="meia">Meia-Entrada ({(config.child_free_max_age || 5) + 1}-{config.child_half_max_age || 11} anos)</option>
+                            <option value="inteira">Inteira / Adulto (12+ anos)</option>
+                          </select>
                         </td>
 
-                        {/* Família & Parentescos */}
+                        {/* Família & Parentescos (Clean Badge) */}
                         <td className="py-3 px-2.5">
-                          <div className="space-y-1">
-                            {person.family_name || person.family_id ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 rounded font-extrabold text-[10px] border border-purple-300">
-                                <Home className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                                <span>{person.family_name || 'Grupo Familiar'}</span>
-                              </span>
-                            ) : null}
-
-                            {person.relationships && person.relationships.length > 0 ? (
-                              <div className="text-[10px] text-slate-500 font-medium space-y-0.5">
-                                {person.relationships.map((rel) => {
-                                  const targetP = persons.find((p) => p.id === rel.target_person_id);
-                                  if (!targetP) return null;
-                                  return (
-                                    <span key={rel.target_person_id} className="block text-slate-600 dark:text-slate-400">
-                                      • {rel.relationship_type === 'spouse' ? 'Cônjuge de' : rel.relationship_type === 'child' ? 'Filho(a) de' : rel.relationship_type === 'parent' ? 'Pai/Mãe de' : 'Parentesco com'} <strong>{targetP.name}</strong>
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            ) : null}
-
+                          {hasFamily ? (
                             <button
                               onClick={() => {
                                 setRelationshipModalPerson(person);
                                 setIsRelationshipOpen(true);
                               }}
-                              className="px-2 py-0.5 bg-slate-100 hover:bg-purple-100 text-purple-700 dark:bg-slate-800 dark:hover:bg-purple-950 text-[10px] font-extrabold rounded border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-800 dark:text-purple-300 rounded-lg font-extrabold text-[11px] border border-purple-300 dark:border-purple-800 shadow-sm transition-all cursor-pointer group"
+                              title="Clique para gerenciar a família e parentescos"
                             >
-                              <Link2 className="w-3 h-3 text-purple-500" />
-                              <span>+ Relacionar</span>
+                              <Home className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+                              <span>{person.family_name || 'Grupo Familiar'}</span>
                             </button>
-                          </div>
-                        </td>
-
-                        {/* Mesa & Assento */}
-                        <td className="py-3 px-2.5">
-                          {table ? (
-                            <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 rounded-lg font-bold text-[10px] border border-amber-300">
-                              {table.name} {person.seat_number ? `(C1:1)` : ''}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 font-medium italic">Sem Mesa</span>
-                          )}
-                        </td>
-
-                        {/* Convite */}
-                        <td className="py-3 px-2 text-center">
-                          {invite ? (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full font-black text-[10px] border border-emerald-300 inline-block">
-                              Convite Gerado
-                            </span>
                           ) : (
                             <button
                               onClick={() => {
-                                setHeadPersonId(person.id);
-                                if (person.phone) setPhone(person.phone);
-                                setWizardStep(1);
-                                setIsAddOpen(true);
+                                setRelationshipModalPerson(person);
+                                setIsRelationshipOpen(true);
                               }}
-                              className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-extrabold text-[10px] shadow-sm transition-all cursor-pointer inline-flex items-center gap-1"
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-purple-100 text-purple-700 dark:bg-slate-800 dark:hover:bg-purple-950 text-[10px] font-extrabold rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
                             >
-                              <Plus className="w-3 h-3" />
-                              <span>+ Convite</span>
+                              <Link2 className="w-3 h-3 text-purple-500" />
+                              <span>+ Relacionar</span>
                             </button>
                           )}
                         </td>
