@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Table, Person } from '@/types';
-import { getAllPersons } from '@/lib/db';
+import { getAllPersons, getTablePosition } from '@/lib/db';
 import { X, Map, Sparkles, Users, Armchair, UserCheck, Info } from 'lucide-react';
 
 interface FloorplanModalProps {
@@ -112,7 +112,7 @@ export function FloorplanModal({
             </div>
           )}
 
-          {/* CONTAINER DA PLANTA BAIXA COM IMAGEM DO GPT + HOTSPOTS INTERATIVOS */}
+          {/* CONTAINER DA PLANTA BAIXA COM IMAGEM DO SALÃO + HOTSPOTS INTERATIVOS */}
           <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 group">
             {/* Imagem de Fundo da Planta Baixa Real do Salão */}
             <img
@@ -122,50 +122,47 @@ export function FloorplanModal({
             />
 
             {/* HOTSPOTS SOBREPOSTOS DAS MESAS */}
-            {tables.map((table) => {
+            {tables.map((table, idx) => {
               const isAssigned = table.id === assignedTableId;
               const isSelected = activeTable?.id === table.id;
-
-              // Usa posição percentual configurada em db.ts
-              const posX = table.position?.x ?? 50;
-              const posY = table.position?.y ?? 50;
+              const pos = getTablePosition(table, idx);
 
               return (
                 <div
                   key={table.id}
-                  style={{ left: `${posX}%`, top: `${posY}%` }}
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                   className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                 >
                   <button
                     onClick={() => setSelectedTable(table)}
                     className={`relative group/btn flex items-center justify-center transition-all cursor-pointer ${
                       isAssigned
-                        ? 'w-10 h-10 sm:w-12 sm:h-12 text-xs font-black'
+                        ? 'w-9 h-9 sm:w-11 sm:h-11 text-xs font-black'
                         : isSelected
-                        ? 'w-9 h-9 sm:w-11 sm:h-11 text-xs font-bold'
-                        : 'w-8 h-8 sm:w-10 sm:h-10 text-[11px] font-semibold hover:scale-110'
+                        ? 'w-8 h-8 sm:w-10 sm:h-10 text-xs font-bold'
+                        : 'w-7 h-7 sm:w-9 sm:h-9 text-[11px] font-semibold hover:scale-115'
                     }`}
                     title={table.name}
                   >
                     {/* Efeito Halo / Anel Pulsante Dourado para a Mesa Reservada do Convidado */}
                     {isAssigned && (
                       <>
-                        <span className="absolute -inset-2.5 rounded-full bg-amber-400/40 animate-ping" />
-                        <span className="absolute -inset-1.5 rounded-full border-2 border-amber-400 animate-pulse" />
+                        <span className="absolute -inset-2 rounded-full bg-amber-400/40 animate-ping" />
+                        <span className="absolute -inset-1 rounded-full border-2 border-amber-400 animate-pulse" />
                       </>
                     )}
 
                     {/* Botão Hotspot da Mesa */}
                     <span
-                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-xs ${
+                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md ${
                         isAssigned
                           ? 'bg-amber-400 text-slate-950 border-amber-300 font-black ring-4 ring-amber-400/50 shadow-amber-500/50'
                           : isSelected
                           ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50 font-black'
-                          : 'bg-slate-900/80 text-amber-300 border-amber-500/60 hover:bg-amber-500 hover:text-slate-950'
+                          : 'bg-slate-950/85 text-amber-300 border-amber-500/70 hover:bg-amber-500 hover:text-slate-950'
                       }`}
                     >
-                      {table.name.replace(/Mesa\s*/i, 'M')}
+                      {table.name.replace(/Mesa\s*/i, 'M').replace(/\s*-\s*.*/, '')}
                     </span>
 
                     {/* Tooltip com Nome da Mesa no Hover */}
@@ -226,7 +223,7 @@ export function FloorplanModal({
 
               {/* LISTA DE CONVIDADOS DA MESA */}
               <div className="space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block flex items-center gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <Armchair className="w-3.5 h-3.5 text-amber-400" /> Pessoas Alocadas nesta Mesa ({tablePersons.length})
                 </span>
 

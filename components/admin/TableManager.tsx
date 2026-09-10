@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Table, Invite, Person } from '@/types';
-import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat } from '@/lib/db';
+import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition } from '@/lib/db';
 import {
   Plus,
   Trash2,
@@ -153,7 +153,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
               }`}
             >
               <Map className="w-4 h-4" />
-              <span>Planta Baixa (GPT)</span>
+              <span>Planta Baixa do Salão</span>
             </button>
           </div>
 
@@ -208,7 +208,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
         </div>
       )}
 
-      {/* MODO PLANTA BAIXA INTERATIVA (GPT ARTWORK) */}
+      {/* MODO PLANTA BAIXA INTERATIVA DO SALÃO */}
       {viewMode === 'floorplan' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Lado Esquerdo: Planta Baixa Interativa com Imagem do Salão */}
@@ -225,7 +225,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
               </span>
             </div>
 
-            {/* Imagem do Salão GPT com Overlays das Mesas */}
+            {/* Imagem do Salão com Overlays das Mesas */}
             <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
               <img
                 src="/salao-planta-baixa.jpg"
@@ -233,27 +233,26 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                 className="w-full h-auto object-cover select-none"
               />
 
-              {tables.map((table) => {
+              {tables.map((table, idx) => {
                 const tablePersons = persons.filter((p) => p.table_id === table.id);
                 const isSelected = inspectorTable?.id === table.id;
                 const isFull = tablePersons.length >= table.capacity;
                 const isHalf = tablePersons.length > 0 && tablePersons.length < table.capacity;
 
-                const posX = table.position?.x ?? 50;
-                const posY = table.position?.y ?? 50;
+                const pos = getTablePosition(table, idx);
 
                 return (
                   <div
                     key={table.id}
-                    style={{ left: `${posX}%`, top: `${posY}%` }}
+                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                     className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                   >
                     <button
                       onClick={() => setActiveFloorplanTable(table)}
                       className={`relative flex items-center justify-center transition-all cursor-pointer ${
                         isSelected
-                          ? 'w-10 h-10 sm:w-12 sm:h-12 scale-110'
-                          : 'w-8 h-8 sm:w-10 sm:h-10 hover:scale-110'
+                          ? 'w-9 h-9 sm:w-11 sm:h-11 scale-110'
+                          : 'w-7 h-7 sm:w-9 sm:h-9 hover:scale-115'
                       }`}
                       title={`${table.name} (${tablePersons.length}/${table.capacity})`}
                     >
@@ -262,17 +261,17 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                       )}
 
                       <span
-                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-xs text-[10px] font-black leading-none ${
+                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[10px] font-black leading-none ${
                           isSelected
                             ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
                             : isFull
                             ? 'bg-emerald-600 text-white border-emerald-300'
                             : isHalf
                             ? 'bg-amber-500 text-slate-950 border-amber-300'
-                            : 'bg-slate-900/80 text-amber-300 border-amber-500/60'
+                            : 'bg-slate-950/85 text-amber-300 border-amber-500/70'
                         }`}
                       >
-                        <span>{table.name.replace(/Mesa\s*/i, 'M')}</span>
+                        <span>{table.name.replace(/Mesa\s*/i, 'M').replace(/\s*-\s*.*/, '')}</span>
                         <span className="text-[8px] opacity-90 mt-0.5">
                           {tablePersons.length}/{table.capacity}
                         </span>
@@ -298,13 +297,13 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                 <span>Parcial</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-slate-800 border border-slate-600" />
+                <span className="w-3 h-3 rounded-full bg-slate-900 border border-amber-500/70" />
                 <span>Vazia</span>
               </div>
             </div>
           </div>
 
-          {/* Lado Direito: Inspector da Mesa Selecionada com 8 Cadeira 1:1 */}
+          {/* Lado Direito: Inspector da Mesa Selecionada com Cadeiras 1:1 */}
           <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-purple-500/40 shadow-xl space-y-5">
             {inspectorTable ? (
               (() => {
