@@ -57,11 +57,23 @@ interface GuestListProps {
   tables: Table[];
   persons: Person[];
   config: EventConfig;
+  activeTab?: 'persons' | 'invites';
+  setActiveTab?: (tab: 'persons' | 'invites') => void;
   onRefresh: () => void;
 }
 
-export function GuestList({ invites, tables, persons, config, onRefresh }: GuestListProps) {
-  const [activeTab, setActiveTab] = useState<'persons' | 'invites'>('persons');
+export function GuestList({
+  invites,
+  tables,
+  persons,
+  config,
+  activeTab: externalActiveTab,
+  setActiveTab: externalSetActiveTab,
+  onRefresh,
+}: GuestListProps) {
+  const [internalActiveTab, setInternalActiveTab] = useState<'persons' | 'invites'>('persons');
+  const activeTab = externalActiveTab || internalActiveTab;
+  const setActiveTab = externalSetActiveTab || setInternalActiveTab;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined'>('all');
   const [isBulkOpen, setIsBulkOpen] = useState(false);
@@ -1255,13 +1267,8 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                             </button>
                           ) : (
                             <button
-                              onClick={() => {
-                                setHeadPersonId(person.id);
-                                if (person.phone) setPhone(person.phone);
-                                setWizardStep(1);
-                                setIsAddOpen(true);
-                              }}
-                              className="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded text-[10px] font-black cursor-pointer"
+                              onClick={() => handleOpenAddForPerson(person)}
+                              className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-[10px] font-black cursor-pointer shadow-sm transition-all"
                             >
                               + Convite
                             </button>
@@ -1541,8 +1548,19 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                             } else {
                               setEditingInvite(null);
                               setPhone(p.phone || '');
-                              if (inviteType === 'family') {
-                                setFamilySlotsCount((prev) => Math.max(2, prev));
+                              const familyMemberIds = (p.relationships || [])
+                                .map((r) => r.target_person_id)
+                                .filter((id) => persons.some((pers) => pers.id === id));
+                              const hasFamily = familyMemberIds.length > 0 || Boolean(p.family_id);
+
+                              if (hasFamily && familyMemberIds.length > 0) {
+                                setInviteType('family');
+                                setCompanionPersonIds(familyMemberIds);
+                                setFamilySlotsCount(1 + familyMemberIds.length);
+                              } else {
+                                setInviteType('individual');
+                                setCompanionPersonIds([]);
+                                setFamilySlotsCount(1);
                               }
                             }
                           }}

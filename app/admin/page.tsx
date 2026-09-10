@@ -9,7 +9,7 @@ import { TableManager } from '@/components/admin/TableManager';
 import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 import { BirthdayOnboardingModal } from '@/components/admin/BirthdayOnboardingModal';
-import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock } from 'lucide-react';
+import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock, Send } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { LoginCard } from '@/components/auth/LoginCard';
@@ -17,7 +17,7 @@ import { AdminUserHeader } from '@/components/admin/AdminUserHeader';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'guests' | 'tables' | 'surprise' | 'settings'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invites' | 'tables' | 'surprise' | 'settings'>('guests');
   const [currentRole, setCurrentRole] = useState<UserRole>('admin');
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -206,7 +206,19 @@ export default function AdminPage() {
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Lista de Convidados e Convites</span>
+              <span>Lista de Convidados</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('invites')}
+              className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                activeTab === 'invites'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <Send className="w-4 h-4" />
+              <span>Convites & Confirmações</span>
             </button>
 
             <button
@@ -271,8 +283,16 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
-            {activeTab === 'guests' && config && (
-              <GuestList invites={invites} tables={tables} persons={persons} config={config} onRefresh={loadAll} />
+            {(activeTab === 'guests' || activeTab === 'invites') && config && (
+              <GuestList
+                invites={invites}
+                tables={tables}
+                persons={persons}
+                config={config}
+                activeTab={activeTab === 'guests' ? 'persons' : 'invites'}
+                setActiveTab={(tab) => setActiveTab(tab === 'persons' ? 'guests' : 'invites')}
+                onRefresh={loadAll}
+              />
             )}
             {activeTab === 'tables' && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} />}
             {activeTab === 'surprise' && currentRole !== 'birthday_person' && (
