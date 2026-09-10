@@ -164,9 +164,9 @@ export function PersonEditModal({
                   : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
               }`}
             >
-              {calculatedCategory === 'isento' && `⚪ Isento (0 a ${config.child_free_max_age || 5} anos)`}
-              {calculatedCategory === 'meia' && `🟡 Meia-Entrada (${(config.child_free_max_age || 5) + 1} a ${config.child_half_max_age || 11} anos)`}
-              {calculatedCategory === 'inteira' && '🟢 Inteira / Adulto (100%)'}
+              {calculatedCategory === 'isento' && `Isento (0 a ${config.child_free_max_age || 5} anos)`}
+              {calculatedCategory === 'meia' && `Meia-Entrada (${(config.child_free_max_age || 5) + 1} a ${config.child_half_max_age || 11} anos)`}
+              {calculatedCategory === 'inteira' && 'Inteira / Adulto (100%)'}
             </span>
           </div>
 

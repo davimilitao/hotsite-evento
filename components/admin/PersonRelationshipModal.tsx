@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Plus,
   AlertCircle,
+  Tag,
 } from 'lucide-react';
 
 interface PersonRelationshipModalProps {
@@ -122,7 +123,6 @@ export function PersonRelationshipModal({
 
   // Adicionar um relacionamento na fila empilhada em memória
   const handleStageAdd = (targetPerson: Person) => {
-    // Evita duplicatas
     if (stagedPersonIds.has(targetPerson.id)) return;
 
     setStagedRelationships((prev) => [
@@ -153,10 +153,9 @@ export function PersonRelationshipModal({
       setStagedFamilyName(updatedPerson.family_name || '');
       setStagedRelationships(updatedPerson.relationships || []);
 
-      setSuccessMessage('✓ Todos os vínculos e o grupo familiar foram GRAVADOS com sucesso!');
+      setSuccessMessage('Todos os vínculos e o grupo familiar foram gravados com sucesso!');
       setTimeout(() => setSuccessMessage(null), 4000);
 
-      // Recarrega a lista do admin
       onRefresh();
     } catch (err) {
       console.error('Erro ao gravar vínculos da família:', err);
@@ -242,8 +241,9 @@ export function PersonRelationshipModal({
 
             {/* EDICAO DO NOME DO GRUPO FAMILIAR */}
             <div className="p-4 bg-purple-950/30 border border-purple-900/60 rounded-2xl space-y-2">
-              <label className="block text-xs font-extrabold text-purple-300 uppercase tracking-wider">
-                🏷️ Sobrenome ou Nome do Grupo Familiar:
+              <label className="block text-xs font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-purple-400" />
+                <span>Sobrenome ou Nome do Grupo Familiar:</span>
               </label>
               <input
                 type="text"
@@ -352,7 +352,7 @@ export function PersonRelationshipModal({
                     Nenhum parente empilhado ainda.
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    Selecione uma pessoa na coluna ao lado e clique em &quot;➕ Adicionar&quot;.
+                    Selecione uma pessoa na coluna ao lado e clique em &quot;Adicionar&quot;.
                   </p>
                 </div>
               )}
@@ -375,8 +375,8 @@ export function PersonRelationshipModal({
                   {saving
                     ? 'GRAVANDO BANCO DE DADOS...'
                     : isDirty
-                    ? `💾 GRAVAR TODOS OS VÍNCULOS (${stagedRelationships.length})`
-                    : '✓ FAMÍLIA E VÍNCULOS GRAVADOS'}
+                    ? `GRAVAR TODOS OS VÍNCULOS (${stagedRelationships.length})`
+                    : 'FAMÍLIA E VÍNCULOS GRAVADOS'}
                 </span>
               </button>
             </div>
@@ -408,7 +408,7 @@ export function PersonRelationshipModal({
                 COLUNA 2: Relacionar Nova Pessoa (Empilhar)
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Escolha o grau de parentesco e clique em &quot;➕ Adicionar à Lista&quot;. Depois, clique em &quot;💾 Gravar Todos&quot;.
+                Escolha o grau de parentesco e clique em &quot;Adicionar&quot;. Depois, clique em &quot;Gravar Todos&quot;.
               </p>
             </div>
 
@@ -495,7 +495,7 @@ export function PersonRelationshipModal({
 
                         {isAlreadyStaged ? (
                           <span className="text-[10px] font-bold text-purple-300 bg-purple-950 px-3 py-1.5 rounded-xl border border-purple-800 flex items-center gap-1">
-                            ✓ Na Fila
+                            <Check className="w-3.5 h-3.5 text-purple-400" /> Na Fila
                           </span>
                         ) : (
                           <button
@@ -504,7 +504,7 @@ export function PersonRelationshipModal({
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                           >
                             <Plus className="w-3.5 h-3.5" />
-                            <span>➕ Adicionar</span>
+                            <span>Adicionar</span>
                           </button>
                         )}
                       </div>
@@ -528,7 +528,9 @@ export function PersonRelationshipModal({
                 <AlertCircle className="w-4 h-4" /> Lembre-se de clicar em &quot;Gravar Todos&quot; para salvar no banco!
               </span>
             ) : (
-              <span className="text-emerald-400 font-bold">✓ Todos os vínculos estão salvos no banco.</span>
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <Check className="w-4 h-4 text-emerald-400" /> Todos os vínculos estão salvos no banco.
+              </span>
             )}
           </div>
 
@@ -548,7 +550,7 @@ export function PersonRelationshipModal({
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>{saving ? 'Gravando...' : '💾 GRAVAR TODOS OS VÍNCULOS'}</span>
+              <span>{saving ? 'Gravando...' : 'GRAVAR TODOS OS VÍNCULOS'}</span>
             </button>
           </div>
         </div>

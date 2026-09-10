@@ -44,6 +44,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Home,
   Heart,
   Baby,
   Link2,
@@ -713,7 +714,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>👥 Lista de Convidados ({persons.length} Pessoas Físicas)</span>
+          <span>Lista de Convidados ({persons.length} Pessoas Físicas)</span>
         </button>
 
         <button
@@ -725,7 +726,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           }`}
         >
           <Send className="w-4 h-4" />
-          <span>💌 Convites & Disparos WhatsApp ({invites.length} Convites Ativos)</span>
+          <span>Convites & Disparos WhatsApp ({invites.length} Convites Ativos)</span>
         </button>
       </div>
 
@@ -908,9 +909,9 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                                   : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
                               }`}
                             >
-                              {childCat === 'isento' && `⚪ Isento (0-${config.child_free_max_age || 5})`}
-                              {childCat === 'meia' && `🟡 Meia (${(config.child_free_max_age || 5) + 1}-${config.child_half_max_age || 11})`}
-                              {childCat === 'inteira' && '🟢 Inteira (12+)'}
+                              {childCat === 'isento' && `Isento (0-${config.child_free_max_age || 5})`}
+                              {childCat === 'meia' && `Meia (${(config.child_free_max_age || 5) + 1}-${config.child_half_max_age || 11})`}
+                              {childCat === 'inteira' && 'Inteira (12+)'}
                             </span>
                           </div>
                         </td>
@@ -920,7 +921,8 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                           <div className="space-y-1">
                             {person.family_name || person.family_id ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 rounded font-extrabold text-[10px] border border-purple-300">
-                                🏡 {person.family_name || 'Grupo Familiar'}
+                                <Home className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                                <span>{person.family_name || 'Grupo Familiar'}</span>
                               </span>
                             ) : null}
 
@@ -931,7 +933,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                                   if (!targetP) return null;
                                   return (
                                     <span key={rel.target_person_id} className="block text-slate-600 dark:text-slate-400">
-                                      • {rel.relationship_type === 'spouse' ? '💑 Cônjuge de' : rel.relationship_type === 'child' ? '👶 Filho(a) de' : rel.relationship_type === 'parent' ? '👴 Pai/Mãe de' : '🔗 Parentesco com'} <strong>{targetP.name}</strong>
+                                      • {rel.relationship_type === 'spouse' ? 'Cônjuge de' : rel.relationship_type === 'child' ? 'Filho(a) de' : rel.relationship_type === 'parent' ? 'Pai/Mãe de' : 'Parentesco com'} <strong>{targetP.name}</strong>
                                     </span>
                                   );
                                 })}
@@ -1690,7 +1692,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                             </span>
                             {selectedPerson ? (
                               <span className="text-emerald-400 flex items-center gap-1 font-extrabold text-[11px]">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> ✓ Completo
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Completo
                               </span>
                             ) : (
                               <span className="text-amber-400 text-[10px] italic">Em branco (pendente)</span>
@@ -1743,7 +1745,7 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
                       return (
                         <div className="p-3 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>✓ Lista da Família Completa! Todos os {familySlotsCount} integrantes foram definidos com sucesso.</span>
+                          <span>Lista da Família Completa! Todos os {familySlotsCount} integrantes foram definidos com sucesso.</span>
                         </div>
                       );
                     }
