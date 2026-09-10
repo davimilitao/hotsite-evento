@@ -102,6 +102,7 @@ export function GuestList({
   const [familySlotsCount, setFamilySlotsCount] = useState<number>(2);
   const [searchPersonQuery, setSearchPersonQuery] = useState<string>('');
   const [loadingForm, setLoadingForm] = useState(false);
+  const [isDirectPersonInvite, setIsDirectPersonInvite] = useState<boolean>(false);
 
   // Estados do Wizard Curto para Convites Especiais (Funções / Staff)
   const [isSpecialOpen, setIsSpecialOpen] = useState(false);
@@ -298,21 +299,47 @@ export function GuestList({
     onRefresh();
   };
 
-  const handleOpenAdd = () => {
-    if (eligiblePersonsForInvite.length === 0) {
-      alert('Todas as pessoas da lista já possuem um convite gerado!');
-      return;
+  // Função utilitária para capturar todos os integrantes vinculados a uma pessoa (via relationships e family_id)
+  const getPersonFamilyMemberIds = (person: Person, allPersons: Person[]): string[] => {
+    const familySet = new Set<string>();
+
+    if (person.relationships && person.relationships.length > 0) {
+      person.relationships.forEach((r) => {
+        if (allPersons.some((p) => p.id === r.target_person_id)) {
+          familySet.add(r.target_person_id);
+        }
+      });
     }
 
-    const firstEligible = eligiblePersonsForInvite[0];
-    handleOpenAddForPerson(firstEligible);
+    if (person.family_id) {
+      allPersons.forEach((p) => {
+        if (p.family_id === person.family_id && p.id !== person.id) {
+          familySet.add(p.id);
+        }
+      });
+    }
+
+    return Array.from(familySet);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingInvite(null);
+    setWizardStep(1);
+    setHeadPersonId('');
+    setPhone('');
+    setInviteType('family');
+    setCompanionPersonIds([]);
+    setFamilySlotsCount(2);
+    setTier('main');
+    setIndividualDeadline('');
+    setSearchPersonQuery('');
+    setIsDirectPersonInvite(false);
+    setIsAddOpen(true);
   };
 
   const handleOpenAddForPerson = (person: Person) => {
-    const familyMemberIds = (person.relationships || [])
-      .map((r) => r.target_person_id)
-      .filter((id) => persons.some((p) => p.id === id));
-    const hasFamily = familyMemberIds.length > 0 || Boolean(person.family_id);
+    const familyMemberIds = getPersonFamilyMemberIds(person, persons);
+    const hasFamily = familyMemberIds.length > 0 || Boolean(person.family_id || person.family_name);
 
     setEditingInvite(null);
     setWizardStep(1);
@@ -321,11 +348,16 @@ export function GuestList({
     setTier('main');
     setIndividualDeadline('');
     setSearchPersonQuery('');
+    setIsDirectPersonInvite(true);
 
     if (hasFamily && familyMemberIds.length > 0) {
       setInviteType('family');
       setCompanionPersonIds(familyMemberIds);
       setFamilySlotsCount(1 + familyMemberIds.length);
+    } else if (hasFamily) {
+      setInviteType('family');
+      setCompanionPersonIds([]);
+      setFamilySlotsCount(2);
     } else {
       setInviteType('individual');
       setCompanionPersonIds([]);
@@ -346,6 +378,7 @@ export function GuestList({
     setTier(invite.tier || 'main');
     setIndividualDeadline(invite.individual_deadline ? invite.individual_deadline.slice(0, 10) : '');
     setSearchPersonQuery('');
+    setIsDirectPersonInvite(true);
     setIsAddOpen(true);
   };
 
@@ -1420,18 +1453,28 @@ export function GuestList({
               {/* Indicador de Passos */}
               <div className="flex items-center justify-between gap-1 text-[10px] font-extrabold text-slate-400">
                 <span className={wizardStep >= 1 ? 'text-purple-500 font-black' : ''}>1. Tipo</span>
-                <span className="text-slate-600">•</span>
-                <span className={wizardStep >= 2 ? 'text-purple-500 font-black' : ''}>2. Responsável</span>
-                <span className="text-slate-600">•</span>
-                <span className={wizardStep >= 3 ? 'text-purple-500 font-black' : ''}>3. Contato</span>
-                {inviteType === 'family' && (
+                {(!isDirectPersonInvite || !headPersonId) && (
                   <>
                     <span className="text-slate-600">•</span>
-                    <span className={wizardStep >= 4 ? 'text-purple-500 font-black' : ''}>4. Integrantes</span>
+                    <span className={wizardStep >= 2 ? 'text-purple-500 font-black' : ''}>2. Responsável</span>
                   </>
                 )}
                 <span className="text-slate-600">•</span>
-                <span className={wizardStep === (inviteType === 'family' ? 5 : 4) ? 'text-purple-500 font-black' : ''}>Final. Revisar</span>
+                <span className={wizardStep >= 3 ? 'text-purple-500 font-black' : ''}>
+                  {isDirectPersonInvite && headPersonId ? '2.' : '3.'} Contato
+                </span>
+                {inviteType === 'family' && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className={wizardStep >= 4 ? 'text-purple-500 font-black' : ''}>
+                      {isDirectPersonInvite && headPersonId ? '3.' : '4.'} Integrantes
+                    </span>
+                  </>
+                )}
+                <span className="text-slate-600">•</span>
+                <span className={wizardStep === (inviteType === 'family' ? 5 : 4) ? 'text-purple-500 font-black' : ''}>
+                  Final. Revisar
+                </span>
               </div>
             </div>
 
@@ -1440,6 +1483,39 @@ export function GuestList({
             {/* PASSO 1: Seleção do Tipo de Convite (Individual vs Família) */}
             {wizardStep === 1 && (
               <div className="space-y-4">
+                {headPersonId && (() => {
+                  const headP = persons.find((p) => p.id === headPersonId);
+                  const headTable = headP ? tables.find((t) => t.id === headP.table_id) : null;
+                  return (
+                    <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-purple-400 shrink-0" />
+                        <div>
+                          <p className="text-[10px] text-purple-400 uppercase font-black tracking-wider">Convidado Titular / Responsável</p>
+                          <p className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <span>{headP?.name || 'Titular'}</span>
+                            {headTable ? (
+                              <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
+                                {headTable.name}
+                              </span>
+                            ) : null}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsDirectPersonInvite(false);
+                          setWizardStep(2);
+                        }}
+                        className="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer"
+                      >
+                        Trocar titular
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Selecione o tipo de experiência para este disparo:
                 </p>
@@ -1548,15 +1624,17 @@ export function GuestList({
                             } else {
                               setEditingInvite(null);
                               setPhone(p.phone || '');
-                              const familyMemberIds = (p.relationships || [])
-                                .map((r) => r.target_person_id)
-                                .filter((id) => persons.some((pers) => pers.id === id));
-                              const hasFamily = familyMemberIds.length > 0 || Boolean(p.family_id);
+                              const familyMemberIds = getPersonFamilyMemberIds(p, persons);
+                              const hasFamily = familyMemberIds.length > 0 || Boolean(p.family_id || p.family_name);
 
                               if (hasFamily && familyMemberIds.length > 0) {
                                 setInviteType('family');
                                 setCompanionPersonIds(familyMemberIds);
                                 setFamilySlotsCount(1 + familyMemberIds.length);
+                              } else if (hasFamily) {
+                                setInviteType('family');
+                                setCompanionPersonIds([]);
+                                setFamilySlotsCount(2);
                               } else {
                                 setInviteType('individual');
                                 setCompanionPersonIds([]);
@@ -1828,7 +1906,11 @@ export function GuestList({
               {wizardStep > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setWizardStep((wizardStep === 3 && inviteType === 'individual' && headPersonId) ? 1 : wizardStep - 1)}
+                  onClick={() =>
+                    setWizardStep(
+                      wizardStep === 3 && headPersonId && isDirectPersonInvite ? 1 : wizardStep - 1
+                    )
+                  }
                   className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" /> Voltar
@@ -1842,11 +1924,16 @@ export function GuestList({
                   <button
                     type="button"
                     disabled={
+                      (wizardStep === 1 && !headPersonId && isDirectPersonInvite) ||
                       (wizardStep === 2 && !headPersonId) ||
                       (wizardStep === 3 && phone.replace(/\D/g, '').length < 8) ||
                       (wizardStep === 4 && inviteType === 'family' && companionPersonIds.filter(Boolean).length < (familySlotsCount - 1))
                     }
-                    onClick={() => setWizardStep((wizardStep === 1 && inviteType === 'individual' && headPersonId) ? 3 : wizardStep + 1)}
+                    onClick={() =>
+                      setWizardStep(
+                        wizardStep === 1 && headPersonId && isDirectPersonInvite ? 3 : wizardStep + 1
+                      )
+                    }
                     className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
                   >
                     <span>Avançar</span>
