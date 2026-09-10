@@ -997,16 +997,6 @@ export async function saveTable(table: Partial<Table> & { id?: string }): Promis
   return fullTable;
 }
 
-export async function swapTablesPositions(tableA: Table, tableB: Table): Promise<void> {
-  const posA = getTablePosition(tableA, 0);
-  const posB = getTablePosition(tableB, 1);
-
-  const updatedA: Table = { ...tableA, position: posB };
-  const updatedB: Table = { ...tableB, position: posA };
-
-  await Promise.all([saveTable(updatedA), saveTable(updatedB)]);
-}
-
 export async function deleteTable(id: string): Promise<void> {
   const tables = await getAllTables();
   const filtered = tables.filter((t) => t.id !== id);
