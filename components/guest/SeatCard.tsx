@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite, Table } from '@/types';
+import { Invite, Table, Person } from '@/types';
 import { FloorplanModal } from './FloorplanModal';
 import { Armchair, MapPin, Sparkles, Compass } from 'lucide-react';
 
 interface SeatCardProps {
   invite: Invite;
   tables: Table[];
+  persons?: Person[];
 }
 
-export function SeatCard({ invite, tables }: SeatCardProps) {
+export function SeatCard({ invite, tables, persons }: SeatCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const assignedTable = tables.find((t) => t.id === invite.table_id);
@@ -60,7 +61,7 @@ export function SeatCard({ invite, tables }: SeatCardProps) {
         {/* Botão para abrir o Mapa / Planta Baixa */}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-sm rounded-2xl shadow-md border border-amber-500/40 flex items-center justify-center gap-2 transition-all active:scale-95"
+          className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-sm rounded-2xl shadow-md border border-amber-500/40 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
         >
           <Compass className="w-4 h-4 text-amber-400" />
           <span>Ver Localização na Planta do Salão</span>
@@ -72,6 +73,7 @@ export function SeatCard({ invite, tables }: SeatCardProps) {
         onClose={() => setIsModalOpen(false)}
         assignedTableId={invite.table_id}
         tables={tables}
+        persons={persons}
       />
     </>
   );

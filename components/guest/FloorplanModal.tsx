@@ -1,192 +1,276 @@
 'use client';
 
-import React from 'react';
-import { Table } from '@/types';
-import { X, Map, Sparkles, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Table, Person } from '@/types';
+import { getAllPersons } from '@/lib/db';
+import { X, Map, Sparkles, Users, Armchair, UserCheck, Info } from 'lucide-react';
 
 interface FloorplanModalProps {
   isOpen: boolean;
   onClose: () => void;
   assignedTableId: string | null;
   tables: Table[];
+  persons?: Person[];
 }
 
-export function FloorplanModal({ isOpen, onClose, assignedTableId, tables }: FloorplanModalProps) {
+export function FloorplanModal({
+  isOpen,
+  onClose,
+  assignedTableId,
+  tables,
+  persons: initialPersons,
+}: FloorplanModalProps) {
+  const [persons, setPersons] = useState<Person[]>(initialPersons || []);
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+
+  // Carrega lista de pessoas se não tiver sido fornecida via props
+  useEffect(() => {
+    if (isOpen) {
+      if (initialPersons && initialPersons.length > 0) {
+        setPersons(initialPersons);
+      } else {
+        getAllPersons().then(setPersons).catch(console.error);
+      }
+    }
+  }, [isOpen, initialPersons]);
+
+  // Define a mesa reservada do convidado como selecionada por padrão ao abrir
+  useEffect(() => {
+    if (isOpen && assignedTableId) {
+      const assigned = tables.find((t) => t.id === assignedTableId);
+      if (assigned) {
+        setSelectedTable(assigned);
+      }
+    } else if (isOpen && tables.length > 0 && !selectedTable) {
+      setSelectedTable(tables[0]);
+    }
+  }, [isOpen, assignedTableId, tables]);
+
   if (!isOpen) return null;
 
-  const currentTable = tables.find((t) => t.id === assignedTableId);
+  const currentAssignedTable = tables.find((t) => t.id === assignedTableId);
+  const activeTable = selectedTable || currentAssignedTable || tables[0];
+  const tablePersons = activeTable ? persons.filter((p) => p.table_id === activeTable.id) : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh] text-slate-100">
         {/* Header do Modal */}
-        <div className="p-5 bg-gradient-to-r from-purple-900 to-indigo-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-400/20 text-amber-300 rounded-xl">
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 border-b border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-400/20 text-amber-300 rounded-2xl border border-amber-400/30">
               <Map className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base">Planta Baixa do Salão</h3>
-              <p className="text-xs text-purple-200">Mapa de assentos do evento</p>
+              <h3 className="font-extrabold text-base sm:text-lg text-amber-300 flex items-center gap-2">
+                Planta Baixa Interativa do Salão
+              </h3>
+              <p className="text-xs text-slate-400">
+                Toque em qualquer mesa no mapa para ver quem sentará nela
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+            className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Conteúdo da Planta SVG */}
-        <div className="p-6 overflow-y-auto space-y-4 text-center">
-          {currentTable ? (
-            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 p-3.5 rounded-2xl flex items-center justify-between text-left">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Sua Mesa Reservada
-                </span>
-                <p className="text-base font-bold text-slate-800 dark:text-slate-100">{currentTable.name}</p>
-                {currentTable.description && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{currentTable.description}</p>
-                )}
+        {/* Conteúdo Principal do Modal (Scrollable) */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+          {/* Banner de Reserva do Convidado */}
+          {currentAssignedTable ? (
+            <div className="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 p-4 rounded-2xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center">
+                  <span className="w-3.5 h-3.5 bg-amber-400 rounded-full animate-ping absolute opacity-75" />
+                  <span className="w-3 h-3 bg-amber-400 rounded-full relative" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Sua Mesa Reservada
+                  </span>
+                  <h4 className="text-base font-extrabold text-white">{currentAssignedTable.name}</h4>
+                  {currentAssignedTable.description && (
+                    <p className="text-xs text-amber-200/80">{currentAssignedTable.description}</p>
+                  )}
+                </div>
               </div>
-              <div className="bg-amber-400 text-slate-950 text-xs font-black px-3 py-1.5 rounded-xl shadow-sm uppercase tracking-wide">
-                Reservado
-              </div>
+              <button
+                onClick={() => setSelectedTable(currentAssignedTable)}
+                className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
+              >
+                Ver no Mapa
+              </button>
             </div>
           ) : (
-            <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl text-xs text-slate-500">
-              Sua mesa será atribuída em breve pelo anfitrião.
+            <div className="bg-slate-800/60 border border-slate-700/60 p-3.5 rounded-2xl flex items-center gap-2 text-xs text-slate-300">
+              <Info className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Sua mesa será atribuída em breve pelo anfitrião do evento. Explore o mapa abaixo!</span>
             </div>
           )}
 
-          {/* Desenho do Salão Interativo SVG */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative shadow-inner">
-            <svg viewBox="0 0 400 300" className="w-full h-auto rounded-xl">
-              {/* Fundo do Salão / Layout */}
-              <rect x="10" y="10" width="380" height="280" rx="15" fill="#0f172a" stroke="#334155" strokeWidth="2" />
+          {/* CONTAINER DA PLANTA BAIXA COM IMAGEM DO GPT + HOTSPOTS INTERATIVOS */}
+          <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 group">
+            {/* Imagem de Fundo da Planta Baixa Real do Salão */}
+            <img
+              src="/salao-planta-baixa.jpg"
+              alt="Planta Baixa Interativa do Salão - Buffet Espaço Estupendo"
+              className="w-full h-auto object-cover select-none"
+            />
 
-              {/* Palco Principal */}
-              <rect x="120" y="20" width="160" height="35" rx="8" fill="#312e81" stroke="#4f46e5" strokeWidth="1.5" />
-              <text x="200" y="42" fill="#c7d2fe" fontSize="12" fontWeight="bold" textAnchor="middle">
-                🎤 PALCO & ANFITRIÃO
-              </text>
+            {/* HOTSPOTS SOBREPOSTOS DAS MESAS */}
+            {tables.map((table) => {
+              const isAssigned = table.id === assignedTableId;
+              const isSelected = activeTable?.id === table.id;
 
-              {/* Bar & Bebidas */}
-              <rect x="25" y="60" width="45" height="120" rx="8" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
-              <text x="47" y="125" fill="#94a3b8" fontSize="11" fontWeight="bold" textAnchor="middle" transform="rotate(-90 47 125)">
-                🍹 BAR DE DRINKS
-              </text>
+              // Usa posição percentual configurada em db.ts
+              const posX = table.position?.x ?? 50;
+              const posY = table.position?.y ?? 50;
 
-              {/* Pista de Dança */}
-              <rect x="140" y="90" width="120" height="100" rx="12" fill="#1e1b4b" stroke="#6366f1" strokeWidth="1" strokeDasharray="4 3" />
-              <text x="200" y="145" fill="#a5b4fc" fontSize="11" fontWeight="bold" textAnchor="middle">
-                💃 PISTA DE DANÇA 🕺
-              </text>
+              return (
+                <div
+                  key={table.id}
+                  style={{ left: `${posX}%`, top: `${posY}%` }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+                >
+                  <button
+                    onClick={() => setSelectedTable(table)}
+                    className={`relative group/btn flex items-center justify-center transition-all cursor-pointer ${
+                      isAssigned
+                        ? 'w-10 h-10 sm:w-12 sm:h-12 text-xs font-black'
+                        : isSelected
+                        ? 'w-9 h-9 sm:w-11 sm:h-11 text-xs font-bold'
+                        : 'w-8 h-8 sm:w-10 sm:h-10 text-[11px] font-semibold hover:scale-110'
+                    }`}
+                    title={table.name}
+                  >
+                    {/* Efeito Halo / Anel Pulsante Dourado para a Mesa Reservada do Convidado */}
+                    {isAssigned && (
+                      <>
+                        <span className="absolute -inset-2.5 rounded-full bg-amber-400/40 animate-ping" />
+                        <span className="absolute -inset-1.5 rounded-full border-2 border-amber-400 animate-pulse" />
+                      </>
+                    )}
 
-              {/* Mesas Renderizadas */}
-              {/* Mesa 01 (Família VIP) */}
-              <g className="cursor-pointer">
-                <circle
-                  cx="100"
-                  cy="235"
-                  r="24"
-                  fill={assignedTableId === 'mesa-01' ? '#f59e0b' : '#334155'}
-                  stroke={assignedTableId === 'mesa-01' ? '#fbbf24' : '#64748b'}
-                  strokeWidth={assignedTableId === 'mesa-01' ? '3' : '1.5'}
-                  className={assignedTableId === 'mesa-01' ? 'animate-pulse' : ''}
-                />
-                <text x="100" y="239" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle">
-                  M-01
-                </text>
-              </g>
+                    {/* Botão Hotspot da Mesa */}
+                    <span
+                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-xs ${
+                        isAssigned
+                          ? 'bg-amber-400 text-slate-950 border-amber-300 font-black ring-4 ring-amber-400/50 shadow-amber-500/50'
+                          : isSelected
+                          ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50 font-black'
+                          : 'bg-slate-900/80 text-amber-300 border-amber-500/60 hover:bg-amber-500 hover:text-slate-950'
+                      }`}
+                    >
+                      {table.name.replace(/Mesa\s*/i, 'M')}
+                    </span>
 
-              {/* Mesa 02 (Amigos) */}
-              <g className="cursor-pointer">
-                <circle
-                  cx="200"
-                  cy="235"
-                  r="24"
-                  fill={assignedTableId === 'mesa-02' ? '#f59e0b' : '#334155'}
-                  stroke={assignedTableId === 'mesa-02' ? '#fbbf24' : '#64748b'}
-                  strokeWidth={assignedTableId === 'mesa-02' ? '3' : '1.5'}
-                  className={assignedTableId === 'mesa-02' ? 'animate-pulse' : ''}
-                />
-                <text x="200" y="239" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle">
-                  M-02
-                </text>
-              </g>
-
-              {/* Mesa 03 */}
-              <g className="cursor-pointer">
-                <circle
-                  cx="300"
-                  cy="235"
-                  r="24"
-                  fill={assignedTableId === 'mesa-03' ? '#f59e0b' : '#334155'}
-                  stroke={assignedTableId === 'mesa-03' ? '#fbbf24' : '#64748b'}
-                  strokeWidth={assignedTableId === 'mesa-03' ? '3' : '1.5'}
-                  className={assignedTableId === 'mesa-03' ? 'animate-pulse' : ''}
-                />
-                <text x="300" y="239" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle">
-                  M-03
-                </text>
-              </g>
-
-              {/* Mesa 04 */}
-              <g className="cursor-pointer">
-                <circle
-                  cx="300"
-                  cy="140"
-                  r="24"
-                  fill={assignedTableId === 'mesa-04' ? '#f59e0b' : '#334155'}
-                  stroke={assignedTableId === 'mesa-04' ? '#fbbf24' : '#64748b'}
-                  strokeWidth={assignedTableId === 'mesa-04' ? '3' : '1.5'}
-                  className={assignedTableId === 'mesa-04' ? 'animate-pulse' : ''}
-                />
-                <text x="300" y="144" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle">
-                  M-04
-                </text>
-              </g>
-
-              {/* Lounge Estofados */}
-              <g className="cursor-pointer">
-                <rect
-                  x="20"
-                  y="220"
-                  width="45"
-                  height="50"
-                  rx="8"
-                  fill={assignedTableId === 'lounge-01' ? '#f59e0b' : '#1e293b'}
-                  stroke={assignedTableId === 'lounge-01' ? '#fbbf24' : '#475569'}
-                  strokeWidth="1.5"
-                />
-                <text x="42" y="249" fill="#94a3b8" fontSize="9" fontWeight="bold" textAnchor="middle">
-                  LOUNGE
-                </text>
-              </g>
-            </svg>
+                    {/* Tooltip com Nome da Mesa no Hover */}
+                    <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/btn:block bg-slate-950 text-amber-300 text-[10px] font-bold px-2 py-1 rounded-md border border-amber-500/40 whitespace-nowrap z-20 pointer-events-none shadow-xl">
+                      {table.name}
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Legenda */}
-          <div className="flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-2">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-300 inline-block animate-pulse" />
-              <span>Sua Mesa Reservada</span>
+          {/* Legenda Explicativa do Mapa */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400 pt-1">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+              </span>
+              <span className="font-bold text-amber-300">Sua Mesa Reservada</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-slate-700 border border-slate-500 inline-block" />
-              <span>Outras Mesas</span>
+              <span className="w-3 h-3 rounded-full bg-purple-600 border border-purple-300" />
+              <span className="text-slate-300">Mesa Selecionada</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-slate-900 border border-amber-500/60" />
+              <span>Outras Mesas do Salão</span>
             </div>
           </div>
+
+          {/* CARD POPUP DE DETALHES DA MESA SELECIONADA */}
+          {activeTable && (
+            <div className="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 space-y-4 shadow-xl animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-lg font-extrabold text-white">{activeTable.name}</h4>
+                    {activeTable.id === assignedTableId && (
+                      <span className="px-2.5 py-0.5 bg-amber-400 text-slate-950 font-black text-[10px] uppercase rounded-full tracking-wider">
+                        Sua Mesa
+                      </span>
+                    )}
+                  </div>
+                  {activeTable.description && (
+                    <p className="text-xs text-slate-400 mt-0.5">{activeTable.description}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-bold bg-slate-900/80 px-3.5 py-2 rounded-xl border border-slate-700/80 self-start sm:self-auto">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  <span className="text-slate-300">Capacidade:</span>
+                  <span className="text-amber-400 font-extrabold">
+                    {tablePersons.length} / {activeTable.capacity} pessoas
+                  </span>
+                </div>
+              </div>
+
+              {/* LISTA DE CONVIDADOS DA MESA */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block flex items-center gap-1.5">
+                  <Armchair className="w-3.5 h-3.5 text-amber-400" /> Pessoas Alocadas nesta Mesa ({tablePersons.length})
+                </span>
+
+                {tablePersons.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                    {tablePersons.map((person) => (
+                      <div
+                        key={person.id}
+                        className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
+                          person.table_id === assignedTableId
+                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+                            : 'bg-slate-900/60 border-slate-700/80 text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="truncate">{person.name}</span>
+                        </div>
+                        {person.role_in_invite === 'head' && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 shrink-0 ml-1">
+                            Mandante
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                    Nenhum convidado alocado nesta mesa até o momento.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer do Modal */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+        <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between shrink-0">
+          <div className="text-xs text-slate-400 hidden sm:block">
+            Planta oficial do Buffet Espaço Estupendo (São Bernardo do Campo - SP)
+          </div>
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-semibold hover:bg-slate-700"
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer ml-auto"
           >
             Fechar Mapa
           </button>

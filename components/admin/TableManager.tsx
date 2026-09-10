@@ -3,7 +3,21 @@
 import React, { useState } from 'react';
 import { Table, Invite, Person } from '@/types';
 import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat } from '@/lib/db';
-import { Plus, Trash2, Edit, Users, Armchair, UserPlus, X, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Users,
+  Armchair,
+  UserPlus,
+  X,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Map,
+  LayoutGrid,
+  Sparkles,
+} from 'lucide-react';
 
 interface TableManagerProps {
   tables: Table[];
@@ -13,6 +27,9 @@ interface TableManagerProps {
 }
 
 export function TableManager({ tables, invites, persons, onRefresh }: TableManagerProps) {
+  const [viewMode, setViewMode] = useState<'cards' | 'floorplan'>('cards');
+  const [activeFloorplanTable, setActiveFloorplanTable] = useState<Table | null>(tables[0] || null);
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
   const [tableName, setTableName] = useState('');
@@ -73,6 +90,9 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const handleDeleteTable = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta mesa? As pessoas alocadas nela voltarão para a lista sem mesa.')) return;
     await deleteTable(id);
+    if (activeFloorplanTable?.id === id) {
+      setActiveFloorplanTable(tables.find((t) => t.id !== id) || null);
+    }
     onRefresh();
   };
 
@@ -87,10 +107,12 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
     onRefresh();
   };
 
+  const inspectorTable = activeFloorplanTable || tables[0];
+
   return (
     <div className="space-y-8">
-      {/* Topo da Gestão de Mesas */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      {/* Topo da Gestão de Mesas & Visual Switcher */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold mb-2 border border-amber-300 dark:border-amber-800">
             <Armchair className="w-4 h-4 text-amber-500" /> Gestão 1:1 de Assentos por Pessoa
@@ -99,16 +121,49 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
             Organização do Salão & Cadeiras
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Cada pessoa da lista (119 nomes) ocupa exatamente 1 assento físico. Aloque pessoa por pessoa em cada cadeira.
+            Cada pessoa da lista ({persons.length} nomes) ocupa exatamente 1 assento físico. Aloque pessoa por pessoa em cada cadeira.
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Nova Mesa do Salão
-        </button>
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {/* Visual Switcher */}
+          <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl flex items-center border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                viewMode === 'cards'
+                  ? 'bg-amber-500 text-slate-950 shadow-md'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>Cards & Cadeiras</span>
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('floorplan');
+                if (tables.length > 0 && !activeFloorplanTable) {
+                  setActiveFloorplanTable(tables[0]);
+                }
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                viewMode === 'floorplan'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Map className="w-4 h-4" />
+              <span>Planta Baixa (GPT)</span>
+            </button>
+          </div>
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Nova Mesa
+          </button>
+        </div>
       </div>
 
       {/* Contadores 1:1 de Assentos */}
@@ -153,126 +208,371 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
         </div>
       )}
 
-      {/* GRID DO CROQUI VISUAL DE MESAS (SEATING CHART 1:1) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tables.map((table) => {
-          // Pessoas alocadas nesta mesa
-          const tablePersons = persons.filter((p) => p.table_id === table.id);
-          const allocatedSeats = tablePersons.length;
-          const occupancyPercent = Math.min(Math.round((allocatedSeats / table.capacity) * 100), 100);
-
-          return (
-            <div
-              key={table.id}
-              className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-md space-y-5 relative flex flex-col justify-between hover:border-amber-400 transition-all"
-            >
-              {/* Header da Mesa */}
-              <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
-                <div>
-                  <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    {table.name}
-                  </h3>
-                  <p className="text-xs text-slate-400">{table.description || 'Mesa do Salão'}</p>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(table)}
-                    className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-                    title="Editar mesa"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTable(table.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
-                    title="Excluir mesa"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+      {/* MODO PLANTA BAIXA INTERATIVA (GPT ARTWORK) */}
+      {viewMode === 'floorplan' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Lado Esquerdo: Planta Baixa Interativa com Imagem do Salão */}
+          <div className="lg:col-span-7 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <Map className="w-5 h-5 text-purple-500" />
+                <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                  Planta Baixa Interativa do Salão
+                </h3>
               </div>
+              <span className="text-xs font-bold text-slate-400">
+                Clique nas mesas para gerenciar cadeiras
+              </span>
+            </div>
 
-              {/* BARRA DE PROGRESSO DA CAPACIDADE */}
-              <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-3">
-                <div className="flex items-center justify-between text-xs font-extrabold">
-                  <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Assentos Ocupados:</span>
-                  <span className={allocatedSeats > table.capacity ? 'text-rose-500 font-black' : 'text-amber-600 dark:text-amber-400'}>
-                    {allocatedSeats} / {table.capacity} cadeiras ({occupancyPercent}%)
-                  </span>
-                </div>
+            {/* Imagem do Salão GPT com Overlays das Mesas */}
+            <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
+              <img
+                src="/salao-planta-baixa.jpg"
+                alt="Planta Baixa Interativa do Salão"
+                className="w-full h-auto object-cover select-none"
+              />
 
-                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              {tables.map((table) => {
+                const tablePersons = persons.filter((p) => p.table_id === table.id);
+                const isSelected = inspectorTable?.id === table.id;
+                const isFull = tablePersons.length >= table.capacity;
+                const isHalf = tablePersons.length > 0 && tablePersons.length < table.capacity;
+
+                const posX = table.position?.x ?? 50;
+                const posY = table.position?.y ?? 50;
+
+                return (
                   <div
-                    className={`h-full transition-all ${
-                      allocatedSeats > table.capacity
-                        ? 'bg-rose-500'
-                        : allocatedSeats === table.capacity
-                        ? 'bg-emerald-500'
-                        : 'bg-amber-500'
-                    }`}
-                    style={{ width: `${occupancyPercent}%` }}
-                  />
+                    key={table.id}
+                    style={{ left: `${posX}%`, top: `${posY}%` }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+                  >
+                    <button
+                      onClick={() => setActiveFloorplanTable(table)}
+                      className={`relative flex items-center justify-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'w-10 h-10 sm:w-12 sm:h-12 scale-110'
+                          : 'w-8 h-8 sm:w-10 sm:h-10 hover:scale-110'
+                      }`}
+                      title={`${table.name} (${tablePersons.length}/${table.capacity})`}
+                    >
+                      {isSelected && (
+                        <span className="absolute -inset-2 rounded-full border-2 border-purple-400 animate-pulse" />
+                      )}
+
+                      <span
+                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-xs text-[10px] font-black leading-none ${
+                          isSelected
+                            ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
+                            : isFull
+                            ? 'bg-emerald-600 text-white border-emerald-300'
+                            : isHalf
+                            ? 'bg-amber-500 text-slate-950 border-amber-300'
+                            : 'bg-slate-900/80 text-amber-300 border-amber-500/60'
+                        }`}
+                      >
+                        <span>{table.name.replace(/Mesa\s*/i, 'M')}</span>
+                        <span className="text-[8px] opacity-90 mt-0.5">
+                          {tablePersons.length}/{table.capacity}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legenda do Administrador */}
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-2">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-purple-600 border border-purple-300" />
+                <span className="font-bold text-purple-600 dark:text-purple-400">Mesa Selecionada</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-emerald-600 border border-emerald-300" />
+                <span>Completa (8/8)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-300" />
+                <span>Parcial</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-slate-800 border border-slate-600" />
+                <span>Vazia</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Lado Direito: Inspector da Mesa Selecionada com 8 Cadeira 1:1 */}
+          <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-purple-500/40 shadow-xl space-y-5">
+            {inspectorTable ? (
+              (() => {
+                const tablePersons = persons.filter((p) => p.table_id === inspectorTable.id);
+                const occupancyPercent = Math.min(
+                  Math.round((tablePersons.length / inspectorTable.capacity) * 100),
+                  100
+                );
+
+                return (
+                  <div className="space-y-5">
+                    {/* Header da Mesa no Inspector */}
+                    <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-700/80 pb-3">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Gestão da Mesa Selecionada
+                        </span>
+                        <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100">
+                          {inspectorTable.name}
+                        </h3>
+                        <p className="text-xs text-slate-400">{inspectorTable.description || 'Mesa do Salão'}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEdit(inspectorTable)}
+                          className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                          title="Editar mesa"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTable(inspectorTable.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                          title="Excluir mesa"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Barra de Progresso */}
+                    <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-extrabold">
+                        <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
+                          Ocupação de Assentos:
+                        </span>
+                        <span className="text-amber-600 dark:text-amber-400 font-extrabold">
+                          {tablePersons.length} / {inspectorTable.capacity} cadeiras ({occupancyPercent}%)
+                        </span>
+                      </div>
+
+                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-500 transition-all"
+                          style={{ width: `${occupancyPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Lista de Cadeiras 1:1 */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                        Assentos da Mesa ({inspectorTable.capacity} cadeiras)
+                      </span>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {Array.from({ length: inspectorTable.capacity }).map((_, chairIdx) => {
+                          const seatNum = chairIdx + 1;
+                          const occupiedPerson =
+                            tablePersons.find((p) => p.seat_number === seatNum) || tablePersons[chairIdx];
+
+                          return (
+                            <div
+                              key={seatNum}
+                              className={`p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col justify-between space-y-1.5 ${
+                                occupiedPerson
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-950 dark:text-emerald-200'
+                                  : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 text-slate-400'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-slate-400 uppercase tracking-wider font-extrabold">
+                                  Cadeira {seatNum}
+                                </span>
+                                <Armchair
+                                  className={`w-3.5 h-3.5 ${
+                                    occupiedPerson ? 'text-emerald-500' : 'text-slate-400'
+                                  }`}
+                                />
+                              </div>
+
+                              {occupiedPerson ? (
+                                <div>
+                                  <span className="block font-black truncate text-xs">{occupiedPerson.name}</span>
+                                  {occupiedPerson.role_in_invite && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 inline-block mt-0.5">
+                                      {occupiedPerson.role_in_invite === 'head' ? 'Mandante' : 'Acompanhante'}
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() => handleUnassignPerson(occupiedPerson.id)}
+                                    className="w-full mt-2 py-1 px-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/60 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  >
+                                    Liberar Cadeira
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setAssignSearchTerm('');
+                                    setSelectedAssignment({ table: inspectorTable, seatNumber: seatNum });
+                                  }}
+                                  className="w-full py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-extrabold rounded-lg border border-amber-500/30 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <UserPlus className="w-3 h-3 text-amber-500" />
+                                  <span>+ Ocupar Cadeira</span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <p className="text-xs text-slate-400">Nenhuma mesa selecionada.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODO CARDS & ALOCAÇÃO 1:1 (CROQUI PADRÃO) */}
+      {viewMode === 'cards' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tables.map((table) => {
+            const tablePersons = persons.filter((p) => p.table_id === table.id);
+            const allocatedSeats = tablePersons.length;
+            const occupancyPercent = Math.min(Math.round((allocatedSeats / table.capacity) * 100), 100);
+
+            return (
+              <div
+                key={table.id}
+                className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-slate-200 dark:border-slate-700 shadow-md space-y-5 relative flex flex-col justify-between hover:border-amber-400 transition-all"
+              >
+                {/* Header da Mesa */}
+                <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      {table.name}
+                    </h3>
+                    <p className="text-xs text-slate-400">{table.description || 'Mesa do Salão'}</p>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEdit(table)}
+                      className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                      title="Editar mesa"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTable(table.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Excluir mesa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* CROQUI DE 8 CADEIRAS INDIVIDUAIS (1:1) */}
-                <div className="pt-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {Array.from({ length: table.capacity }).map((_, chairIdx) => {
-                      const seatNum = chairIdx + 1;
-                      const occupiedPerson = tablePersons.find((p) => p.seat_number === seatNum) || tablePersons[chairIdx];
+                {/* BARRA DE PROGRESSO DA CAPACIDADE */}
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-extrabold">
+                    <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
+                      Assentos Ocupados:
+                    </span>
+                    <span
+                      className={
+                        allocatedSeats > table.capacity
+                          ? 'text-rose-500 font-black'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }
+                    >
+                      {allocatedSeats} / {table.capacity} cadeiras ({occupancyPercent}%)
+                    </span>
+                  </div>
 
-                      return (
-                        <div
-                          key={seatNum}
-                          className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col justify-between space-y-1.5 ${
-                            occupiedPerson
-                              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-950 dark:text-emerald-200'
-                              : 'bg-white dark:bg-slate-800 border-dashed border-slate-300 dark:border-slate-700 text-slate-400'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-[10px]">
-                            <span className="text-slate-400 uppercase tracking-wider font-extrabold">Cadeira {seatNum}</span>
-                            <Armchair className={`w-3.5 h-3.5 ${occupiedPerson ? 'text-emerald-500' : 'text-slate-400'}`} />
-                          </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        allocatedSeats > table.capacity
+                          ? 'bg-rose-500'
+                          : allocatedSeats === table.capacity
+                          ? 'bg-emerald-500'
+                          : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${occupancyPercent}%` }}
+                    />
+                  </div>
 
-                          {occupiedPerson ? (
-                            <div>
-                              <span className="block font-black truncate text-xs">{occupiedPerson.name}</span>
-                              {occupiedPerson.role_in_invite && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 inline-block mt-0.5">
-                                  {occupiedPerson.role_in_invite === 'head' ? 'Mandante' : 'Acompanhante'}
-                                </span>
-                              )}
-                              <button
-                                onClick={() => handleUnassignPerson(occupiedPerson.id)}
-                                className="w-full mt-1.5 py-1 px-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/60 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
-                              >
-                                Liberar Cadeira
-                              </button>
+                  {/* CROQUI DE CADEIRAS INDIVIDUAIS (1:1) */}
+                  <div className="pt-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: table.capacity }).map((_, chairIdx) => {
+                        const seatNum = chairIdx + 1;
+                        const occupiedPerson =
+                          tablePersons.find((p) => p.seat_number === seatNum) || tablePersons[chairIdx];
+
+                        return (
+                          <div
+                            key={seatNum}
+                            className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col justify-between space-y-1.5 ${
+                              occupiedPerson
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 text-emerald-950 dark:text-emerald-200'
+                                : 'bg-white dark:bg-slate-800 border-dashed border-slate-300 dark:border-slate-700 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-slate-400 uppercase tracking-wider font-extrabold">
+                                Cadeira {seatNum}
+                              </span>
+                              <Armchair
+                                className={`w-3.5 h-3.5 ${occupiedPerson ? 'text-emerald-500' : 'text-slate-400'}`}
+                              />
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setAssignSearchTerm('');
-                                setSelectedAssignment({ table, seatNumber: seatNum });
-                              }}
-                              className="w-full py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-extrabold rounded-lg border border-amber-500/30 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              <UserPlus className="w-3 h-3 text-amber-500" />
-                              <span>+ Ocupar</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+
+                            {occupiedPerson ? (
+                              <div>
+                                <span className="block font-black truncate text-xs">{occupiedPerson.name}</span>
+                                {occupiedPerson.role_in_invite && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 inline-block mt-0.5">
+                                    {occupiedPerson.role_in_invite === 'head' ? 'Mandante' : 'Acompanhante'}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleUnassignPerson(occupiedPerson.id)}
+                                  className="w-full mt-1.5 py-1 px-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/60 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Liberar Cadeira
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setAssignSearchTerm('');
+                                  setSelectedAssignment({ table, seatNumber: seatNum });
+                                }}
+                                className="w-full py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-extrabold rounded-lg border border-amber-500/30 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <UserPlus className="w-3 h-3 text-amber-500" />
+                                <span>+ Ocupar</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal para Selecionar Pessoa e Ocupar Cadeira (Com Busca por Digitação) */}
       {selectedAssignment && (
@@ -296,7 +596,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Digite o nome da pessoa física (1 das 119 da lista) para alocar nesta cadeira:
+              Digite o nome da pessoa física ({persons.length} da lista) para alocar nesta cadeira:
             </p>
 
             {/* Campo de Busca com resposta instantânea por digitação */}
@@ -321,7 +621,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                 if (unassignedPersons.length === 0) {
                   return (
                     <div className="text-center py-6 text-xs text-slate-400">
-                      Todas as 119 pessoas da lista já possuem assento atribuído!
+                      Todas as pessoas da lista já possuem assento atribuído!
                     </div>
                   );
                 }
@@ -366,7 +666,10 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
                 {editingTable ? 'Editar Mesa' : 'Nova Mesa do Salão'}
               </h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <button
+                onClick={() => setIsAddOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -434,14 +737,14 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                 <button
                   type="button"
                   onClick={() => setIsAddOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-md"
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-md cursor-pointer"
                 >
                   {loading ? 'Salvando...' : editingTable ? 'Salvar Alterações' : 'Criar Mesa'}
                 </button>
@@ -453,4 +756,3 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
     </div>
   );
 }
-
