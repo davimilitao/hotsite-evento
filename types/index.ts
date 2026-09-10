@@ -43,12 +43,31 @@ export interface SurpriseContribution {
 
 export type SpecialRole = 'guest' | 'birthday_person' | 'ceremonialist' | 'musician' | 'staff';
 
+export type RelationshipType =
+  | 'spouse'     // Cônjuge / Marido / Esposa
+  | 'child'      // Filho / Filha
+  | 'parent'     // Pai / Mãe
+  | 'sibling'    // Irmão / Irmã
+  | 'relative'   // Pessoa da Família / Parente
+  | 'friend';    // Amigo / Amiga
+
+export type ChildCategory = 'isento' | 'meia' | 'inteira';
+
+export interface Relationship {
+  target_person_id: string;
+  relationship_type: RelationshipType;
+}
+
 export interface Person {
   id: string;
   name: string;
   phone?: string;
   age?: number;
   type?: GuestType;
+  child_category?: ChildCategory;
+  family_id?: string | null;
+  family_name?: string;
+  relationships?: Relationship[];
   table_id?: string | null;
   seat_number?: number | null;
   invite_id?: string | null;
@@ -66,6 +85,8 @@ export interface Invite {
   companion_person_ids?: string[];
   head_name: string;
   phone: string;
+  target_phone_numbers?: string[];
+  whatsapp_dispatch_mode?: 'centralized' | 'multi_contact';
   max_guests: number;
   status: InviteStatus;
   confirmed_count: number;

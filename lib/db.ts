@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
@@ -360,6 +360,29 @@ export async function getAllPersons(): Promise<Person[]> {
   return cached;
 }
 
+export function calculateChildCategory(age?: number, config?: EventConfig): ChildCategory {
+  if (age === undefined || age === null || age >= 12) {
+    return 'inteira';
+  }
+  const freeMax = config?.child_free_max_age ?? 5;
+  const halfMax = config?.child_half_max_age ?? 11;
+  if (age <= freeMax) return 'isento';
+  if (age <= halfMax) return 'meia';
+  return 'inteira';
+}
+
+export function getInverseRelationshipType(relType: RelationshipType): RelationshipType {
+  switch (relType) {
+    case 'spouse': return 'spouse';
+    case 'child': return 'parent';
+    case 'parent': return 'child';
+    case 'sibling': return 'sibling';
+    case 'relative': return 'relative';
+    case 'friend': return 'friend';
+    default: return 'relative';
+  }
+}
+
 export async function savePerson(person: Partial<Person> & { id?: string }): Promise<Person> {
   const persons = await getAllPersons();
   let fullPerson: Person;
@@ -367,14 +390,28 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
   if (person.id) {
     const existingIndex = persons.findIndex((p) => p.id === person.id);
     if (existingIndex >= 0) {
-      fullPerson = { ...persons[existingIndex], ...person };
+      const existing = persons[existingIndex];
+      fullPerson = {
+        ...existing,
+        ...person,
+        age: person.age !== undefined ? person.age : existing.age,
+        child_category: person.child_category || existing.child_category,
+        family_id: person.family_id !== undefined ? person.family_id : existing.family_id,
+        family_name: person.family_name !== undefined ? person.family_name : existing.family_name,
+        relationships: person.relationships || existing.relationships || [],
+      };
       persons[existingIndex] = fullPerson;
     } else {
       fullPerson = {
         id: person.id,
         name: person.name || 'Sem nome',
         phone: person.phone || '',
-        type: person.type || 'adult',
+        age: person.age,
+        child_category: person.child_category,
+        type: person.type || (person.age !== undefined && person.age < 12 ? 'child' : 'adult'),
+        family_id: person.family_id || null,
+        family_name: person.family_name || '',
+        relationships: person.relationships || [],
         table_id: person.table_id || null,
         seat_number: person.seat_number ?? null,
         invite_id: person.invite_id || null,
@@ -392,7 +429,12 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
       id: newId,
       name: person.name || 'Sem nome',
       phone: person.phone || '',
-      type: person.type || 'adult',
+      age: person.age,
+      child_category: person.child_category,
+      type: person.type || (person.age !== undefined && person.age < 12 ? 'child' : 'adult'),
+      family_id: person.family_id || null,
+      family_name: person.family_name || '',
+      relationships: person.relationships || [],
       table_id: person.table_id || null,
       seat_number: person.seat_number ?? null,
       invite_id: person.invite_id || null,
@@ -415,6 +457,92 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
 
   setLS(LS_KEYS.PERSONS, persons);
   return fullPerson;
+}
+
+export async function linkPeopleRelationship(
+  person1Id: string,
+  person2Id: string,
+  relType1: RelationshipType,
+  customFamilyName?: string
+): Promise<{ person1: Person; person2: Person }> {
+  const persons = await getAllPersons();
+  const p1 = persons.find((p) => p.id === person1Id);
+  const p2 = persons.find((p) => p.id === person2Id);
+
+  if (!p1 || !p2) throw new Error('Pessoas não encontradas para vincular parentesco.');
+
+  const sharedFamilyId = p1.family_id || p2.family_id || `fam-${Date.now()}`;
+  const defaultFamilyName = customFamilyName || p1.family_name || p2.family_name || `Família ${p1.name.split(' ')[0]}`;
+  const relType2 = getInverseRelationshipType(relType1);
+
+  const p1Rels = (p1.relationships || []).filter((r) => r.target_person_id !== person2Id);
+  p1Rels.push({ target_person_id: person2Id, relationship_type: relType1 });
+
+  const p2Rels = (p2.relationships || []).filter((r) => r.target_person_id !== person1Id);
+  p2Rels.push({ target_person_id: person1Id, relationship_type: relType2 });
+
+  const updatedP1 = await savePerson({
+    ...p1,
+    family_id: sharedFamilyId,
+    family_name: defaultFamilyName,
+    relationships: p1Rels,
+  });
+
+  const updatedP2 = await savePerson({
+    ...p2,
+    family_id: sharedFamilyId,
+    family_name: defaultFamilyName,
+    relationships: p2Rels,
+  });
+
+  // Se outras pessoas pertenciam ao antigo family_id de P2 ou P1, unificar todas no mesmo family_id
+  const oldFamilyIds = new Set<string>();
+  if (p1.family_id && p1.family_id !== sharedFamilyId) oldFamilyIds.add(p1.family_id);
+  if (p2.family_id && p2.family_id !== sharedFamilyId) oldFamilyIds.add(p2.family_id);
+
+  if (oldFamilyIds.size > 0) {
+    for (const member of persons) {
+      if (member.id !== p1.id && member.id !== p2.id && member.family_id && oldFamilyIds.has(member.family_id)) {
+        await savePerson({
+          ...member,
+          family_id: sharedFamilyId,
+          family_name: defaultFamilyName,
+        });
+      }
+    }
+  }
+
+  return { person1: updatedP1, person2: updatedP2 };
+}
+
+export async function unlinkPeopleRelationship(
+  person1Id: string,
+  person2Id: string
+): Promise<{ person1: Person | null; person2: Person | null }> {
+  const persons = await getAllPersons();
+  const p1 = persons.find((p) => p.id === person1Id);
+  const p2 = persons.find((p) => p.id === person2Id);
+
+  let updatedP1: Person | null = null;
+  let updatedP2: Person | null = null;
+
+  if (p1) {
+    const newRels = (p1.relationships || []).filter((r) => r.target_person_id !== person2Id);
+    updatedP1 = await savePerson({
+      ...p1,
+      relationships: newRels,
+    });
+  }
+
+  if (p2) {
+    const newRels = (p2.relationships || []).filter((r) => r.target_person_id !== person1Id);
+    updatedP2 = await savePerson({
+      ...p2,
+      relationships: newRels,
+    });
+  }
+
+  return { person1: updatedP1, person2: updatedP2 };
 }
 
 export async function deletePerson(id: string): Promise<void> {

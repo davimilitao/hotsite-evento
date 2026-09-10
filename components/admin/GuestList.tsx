@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
+import { PersonRelationshipModal } from './PersonRelationshipModal';
+import { PersonEditModal } from './PersonEditModal';
 import {
   Users,
   UserCheck,
@@ -42,6 +44,11 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Heart,
+  Baby,
+  Link2,
+  Shield,
+  Tag,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -53,12 +60,19 @@ interface GuestListProps {
 }
 
 export function GuestList({ invites, tables, persons, config, onRefresh }: GuestListProps) {
+  const [activeTab, setActiveTab] = useState<'persons' | 'invites'>('persons');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined'>('all');
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  // Estados dos Modais de Cadastro / Edição de Pessoa e Parentesco
+  const [relationshipModalPerson, setRelationshipModalPerson] = useState<Person | null>(null);
+  const [isRelationshipOpen, setIsRelationshipOpen] = useState<boolean>(false);
+  const [editModalPerson, setEditModalPerson] = useState<Person | null>(null);
+  const [isPersonEditOpen, setIsPersonEditOpen] = useState<boolean>(false);
 
   // Estados de Edição Inline & Menu Dropdown na DataTable
   const [editingCell, setEditingCell] = useState<{ inviteId: string; field: 'name' | 'phone'; value: string } | null>(null);
@@ -688,39 +702,84 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
+      {/* SELETOR DE ABAS PRINCIPAIS: LISTA DE CONVIDADOS vs GESTÃO DE CONVITES */}
+      <div className="bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl flex items-center border border-slate-200 dark:border-slate-800">
+        <button
+          onClick={() => setActiveTab('persons')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            activeTab === 'persons'
+              ? 'bg-amber-500 text-slate-950 shadow-md'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>👥 Lista de Convidados ({persons.length} Pessoas Físicas)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('invites')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            activeTab === 'invites'
+              ? 'bg-purple-600 text-white shadow-md'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Send className="w-4 h-4" />
+          <span>💌 Convites & Disparos WhatsApp ({invites.length} Convites Ativos)</span>
+        </button>
+      </div>
+
       {/* CARD 1: PAINEL SUPERIOR DE AÇÕES E CRIAÇÃO (CTAs) */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Users className="w-4 h-4 text-purple-500" />
-            <span>Gestão da Lista de Convidados</span>
+            <span>{activeTab === 'persons' ? 'Gestão da Lista de Convidados' : 'Gestão de Convites & Disparos WhatsApp'}</span>
           </h2>
           <p className="text-[11px] text-slate-400 font-medium">
-            Cadastre nomes, organize grupos e envie convites pelo WhatsApp
+            {activeTab === 'persons'
+              ? 'Cadastre convidados, informe idades e vincule grupos familiares de parentesco'
+              : 'Gere tokens de convite, selecione celulares elegíveis e dispare pelo WhatsApp'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setIsQuickAddOpen(true)}
-            className="min-h-[42px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
-          >
-            <UserPlus className="w-4 h-4 text-emerald-100" /> <span>+ Adicionar Nome à Lista</span>
-          </button>
+          {activeTab === 'persons' ? (
+            <>
+              <button
+                onClick={() => {
+                  setEditModalPerson(null);
+                  setIsPersonEditOpen(true);
+                }}
+                className="min-h-[42px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <UserPlus className="w-4 h-4 text-emerald-100" /> <span>+ Cadastrar Convidado</span>
+              </button>
 
-          <button
-            onClick={handleOpenAdd}
-            className="min-h-[42px] px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" /> <span>Novo Convite (Wizard)</span>
-          </button>
+              <button
+                onClick={() => setIsBulkOpen(true)}
+                className="min-h-[42px] px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <Upload className="w-4 h-4 text-purple-100" /> <span>Importar em Massa</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleOpenAdd}
+                className="min-h-[42px] px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> <span>Novo Convite (Wizard)</span>
+              </button>
 
-          <button
-            onClick={handleOpenSpecialModal}
-            className="min-h-[42px] px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
-          >
-            <Star className="w-4 h-4 text-amber-900" /> <span>Convite Especial</span>
-          </button>
+              <button
+                onClick={handleOpenSpecialModal}
+                className="min-h-[42px] px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <Star className="w-4 h-4 text-amber-900" /> <span>Convite Especial</span>
+              </button>
+            </>
+          )}
 
           <a
             href="/og-save-the-date.jpg"
@@ -774,422 +833,542 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
         </div>
       </div>
 
-      {/* TABELA DE CONVITES CRIADOS (DATATABLE 360º) */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[350px]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[850px]">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
-                <th
-                  onClick={() => handleSort('name')}
-                  className="py-3 px-3 cursor-pointer hover:text-purple-600 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Nome</span>
-                    {sortField === 'name' ? (
-                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
-                    )}
-                  </div>
-                </th>
-                <th className="py-3 px-2.5">Telefone</th>
-                <th
-                  onClick={() => handleSort('invite_type')}
-                  className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Tipo</span>
-                    {sortField === 'invite_type' ? (
-                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('table')}
-                  className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Mesa</span>
-                    {sortField === 'table' ? (
-                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
-                    )}
-                  </div>
-                </th>
-                <th className="py-3 px-2 text-center">Convite</th>
-                <th
-                  onClick={() => handleSort('status')}
-                  className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Status</span>
-                    {sortField === 'status' ? (
-                      sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-300" />
-                    )}
-                  </div>
-                </th>
-                <th className="py-3 px-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
-              {sortedPersons.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
-                    Nenhum convidado encontrado na busca ou filtro selecionado.
-                  </td>
+      {/* TABELA PRINCIPAL CONFORME A ABA ATIVA */}
+      {activeTab === 'persons' ? (
+        /* TAB 1: GESTÃO DA LISTA DE CONVIDADOS (PESSOAS FÍSICAS, IDADES & PARENTESCOS) */
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[350px]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[950px]">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                  <th onClick={() => handleSort('name')} className="py-3 px-3 cursor-pointer hover:text-amber-500">
+                    Convidado(a)
+                  </th>
+                  <th className="py-3 px-2.5">Telefone (WhatsApp)</th>
+                  <th className="py-3 px-2.5">Idade & Categoria Buffet</th>
+                  <th className="py-3 px-2.5">Família & Parentescos</th>
+                  <th className="py-3 px-2.5">Mesa & Assento</th>
+                  <th className="py-3 px-2 text-center">Status Convite</th>
+                  <th className="py-3 px-3 text-right">Ações</th>
                 </tr>
-              ) : (
-                sortedPersons.map((person, index) => {
-                  const invite = invites.find(
-                    (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
-                  );
-                  const headPerson = invite?.head_person_id ? persons.find((p) => p.id === invite.head_person_id) : null;
-                  const isHead = invite ? (invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase())) : false;
-                  const isCompanion = !isHead && invite?.companion_person_ids?.includes(person.id);
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
+                {sortedPersons.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                      Nenhum convidado encontrado na busca ou filtro selecionado.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedPersons.map((person) => {
+                    const invite = invites.find(
+                      (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
+                    );
+                    const childCat = calculateChildCategory(person.age, config);
+                    const table = tables.find((t) => t.id === person.table_id);
 
-                  const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : { expired: false, label: 'Pendente', color: 'bg-slate-100 text-slate-700 border-slate-300' };
-                  const isSent = invite?.sent_status === 'sent';
-                  const currentTableId = person.table_id || '';
-
-                  const isEditingName = editingCell?.inviteId === person.id && editingCell?.field === 'name';
-                  const isEditingPhone = editingCell?.inviteId === person.id && editingCell?.field === 'phone';
-
-                  // Status individual do convidado no RSVP
-                  const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
-                  const rsvpStatus = guestObj?.status || invite?.status || 'pending';
-
-                  // Direção do Dropdown (Abre para cima nas últimas linhas para evitar corte)
-                  const openUpwards = index >= sortedPersons.length - 3 && sortedPersons.length > 2;
-
-                  return (
-                    <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                      {/* COLUNA 1: NOME (Edição Inline por Pessoa Física 1:1) */}
-                      <td className="py-2.5 px-3 min-w-[150px]">
-                        {isEditingName ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              autoFocus
-                              value={editingCell.value}
-                              onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSavePersonInlineCell(person);
-                                if (e.key === 'Escape') setEditingCell(null);
-                              }}
-                              className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
-                            />
-                            <button
-                              onClick={() => handleSavePersonInlineCell(person)}
-                              className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                              title="Salvar Nome"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
+                    return (
+                      <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                        {/* Nome */}
+                        <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-100">
+                          <div className="flex items-center gap-2">
+                            <span>{person.name}</span>
+                            {person.special_role && person.special_role !== 'guest' && (
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-300">
+                                {person.special_role}
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          <div
-                            onClick={() => setEditingCell({ inviteId: person.id, field: 'name', value: person.name })}
-                            className="group flex items-center gap-1.5 cursor-pointer py-0.5 flex-wrap"
-                            title="Clique para editar o nome diretamente na tabela"
-                          >
-                            <span className="font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
-                              {person.name}
+                        </td>
+
+                        {/* Telefone */}
+                        <td className="py-3 px-2.5 font-medium text-slate-600 dark:text-slate-300">
+                          {person.phone ? (
+                            <span className="flex items-center gap-1 font-mono text-[11px]">
+                              <MessageCircle className="w-3 h-3 text-emerald-500" />
+                              {formatPhoneDisplay(person.phone)}
                             </span>
-                            <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            {person.special_role === 'ceremonialist' && (
-                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5 whitespace-nowrap">
-                                <Star className="w-3 h-3 text-amber-500" /> Cerimonialista
-                              </span>
-                            )}
-                            {person.special_role === 'musician' && (
-                              <span className="bg-sky-500/20 text-sky-600 dark:text-sky-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-0.5 whitespace-nowrap">
-                                <Music className="w-3 h-3 text-sky-500" /> Músico
-                              </span>
-                            )}
-                            {person.special_role === 'staff' && (
-                              <span className="bg-slate-500/20 text-slate-600 dark:text-slate-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-slate-500/30 flex items-center gap-0.5 whitespace-nowrap">
-                                <Briefcase className="w-3 h-3 text-slate-500" /> Staff
-                              </span>
-                            )}
-                            {person.special_role === 'birthday_person' && (
-                              <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-0.5 whitespace-nowrap">
-                                <Crown className="w-3 h-3 text-amber-400" /> Aniversariante
-                              </span>
-                            )}
-                            {!person.table_id && (
-                              <span className="bg-amber-400/20 text-amber-600 dark:text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 whitespace-nowrap">
-                                Reserva
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {invite && <div className="text-[10px] font-mono text-purple-500 mt-0.5 truncate max-w-[160px]">/convite/{invite.id}</div>}
-                      </td>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] italic">Sem Celular</span>
+                          )}
+                        </td>
 
-                      {/* COLUNA 2: TELEFONE */}
-                      <td className="py-2.5 px-2.5 min-w-[120px]">
-                        {isEditingPhone ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              autoFocus
-                              placeholder="11999998888"
-                              value={editingCell.value}
-                              onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSavePersonInlineCell(person);
-                                if (e.key === 'Escape') setEditingCell(null);
-                              }}
-                              className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-medium focus:outline-none"
-                            />
-                            <button
-                              onClick={() => handleSavePersonInlineCell(person)}
-                              className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                              title="Salvar Telefone"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || invite?.phone || '' })}
-                            className="group flex items-center gap-1.5 cursor-pointer py-1 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap"
-                            title="Clique para editar o telefone"
-                          >
-                            <span>
-                              {formatPhoneDisplay(person.phone || invite?.phone || '') || (
-                                <em className="text-amber-500 text-[11px]">Sem fone (adicionar)</em>
-                              )}
+                        {/* Idade & Categoria Buffet */}
+                        <td className="py-3 px-2.5">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px]">
+                              {person.age !== undefined && person.age !== null ? `${person.age} anos` : 'Idade N/I'}
                             </span>
-                            <Edit className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        )}
-                      </td>
-
-                      {/* COLUNA 3: TIPO DE CONVITE */}
-                      <td className="py-2.5 px-2.5">
-                        {isHead && (
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border whitespace-nowrap ${
-                            invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
-                              ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800'
-                              : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
-                          }`}>
-                            {invite?.invite_type === 'family' || (invite?.companion_person_ids && invite.companion_person_ids.length > 0)
-                              ? `Família (${1 + (invite?.companion_person_ids?.length || 0)} pes)`
-                              : 'Individual'}
-                          </span>
-                        )}
-                        {isCompanion && (
-                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 whitespace-nowrap">
-                            Família (Acompanhante)
-                          </span>
-                        )}
-                        {!invite && (
-                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-300 dark:border-slate-800 whitespace-nowrap">
-                            Sem Convite
-                          </span>
-                        )}
-                      </td>
-
-                      {/* COLUNA 4: MESA (Seletor Inline 360º) */}
-                      <td className="py-2.5 px-2.5 min-w-[120px]">
-                        <select
-                          value={currentTableId}
-                          onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
-                          className={`w-full px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer focus:outline-none ${
-                            currentTableId
-                              ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800'
-                              : 'bg-slate-100 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700 italic'
-                          }`}
-                        >
-                          <option value="">-- Sem Mesa --</option>
-                          {tables.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-
-                      {/* COLUNA 5: CONVITE (Header "Convite" - Enviar / Enviado / Reenviar) */}
-                      <td className="py-2.5 px-2 text-center min-w-[110px]">
-                        {invite ? (
-                          isSent ? (
-                            <button
-                              onClick={() => handleWhatsAppDispatch(invite)}
-                              className="group relative inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 hover:bg-amber-500/20 text-emerald-600 hover:text-amber-700 dark:text-emerald-400 dark:hover:text-amber-300 border border-emerald-500/30 hover:border-amber-500/40 rounded-xl font-extrabold text-[11px] transition-all cursor-pointer shadow-sm whitespace-nowrap"
-                              title="Clique para reenviar a mensagem de convite no WhatsApp"
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border w-fit ${
+                                childCat === 'isento'
+                                  ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'
+                                  : childCat === 'meia'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                                  : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                              }`}
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 group-hover:hidden shrink-0" />
-                              <Send className="w-3.5 h-3.5 text-amber-500 hidden group-hover:inline shrink-0" />
-                              <span className="group-hover:hidden">Enviado</span>
-                              <span className="hidden group-hover:inline font-black">Reenviar</span>
+                              {childCat === 'isento' && `⚪ Isento (0-${config.child_free_max_age || 5})`}
+                              {childCat === 'meia' && `🟡 Meia (${(config.child_free_max_age || 5) + 1}-${config.child_half_max_age || 11})`}
+                              {childCat === 'inteira' && '🟢 Inteira (12+)'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Família & Parentescos */}
+                        <td className="py-3 px-2.5">
+                          <div className="space-y-1">
+                            {person.family_name || person.family_id ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 rounded font-extrabold text-[10px] border border-purple-300">
+                                🏡 {person.family_name || 'Grupo Familiar'}
+                              </span>
+                            ) : null}
+
+                            {person.relationships && person.relationships.length > 0 ? (
+                              <div className="text-[10px] text-slate-500 font-medium space-y-0.5">
+                                {person.relationships.map((rel) => {
+                                  const targetP = persons.find((p) => p.id === rel.target_person_id);
+                                  if (!targetP) return null;
+                                  return (
+                                    <span key={rel.target_person_id} className="block text-slate-600 dark:text-slate-400">
+                                      • {rel.relationship_type === 'spouse' ? '💑 Cônjuge de' : rel.relationship_type === 'child' ? '👶 Filho(a) de' : rel.relationship_type === 'parent' ? '👴 Pai/Mãe de' : '🔗 Parentesco com'} <strong>{targetP.name}</strong>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+
+                            <button
+                              onClick={() => {
+                                setRelationshipModalPerson(person);
+                                setIsRelationshipOpen(true);
+                              }}
+                              className="px-2 py-0.5 bg-slate-100 hover:bg-purple-100 text-purple-700 dark:bg-slate-800 dark:hover:bg-purple-950 text-[10px] font-extrabold rounded border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <Link2 className="w-3 h-3 text-purple-500" />
+                              <span>+ Relacionar</span>
                             </button>
+                          </div>
+                        </td>
+
+                        {/* Mesa & Assento */}
+                        <td className="py-3 px-2.5">
+                          {table ? (
+                            <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 rounded-lg font-bold text-[10px] border border-amber-300">
+                              {table.name} {person.seat_number ? `(C1:1)` : ''}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-medium italic">Sem Mesa</span>
+                          )}
+                        </td>
+
+                        {/* Convite */}
+                        <td className="py-3 px-2 text-center">
+                          {invite ? (
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full font-black text-[10px] border border-emerald-300 inline-block">
+                              Convite Gerado
+                            </span>
                           ) : (
                             <button
-                              onClick={() => handleWhatsAppDispatch(invite)}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-[11px] shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-                              title="Disparar mensagem de convite pelo WhatsApp"
+                              onClick={() => {
+                                setHeadPersonId(person.id);
+                                if (person.phone) setPhone(person.phone);
+                                setWizardStep(1);
+                                setIsAddOpen(true);
+                              }}
+                              className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-extrabold text-[10px] shadow-sm transition-all cursor-pointer inline-flex items-center gap-1"
                             >
-                              <Send className="w-3.5 h-3.5 text-emerald-100 shrink-0" />
-                              <span>Enviar</span>
+                              <Plus className="w-3 h-3" />
+                              <span>+ Convite</span>
                             </button>
-                          )
-                        ) : (
-                          <button
-                            onClick={() => handleOpenAddForPerson(person)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-[11px] shadow-sm transition-all cursor-pointer whitespace-nowrap"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-white" />
-                            <span>Gerar Convite</span>
-                          </button>
-                        )}
-                      </td>
+                          )}
+                        </td>
 
-                      {/* COLUNA 6: STATUS DA CONFIRMAÇÃO */}
-                      <td className="py-2.5 px-2.5">
-                        {invite ? (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {rsvpStatus === 'confirmed' ? (
-                              <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap">
-                                🟢 Confirmado
-                              </span>
-                            ) : rsvpStatus === 'declined' ? (
-                              <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap">
-                                🔴 Não Vai
-                              </span>
-                            ) : rsvpStatus === 'pending_date' ? (
-                              <span className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap">
-                                🟡 Pediu Prazo
-                              </span>
-                            ) : (
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border whitespace-nowrap ${deadlineInfo?.color || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
-                                {deadlineInfo?.label || 'Pendente'}
-                              </span>
-                            )}
+                        {/* Ações */}
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setEditModalPerson(person);
+                                setIsPersonEditOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                              title="Editar Convidado"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRelationshipModalPerson(person);
+                                setIsRelationshipOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                              title="Vincular Parentesco"
+                            >
+                              <Link2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePerson(person)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                              title="Excluir Convidado"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
-                        ) : (
-                          <span className="text-[10px] font-medium text-slate-400 italic whitespace-nowrap">
-                            -- Sem Convite --
-                          </span>
-                        )}
-                      </td>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* TAB 2: TABELA DE GESTÃO DE CONVITES & DISPAROS WHATSAPP (DATATABLE 360º) */
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[350px]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[850px]">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                  <th
+                    onClick={() => handleSort('name')}
+                    className="py-3 px-3 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Nome</span>
+                      {sortField === 'name' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="py-3 px-2.5">Telefone</th>
+                  <th
+                    onClick={() => handleSort('invite_type')}
+                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Tipo</span>
+                      {sortField === 'invite_type' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('table')}
+                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Mesa</span>
+                      {sortField === 'table' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="py-3 px-2 text-center">Convite</th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Status</span>
+                      {sortField === 'status' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="py-3 px-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
+                {sortedPersons.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                      Nenhum convidado encontrado na busca ou filtro selecionado.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedPersons.map((person, index) => {
+                    const invite = invites.find(
+                      (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
+                    );
+                    const headPerson = invite?.head_person_id ? persons.find((p) => p.id === invite.head_person_id) : null;
+                    const isHead = invite ? (invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase())) : false;
+                    const isCompanion = !isHead && invite?.companion_person_ids?.includes(person.id);
 
-                      {/* COLUNA 7: AÇÕES */}
-                      <td className="py-2.5 px-3 text-right relative">
-                        <div className="relative inline-block text-left">
-                          <button
-                            onClick={() => setOpenDropdownId(openDropdownId === person.id ? null : person.id)}
-                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                          >
-                            <span>Ações</span>
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                          </button>
+                    const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : { expired: false, label: 'Pendente', color: 'bg-slate-100 text-slate-700 border-slate-300' };
+                    const isSent = invite?.sent_status === 'sent';
+                    const currentTableId = person.table_id || '';
 
-                          {openDropdownId === person.id && (
-                            <div className={`absolute right-0 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in ${
-                              openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
-                            }`}>
-                              {/* 1. EDITAR CONVITE (se houver) */}
-                              {invite && (
-                                <button
-                                  onClick={() => {
-                                    setOpenDropdownId(null);
-                                    handleOpenEdit(invite);
-                                  }}
-                                  className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
-                                >
-                                  <Edit className="w-4 h-4 text-purple-500" />
-                                  <span>Editar Convite (Wizard)</span>
-                                </button>
-                              )}
+                    const isEditingName = editingCell?.inviteId === person.id && editingCell?.field === 'name';
+                    const isEditingPhone = editingCell?.inviteId === person.id && editingCell?.field === 'phone';
 
-                              {/* 2. COPIAR LINK HOTSITE */}
-                              {invite && (
-                                <button
-                                  onClick={() => {
-                                    setOpenDropdownId(null);
-                                    handleCopyLink(invite.id);
-                                  }}
-                                  className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
-                                >
-                                  {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-purple-500" />}
-                                  <span>{copiedToken === invite.id ? 'Link Copiado!' : 'Copiar Link Hotsite'}</span>
-                                </button>
-                              )}
+                    const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
+                    const rsvpStatus = guestObj?.status || invite?.status || 'pending';
+                    const openUpwards = index >= sortedPersons.length - 3 && sortedPersons.length > 2;
 
-                              {/* 3. ACESSAR HOTSITE */}
-                              {invite && (
-                                <a
-                                  href={`/convite/${invite.id}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
-                                >
-                                  <ExternalLink className="w-4 h-4 text-blue-500" />
-                                  <span>Acessar Hotsite</span>
-                                </a>
-                              )}
-
-                              {/* 4. DESALOCAR DA MESA */}
-                              {person.table_id && (
-                                <button
-                                  onClick={async () => {
-                                    setOpenDropdownId(null);
-                                    await unassignPersonSeat(person.id);
-                                    onRefresh();
-                                  }}
-                                  className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
-                                >
-                                  <Armchair className="w-4 h-4 text-amber-500" />
-                                  <span>Desalocar da Mesa</span>
-                                </button>
-                              )}
-
-                              {/* 5. EXCLUIR APENAS O CONVITE (mantém o convidado na lista) */}
-                              {invite && (
-                                <button
-                                  onClick={async () => {
-                                    setOpenDropdownId(null);
-                                    await handleDeleteInviteForPerson(person, invite);
-                                  }}
-                                  className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
-                                >
-                                  <X className="w-4 h-4 text-amber-500" />
-                                  <span>Excluir Apenas Convite</span>
-                                </button>
-                              )}
-
-                              {/* 6. EXCLUIR CONVIDADO DA LISTA (Pessoa Física no Banco de Dados) */}
-                              <button
-                                onClick={async () => {
-                                  setOpenDropdownId(null);
-                                  await handleDeletePerson(person);
+                    return (
+                      <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="py-2.5 px-3 min-w-[150px]">
+                          {isEditingName ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingCell.value}
+                                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSavePersonInlineCell(person);
+                                  if (e.key === 'Escape') setEditingCell(null);
                                 }}
-                                className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold flex items-center gap-2 cursor-pointer"
+                                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleSavePersonInlineCell(person)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                                title="Salvar Nome"
                               >
-                                <Trash2 className="w-4 h-4 text-rose-500" />
-                                <span>Excluir Convidado da Lista</span>
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="group flex items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-extrabold text-slate-800 dark:text-slate-100">
+                                  {person.name}
+                                </span>
+                                {invite && isHead && invite.invite_type === 'family' && (
+                                  <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                                    Titular
+                                  </span>
+                                )}
+                                {invite && isCompanion && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-900 text-slate-500">
+                                    Família
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => setEditingCell({ inviteId: person.id, field: 'name', value: person.name })}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
+                              >
+                                <Edit className="w-3 h-3" />
                               </button>
                             </div>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+
+                        <td className="py-2.5 px-2.5 min-w-[130px]">
+                          {isEditingPhone ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingCell.value}
+                                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSavePersonInlineCell(person);
+                                  if (e.key === 'Escape') setEditingCell(null);
+                                }}
+                                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleSavePersonInlineCell(person)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                                title="Salvar Telefone"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="group flex items-center justify-between gap-1">
+                              <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                                {person.phone ? formatPhoneDisplay(person.phone) : <span className="text-slate-400 italic font-sans text-[10px]">Sem número</span>}
+                              </span>
+                              <button
+                                onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || '' })}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 px-2.5">
+                          {invite ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                              {invite.invite_type === 'individual' ? 'Individual' : `Família (${1 + (invite.companion_person_ids?.length || 0)})`}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Individual</span>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 px-2.5 min-w-[140px]">
+                          <select
+                            value={currentTableId}
+                            onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
+                            className="w-full p-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                          >
+                            <option value="">-- Sem Mesa --</option>
+                            {tables.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} ({persons.filter((p) => p.table_id === t.id).length}/{t.capacity})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        <td className="py-2.5 px-2 text-center">
+                          {invite ? (
+                            <button
+                              onClick={() => handleWhatsAppDispatch(invite)}
+                              className={`p-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center ${
+                                isSent
+                                  ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-300'
+                                  : 'bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-950 dark:hover:bg-purple-900 dark:text-purple-300'
+                              }`}
+                              title={isSent ? 'Convite já enviado no WhatsApp (Clique para re-enviar)' : 'Enviar convite no WhatsApp'}
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setHeadPersonId(person.id);
+                                if (person.phone) setPhone(person.phone);
+                                setWizardStep(1);
+                                setIsAddOpen(true);
+                              }}
+                              className="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded text-[10px] font-black cursor-pointer"
+                            >
+                              + Convite
+                            </button>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 px-2.5">
+                          {invite ? (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                rsvpStatus === 'confirmed'
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : rsvpStatus === 'declined'
+                                  ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300'
+                                  : rsvpStatus === 'pending_date'
+                                  ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                                  : 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                              }`}
+                            >
+                              {rsvpStatus === 'confirmed' && '🎉 Confirmado'}
+                              {rsvpStatus === 'declined' && '😔 Não Vai'}
+                              {rsvpStatus === 'pending_date' && '🤔 Pediu Prazo'}
+                              {rsvpStatus === 'pending' && '⏳ Pendente'}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Sem Convite</span>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 px-3 text-right">
+                          <div className="relative inline-block text-left">
+                            <button
+                              onClick={() => setOpenDropdownId(openDropdownId === person.id ? null : person.id)}
+                              className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+                            >
+                              <span>Ações</span>
+                              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                            </button>
+
+                            {openDropdownId === person.id && (
+                              <div className={`absolute right-0 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in ${
+                                openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+                              }`}>
+                                {invite && (
+                                  <button
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleOpenEdit(invite);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Edit className="w-4 h-4 text-purple-500" />
+                                    <span>Editar Convite (Wizard)</span>
+                                  </button>
+                                )}
+
+                                {invite && (
+                                  <button
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleCopyLink(invite.id);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 cursor-pointer"
+                                  >
+                                    {copiedToken === invite.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-purple-500" />}
+                                    <span>{copiedToken === invite.id ? 'Link Copiado!' : 'Copiar Link Hotsite'}</span>
+                                  </button>
+                                )}
+
+                                {invite && (
+                                  <a
+                                    href={`/convite/${invite.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={() => setOpenDropdownId(null)}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2 block cursor-pointer"
+                                  >
+                                    <ExternalLink className="w-4 h-4 text-blue-500" />
+                                    <span>Acessar Hotsite</span>
+                                  </a>
+                                )}
+
+                                {person.table_id && (
+                                  <button
+                                    onClick={async () => {
+                                      setOpenDropdownId(null);
+                                      await unassignPersonSeat(person.id);
+                                      onRefresh();
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Armchair className="w-4 h-4 text-amber-500" />
+                                    <span>Desalocar da Mesa</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={async () => {
+                                    setOpenDropdownId(null);
+                                    await handleDeletePerson(person);
+                                  }}
+                                  className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4 text-rose-500" />
+                                  <span>Excluir Convidado da Lista</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* PRINT 5: MODAL WIZARD STEP-BY-STEP PARA NOVO / EDITAR CONVITE */}
       {isAddOpen && (
@@ -1999,6 +2178,24 @@ export function GuestList({ invites, tables, persons, config, onRefresh }: Guest
           </div>
         </div>
       )}
+
+      {/* MODAL DE VÍNCULO DE PARENTESCO & GRUPO FAMILIAR */}
+      <PersonRelationshipModal
+        person={relationshipModalPerson}
+        allPersons={persons}
+        isOpen={isRelationshipOpen}
+        onClose={() => setIsRelationshipOpen(false)}
+        onRefresh={onRefresh}
+      />
+
+      {/* MODAL DE CADASTRO / EDIÇÃO COMPLETA DE CONVIDADO */}
+      <PersonEditModal
+        person={editModalPerson}
+        config={config}
+        isOpen={isPersonEditOpen}
+        onClose={() => setIsPersonEditOpen(false)}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 }
