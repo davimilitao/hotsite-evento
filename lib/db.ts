@@ -76,47 +76,66 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
 };
 
 export const DEFAULT_TABLE_POSITIONS: Record<string, { x: number; y: number }> = {
-  'mesa-01': { x: 23, y: 4 },
-  'mesa-02': { x: 23, y: 17 },
-  'mesa-03': { x: 23, y: 30 },
-  'mesa-04': { x: 23, y: 43 },
-  'mesa-05': { x: 23, y: 56 },
-  'mesa-06': { x: 23, y: 69 },
-  'mesa-07': { x: 77, y: 4 },
-  'mesa-08': { x: 77, y: 17 },
-  'mesa-09': { x: 77, y: 30 },
-  'mesa-10': { x: 77, y: 43 },
-  'mesa-11': { x: 77, y: 56 },
-  'mesa-12': { x: 77, y: 69 },
+  // Mesas da Esquerda (1 a 6)
+  'mesa-01': { x: 21.5, y: 17.5 },
+  'mesa-02': { x: 21.5, y: 31.0 },
+  'mesa-03': { x: 21.5, y: 44.5 },
+  'mesa-04': { x: 21.5, y: 58.0 },
+  'mesa-05': { x: 21.5, y: 71.5 },
+  'mesa-06': { x: 21.5, y: 85.0 },
+  // Mesas da Direita (7 a 11)
+  'mesa-07': { x: 83.5, y: 21.5 },
+  'mesa-08': { x: 83.5, y: 35.0 },
+  'mesa-09': { x: 83.5, y: 48.5 },
+  'mesa-10': { x: 83.5, y: 62.0 },
+  'mesa-11': { x: 83.5, y: 75.5 },
+  'mesa-12': { x: 83.5, y: 86.5 },
 };
 
 export function getTablePosition(table: Table, index: number): { x: number; y: number } {
-  if (table.position && typeof table.position.x === 'number' && typeof table.position.y === 'number' && table.position.x !== 50) {
-    return table.position;
-  }
+  const nameLower = (table.name || '').toLowerCase();
+
+  // Mapeamento Inteligente por Nome da Mesa (ex: "01 á esquerda", "02 á direita")
+  if (nameLower.includes('01') && (nameLower.includes('esq') || nameLower.includes('seppi'))) return { x: 21.5, y: 17.5 };
+  if (nameLower.includes('02') && (nameLower.includes('esq') || nameLower.includes('infân'))) return { x: 21.5, y: 31.0 };
+  if (nameLower.includes('03') && (nameLower.includes('esq') || nameLower.includes('trabalho'))) return { x: 21.5, y: 44.5 };
+  if (nameLower.includes('04') && (nameLower.includes('esq') || nameLower.includes('expandida'))) return { x: 21.5, y: 58.0 };
+  if (nameLower.includes('05') && (nameLower.includes('esq') || nameLower.includes('hóspedes'))) return { x: 21.5, y: 71.5 };
+  if (nameLower.includes('06') && (nameLower.includes('esq') || nameLower.includes('primos'))) return { x: 21.5, y: 85.0 };
+
+  if (nameLower.includes('01') && nameLower.includes('dir')) return { x: 83.5, y: 21.5 };
+  if (nameLower.includes('02') && nameLower.includes('dir')) return { x: 83.5, y: 35.0 };
+  if (nameLower.includes('03') && nameLower.includes('dir')) return { x: 83.5, y: 48.5 };
+  if (nameLower.includes('04') && nameLower.includes('dir')) return { x: 83.5, y: 62.0 };
+  if (nameLower.includes('05') && nameLower.includes('dir')) return { x: 83.5, y: 75.5 };
+
+  // Mapeamento por ID padrão se existir
   if (DEFAULT_TABLE_POSITIONS[table.id]) {
     return DEFAULT_TABLE_POSITIONS[table.id];
   }
-  const isLeft = index < 6;
-  const row = isLeft ? index : index - 6;
+
+  // Fallback por índice se for uma mesa customizada nova
+  const isLeft = nameLower.includes('esq') || index < 6;
+  const row = isLeft ? index % 6 : (index - 6) % 6;
+
   return {
-    x: isLeft ? 23 : 77,
-    y: Math.min(4 + row * 13, 93),
+    x: isLeft ? 21.5 : 83.5,
+    y: isLeft ? 17.5 + row * 13.5 : 21.5 + row * 13.5,
   };
 }
 
 export const INITIAL_TABLES: Table[] = [
-  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, shape: 'round', description: 'Esquerda (Topo - Próxima aos Banheiros)', position: { x: 23, y: 4 } },
-  { id: 'mesa-02', name: 'Mesa 02 - Amigos de Infância', capacity: 8, shape: 'round', description: 'Esquerda (Superior)', position: { x: 23, y: 17 } },
-  { id: 'mesa-03', name: 'Mesa 03 - Colegas de Trabalho', capacity: 8, shape: 'round', description: 'Esquerda (Centro-Alto)', position: { x: 23, y: 30 } },
-  { id: 'mesa-04', name: 'Mesa 04 - Família Expandida', capacity: 8, shape: 'round', description: 'Esquerda (Centro-Baixo)', position: { x: 23, y: 43 } },
-  { id: 'mesa-05', name: 'Mesa 05 - Hóspedes & Viagem', capacity: 8, shape: 'round', description: 'Esquerda (Inferior - Próxima Pista)', position: { x: 23, y: 56 } },
-  { id: 'mesa-06', name: 'Mesa 06 - Primos & Família', capacity: 8, shape: 'round', description: 'Esquerda (Base - Próxima Escada)', position: { x: 23, y: 69 } },
-  { id: 'mesa-07', name: 'Mesa 07 - Convidado Especial', capacity: 8, shape: 'round', description: 'Direita (Topo)', position: { x: 77, y: 4 } },
-  { id: 'mesa-08', name: 'Mesa 08 - Amigos Próximos', capacity: 8, shape: 'round', description: 'Direita (Superior)', position: { x: 77, y: 17 } },
-  { id: 'mesa-09', name: 'Mesa 09 - Família Amigos', capacity: 8, shape: 'round', description: 'Direita (Centro)', position: { x: 77, y: 30 } },
-  { id: 'mesa-10', name: 'Mesa 10 - Amigos & Acompanhantes', capacity: 8, shape: 'round', description: 'Direita (Inferior)', position: { x: 77, y: 43 } },
-  { id: 'mesa-11', name: 'Mesa 11 - Setor Recepção', capacity: 8, shape: 'round', description: 'Direita (Base)', position: { x: 77, y: 56 } },
+  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, shape: 'round', description: 'Esquerda (Topo - Próxima aos Banheiros)', position: { x: 21.5, y: 17.5 } },
+  { id: 'mesa-02', name: 'Mesa 02 - Amigos de Infância', capacity: 8, shape: 'round', description: 'Esquerda (Superior)', position: { x: 21.5, y: 31.0 } },
+  { id: 'mesa-03', name: 'Mesa 03 - Colegas de Trabalho', capacity: 8, shape: 'round', description: 'Esquerda (Centro-Alto)', position: { x: 21.5, y: 44.5 } },
+  { id: 'mesa-04', name: 'Mesa 04 - Família Expandida', capacity: 8, shape: 'round', description: 'Esquerda (Centro-Baixo)', position: { x: 21.5, y: 58.0 } },
+  { id: 'mesa-05', name: 'Mesa 05 - Hóspedes & Viagem', capacity: 8, shape: 'round', description: 'Esquerda (Inferior - Próxima Pista)', position: { x: 21.5, y: 71.5 } },
+  { id: 'mesa-06', name: 'Mesa 06 - Primos & Família', capacity: 8, shape: 'round', description: 'Esquerda (Base - Próxima Escada)', position: { x: 21.5, y: 85.0 } },
+  { id: 'mesa-07', name: 'Mesa 07 - Convidado Especial', capacity: 8, shape: 'round', description: 'Direita (Topo)', position: { x: 83.5, y: 21.5 } },
+  { id: 'mesa-08', name: 'Mesa 08 - Amigos Próximos', capacity: 8, shape: 'round', description: 'Direita (Superior)', position: { x: 83.5, y: 35.0 } },
+  { id: 'mesa-09', name: 'Mesa 09 - Família Amigos', capacity: 8, shape: 'round', description: 'Direita (Centro)', position: { x: 83.5, y: 48.5 } },
+  { id: 'mesa-10', name: 'Mesa 10 - Amigos & Acompanhantes', capacity: 8, shape: 'round', description: 'Direita (Inferior)', position: { x: 83.5, y: 62.0 } },
+  { id: 'mesa-11', name: 'Mesa 11 - Setor Recepção', capacity: 8, shape: 'round', description: 'Direita (Base)', position: { x: 83.5, y: 75.5 } },
 ];
 
 const RAW_GUEST_NAMES = [

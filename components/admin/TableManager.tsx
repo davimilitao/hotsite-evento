@@ -261,7 +261,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                       )}
 
                       <span
-                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[10px] font-black leading-none ${
+                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[9px] sm:text-[10px] font-black leading-none ${
                           isSelected
                             ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
                             : isFull
@@ -271,8 +271,17 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                             : 'bg-slate-950/85 text-amber-300 border-amber-500/70'
                         }`}
                       >
-                        <span>{table.name.replace(/Mesa\s*/i, 'M').replace(/\s*-\s*.*/, '')}</span>
-                        <span className="text-[8px] opacity-90 mt-0.5">
+                        <span>
+                          {(() => {
+                            const n = table.name.toLowerCase();
+                            const num = table.name.match(/\d+/)?.[0] || '';
+                            if (n.includes('esquerda')) return `E-${num}`;
+                            if (n.includes('direita')) return `D-${num}`;
+                            if (n.includes('mesa')) return `M-${num}`;
+                            return table.name.substring(0, 5);
+                          })()}
+                        </span>
+                        <span className="text-[8px] opacity-90 mt-0.5 font-bold">
                           {tablePersons.length}/{table.capacity}
                         </span>
                       </span>

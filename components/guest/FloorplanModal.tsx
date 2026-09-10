@@ -154,15 +154,22 @@ export function FloorplanModal({
 
                     {/* Botão Hotspot da Mesa */}
                     <span
-                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md ${
+                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md text-[10px] sm:text-xs font-black ${
                         isAssigned
-                          ? 'bg-amber-400 text-slate-950 border-amber-300 font-black ring-4 ring-amber-400/50 shadow-amber-500/50'
+                          ? 'bg-amber-400 text-slate-950 border-amber-300 ring-4 ring-amber-400/50 shadow-amber-500/50'
                           : isSelected
                           ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50 font-black'
                           : 'bg-slate-950/85 text-amber-300 border-amber-500/70 hover:bg-amber-500 hover:text-slate-950'
                       }`}
                     >
-                      {table.name.replace(/Mesa\s*/i, 'M').replace(/\s*-\s*.*/, '')}
+                      {(() => {
+                        const n = table.name.toLowerCase();
+                        const num = table.name.match(/\d+/)?.[0] || '';
+                        if (n.includes('esquerda')) return `E-${num}`;
+                        if (n.includes('direita')) return `D-${num}`;
+                        if (n.includes('mesa')) return `M-${num}`;
+                        return table.name.substring(0, 5);
+                      })()}
                     </span>
 
                     {/* Tooltip com Nome da Mesa no Hover */}
