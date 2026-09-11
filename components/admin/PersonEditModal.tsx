@@ -96,7 +96,7 @@ export function PersonEditModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
           {/* Nome */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -107,6 +107,7 @@ export function PersonEditModal({
               <input
                 type="text"
                 required
+                autoComplete="off"
                 placeholder="Ex: Édipo Barreto"
                 value={name}
                 onChange={(e) => setName(e.target.value)}

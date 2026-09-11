@@ -247,6 +247,7 @@ export function PersonRelationshipModal({
               </label>
               <input
                 type="text"
+                autoComplete="off"
                 placeholder={`Ex: Família ${currentPerson.name.split(' ')[0]}`}
                 value={stagedFamilyName}
                 onChange={(e) => setStagedFamilyName(e.target.value)}

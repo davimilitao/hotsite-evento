@@ -7,6 +7,7 @@ import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort
 import { BulkImporter } from './BulkImporter';
 import { PersonRelationshipModal } from './PersonRelationshipModal';
 import { PersonEditModal } from './PersonEditModal';
+import { DataNormalizerModal } from './DataNormalizerModal';
 import {
   Users,
   UserCheck,
@@ -87,10 +88,11 @@ export function GuestList({
   const [editModalPerson, setEditModalPerson] = useState<Person | null>(null);
   const [isPersonEditOpen, setIsPersonEditOpen] = useState<boolean>(false);
 
-  // Estado do Modal de Vínculo de Telefone Responsável
+  // Estado do Modal de Vínculo de Telefone Responsável & Normalizador
   const [phoneLinkModalPerson, setPhoneLinkModalPerson] = useState<Person | null>(null);
   const [isPhoneLinkModalOpen, setIsPhoneLinkModalOpen] = useState<boolean>(false);
   const [selectedPhoneRespId, setSelectedPhoneRespId] = useState<string>('');
+  const [isNormalizerOpen, setIsNormalizerOpen] = useState<boolean>(false);
 
   // Estados de Edição Inline & Menu Dropdown na DataTable
   const [editingCell, setEditingCell] = useState<{ inviteId: string; field: 'name' | 'phone'; value: string } | null>(null);
@@ -813,6 +815,37 @@ export function GuestList({
         <div className="flex flex-wrap items-center gap-2">
           {activeTab === 'persons' ? (
             <>
+              {(() => {
+                const incompleteCount = persons.filter((p) => {
+                  const hasOwnPhone = (p.phone || '').replace(/\D/g, '').length >= 8;
+                  const hasResp = Boolean(p.phone_responsible_person_id);
+                  return !hasOwnPhone && !hasResp;
+                }).length;
+
+                return (
+                  <button
+                    onClick={() => setIsNormalizerOpen(true)}
+                    className={`min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+                      incompleteCount > 0
+                        ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
+                        : 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-900 dark:text-purple-300" />
+                    <span>🧹 Normalizar Base</span>
+                    {incompleteCount > 0 ? (
+                      <span className="bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded-full text-[10px] font-black">
+                        {incompleteCount}
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded-full text-[9px] font-black">
+                        100%
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
+
               <button
                 onClick={() => {
                   setEditModalPerson(null);
@@ -2510,6 +2543,16 @@ export function GuestList({
         config={config}
         isOpen={isPersonEditOpen}
         onClose={() => setIsPersonEditOpen(false)}
+        onRefresh={onRefresh}
+      />
+
+      {/* MODAL NORMALIZADOR DE DADOS CADASTRAIS (PRODUTIVIDADE EM LOTE) */}
+      <DataNormalizerModal
+        isOpen={isNormalizerOpen}
+        onClose={() => setIsNormalizerOpen(false)}
+        persons={persons}
+        tables={tables}
+        config={config}
         onRefresh={onRefresh}
       />
     </div>
