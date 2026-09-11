@@ -1,8 +1,8 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { EventConfig, Invite, EventTheme } from '@/types';
-import { Calendar, MapPin, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Sparkles, CalendarPlus, ZoomIn } from 'lucide-react';
+import { getGoogleCalendarUrl } from '@/lib/utils';
+import { ImageLightboxModal } from './ImageLightboxModal';
 
 interface HeaderHeroProps {
   config: EventConfig;
@@ -10,15 +10,17 @@ interface HeaderHeroProps {
 }
 
 export function HeaderHero({ config, invite }: HeaderHeroProps) {
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
   const theme: EventTheme = config.theme || {
     preset: 'lavender_floral',
     invite_mode: 'custom',
-    primary_color: '#6b4684',
+    primary_color: '#6d44e4',
     accent_color: '#c5a059',
-    bg_color: '#faf6f0',
+    bg_color: '#f7f4fc',
     card_bg_color: '#ffffff',
-    text_color: '#2d2138',
-    font_family: 'serif',
+    text_color: '#1e152d',
+    font_family: 'sans',
     banner_image_url: '',
   };
 
@@ -51,27 +53,51 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
     return () => clearInterval(interval);
   }, [config.date_time]);
 
+  const googleCalendarUrl = getGoogleCalendarUrl(config);
   const isUploadMode = theme.invite_mode === 'upload' && Boolean(theme.uploaded_invite_url);
 
   if (isUploadMode) {
     return (
       <header className="relative text-center space-y-4 pt-6 px-4">
-        {/* Badge Flutuante de Boas-Vindas em Pílula Lilás */}
-        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/90 backdrop-blur-md text-[#6d44e4] rounded-full text-xs font-bold border border-purple-100 shadow-md">
-          <Sparkles className="w-4 h-4 text-purple-500" /> Convite Exclusivo para {invite.head_name}
+        {/* Badge Flutuante de Boas-Vindas */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/90 backdrop-blur-md text-[#6d44e4] rounded-full text-xs font-bold border border-purple-100 shadow-md">
+            <Sparkles className="w-4 h-4 text-purple-500" /> Convite Exclusivo para {invite.head_name}
+          </div>
+
+          <a
+            href={googleCalendarUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <CalendarPlus className="w-4 h-4 text-amber-300" /> Salvar no Google Agenda
+          </a>
         </div>
 
-        {/* Imagem Pura do Convite Físico */}
-        <div className="max-w-md mx-auto pt-2">
+        {/* Imagem Pura do Convite Físico - Clicável para Ampliar */}
+        <div className="max-w-md mx-auto pt-2 relative group cursor-pointer" onClick={() => setIsLightboxOpen(true)}>
+          <div className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-slate-950/70 backdrop-blur-md text-white text-[11px] font-bold rounded-full border border-white/20 shadow-lg flex items-center gap-1.5 group-hover:scale-105 transition-all">
+            <ZoomIn className="w-3.5 h-3.5 text-amber-300" /> Ampliar Convite
+          </div>
+
           <img
             src={theme.uploaded_invite_url}
             alt={`Arte do Convite - ${config.title}`}
-            className="w-full h-auto max-h-[600px] object-contain rounded-3xl shadow-2xl mx-auto border-0 block"
+            className="w-full h-auto max-h-[600px] object-contain rounded-3xl shadow-2xl mx-auto border-0 block group-hover:opacity-95 transition-opacity"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
         </div>
+
+        {/* Modal Lightbox de Zoom */}
+        <ImageLightboxModal
+          isOpen={isLightboxOpen}
+          onClose={() => setIsLightboxOpen(false)}
+          imageUrl={theme.uploaded_invite_url || ''}
+          altText={`Arte do Convite - ${config.title}`}
+        />
       </header>
     );
   }
@@ -105,7 +131,7 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
 
           {/* Banner Secundário (se configurado) */}
           {theme.banner_image_url && (
-            <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-purple-100">
+            <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-purple-100 cursor-pointer" onClick={() => setIsLightboxOpen(true)}>
               <img
                 src={theme.banner_image_url}
                 alt="Arte do Convite"
@@ -125,6 +151,18 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
               <MapPin className="w-4 h-4 text-[#6d44e4]" />
               <span>{config.location_name}</span>
             </div>
+          </div>
+
+          {/* Botão de Salvar no Google Calendar */}
+          <div className="pt-1">
+            <a
+              href={googleCalendarUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              <CalendarPlus className="w-4 h-4 text-amber-300" /> Salvar no Meu Google Agenda
+            </a>
           </div>
 
           {/* Contador Regressivo Clean */}
@@ -153,6 +191,16 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
           </div>
         </div>
       </div>
+
+      {/* Modal Lightbox de Zoom (para modo digital com banner) */}
+      {theme.banner_image_url && (
+        <ImageLightboxModal
+          isOpen={isLightboxOpen}
+          onClose={() => setIsLightboxOpen(false)}
+          imageUrl={theme.banner_image_url}
+          altText="Arte do Convite"
+        />
+      )}
     </header>
   );
 }

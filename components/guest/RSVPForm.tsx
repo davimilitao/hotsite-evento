@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Invite, Guest, EventConfig, Person } from '@/types';
 import { saveInvite, savePerson } from '@/lib/db';
 import { isInviteExpired, formatDateShort } from '@/lib/utils';
-import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown } from 'lucide-react';
+import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RSVPFormProps {
@@ -24,6 +24,14 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
   const isExpired = isInviteExpired(invite, config.deadline_rsvp);
   const activeDeadline = invite.individual_deadline || config.deadline_rsvp;
   const isAlreadyResponded = invite.status !== 'pending';
+
+  const headPerson = allPersons?.find((p) => p.id === invite.head_person_id || p.name.trim().toLowerCase() === invite.head_name.trim().toLowerCase());
+  const familyName = headPerson?.family_name;
+  const isFamilyInvite = invite.invite_type === 'family' || guests.length > 1;
+
+  const displayGreeting = isFamilyInvite
+    ? `Olá, ${invite.head_name}${familyName ? ` e ${familyName}` : ' e Família'}!`
+    : `Olá, ${invite.head_name}!`;
 
   useEffect(() => {
     const headP = allPersons?.find(
@@ -169,9 +177,9 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             <HeartHandshake className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-[#1e152d]">Confirmação de Presença (RSVP)</h2>
+            <h2 className="text-lg font-black text-[#1e152d]">Confirmação de Presença</h2>
             <p className="text-xs text-slate-500">
-              Convite reservado para <strong className="text-[#1e152d]">{guests.length} integrante(s) da família</strong>
+              Espaço exclusivo para <strong className="text-[#1e152d]">{guests.length} integrante(s)</strong>
             </p>
           </div>
         </div>
@@ -182,6 +190,57 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             <span>Até {formatDateShort(activeDeadline)}</span>
           </div>
         )}
+      </div>
+
+      {/* CARD DE BOAS-VINDAS INTIMISTA & ONBOARDING ACOLHEDOR */}
+      <div className="bg-[#f9f7fd] p-5 rounded-2xl border border-purple-200/60 space-y-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4.5 h-4.5 text-purple-600 shrink-0" />
+          <h3 className="text-sm font-black text-[#1e152d]">{displayGreeting}</h3>
+        </div>
+
+        <p className="text-xs text-slate-600 leading-relaxed font-medium">
+          Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Preparamos este espaço com muito carinho para facilitar sua experiência:
+        </p>
+
+        {/* Guia de Navegação em Tópicos Leves */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-[11px]">
+          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
+            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> 1. Confirme sua Presença
+            </span>
+            <p className="text-slate-500 leading-tight">
+              Confirme você e sua família abaixo. Se precisar de mais alguns dias, selecione a opção <strong>&apos;Pedir Prazo&apos;</strong> e diga até quando!
+            </p>
+          </div>
+
+          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
+            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
+              <Utensils className="w-3.5 h-3.5 text-amber-500" /> 2. Local & Sua Mesa
+            </span>
+            <p className="text-slate-500 leading-tight">
+              No menu abaixo, veja a rota do salão (Maps/Waze) e a <strong>mesa reservada para sua família</strong>.
+            </p>
+          </div>
+
+          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
+            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-pink-500" /> 3. Mimos & Presentes
+            </span>
+            <p className="text-slate-500 leading-tight">
+              A Fernanda deixou algumas sugestões de presentes e a vaquinha Pix na aba de presentes.
+            </p>
+          </div>
+
+          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
+            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
+              <HeartHandshake className="w-3.5 h-3.5 text-purple-600" /> 4. Recados da Festa
+            </span>
+            <p className="text-slate-500 leading-tight">
+              Nossa Cerimonialista enviará recados especiais no WhatsApp para te deixar por dentro de todas as atrações!
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* MODO RESUMO: Exibição Fixa */}

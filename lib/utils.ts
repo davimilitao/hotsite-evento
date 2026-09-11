@@ -296,3 +296,24 @@ export function downloadExcelTemplate(): void {
   link.click();
   document.body.removeChild(link);
 }
+
+/**
+ * Gera URL do Google Calendar para salvar a festa na agenda do convidado
+ */
+export function getGoogleCalendarUrl(config: { title: string; birthday_person: string; date_time: string; location_name: string; address: string }): string {
+  const title = encodeURIComponent(config.title || `Aniversário 40 Anos ${config.birthday_person}`);
+  const location = encodeURIComponent(`${config.location_name}, ${config.address}`);
+  const details = encodeURIComponent(`Comemoração de 40 Anos de ${config.birthday_person}. Confirme sua presença e acompanhe seu assento no hotsite!`);
+
+  try {
+    const startDate = new Date(config.date_time || '2026-11-07T17:00:00.000Z');
+    const endDate = new Date(startDate.getTime() + 6 * 60 * 60 * 1000); // 6 horas de festa
+
+    const formatDate = (date: Date) => date.toISOString().replace(/-|:|\.\d+/g, '');
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${details}&location=${location}`;
+  } catch {
+    return 'https://calendar.google.com';
+  }
+}
+
