@@ -76,6 +76,7 @@ export interface Person {
   counts_towards_buffet?: boolean;
   special_arrival_time?: string;
   notes?: string;
+  phone_responsible_person_id?: string | null;
 }
 
 export interface Invite {

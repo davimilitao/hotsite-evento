@@ -409,6 +409,7 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
         family_id: person.family_id !== undefined ? person.family_id : existing.family_id,
         family_name: person.family_name !== undefined ? person.family_name : existing.family_name,
         relationships: person.relationships !== undefined ? person.relationships : (existing.relationships || []),
+        phone_responsible_person_id: person.phone_responsible_person_id !== undefined ? person.phone_responsible_person_id : existing.phone_responsible_person_id,
       };
       persons[existingIndex] = fullPerson;
     } else {
@@ -422,6 +423,7 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
         family_id: person.family_id || null,
         family_name: person.family_name || '',
         relationships: person.relationships || [],
+        phone_responsible_person_id: person.phone_responsible_person_id || null,
         table_id: person.table_id || null,
         seat_number: person.seat_number ?? null,
         invite_id: person.invite_id || null,
@@ -445,6 +447,7 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
       family_id: person.family_id || null,
       family_name: person.family_name || '',
       relationships: person.relationships || [],
+      phone_responsible_person_id: person.phone_responsible_person_id || null,
       table_id: person.table_id || null,
       seat_number: person.seat_number ?? null,
       invite_id: person.invite_id || null,
@@ -467,6 +470,32 @@ export async function savePerson(person: Partial<Person> & { id?: string }): Pro
 
   setLS(LS_KEYS.PERSONS, persons);
   return fullPerson;
+}
+
+export async function linkPersonPhoneResponsible(
+  guestId: string,
+  responsiblePersonId: string | null
+): Promise<Person> {
+  const persons = await getAllPersons();
+  const guest = persons.find((p) => p.id === guestId);
+  if (!guest) throw new Error('Pessoa não encontrada.');
+
+  if (responsiblePersonId) {
+    if (responsiblePersonId === guestId) {
+      throw new Error('Uma pessoa não pode ser vinculada a ela mesma como responsável de telefone.');
+    }
+    const resp = persons.find((p) => p.id === responsiblePersonId);
+    if (!resp) throw new Error('Responsável de telefone não encontrado.');
+    const respPhone = (resp.phone || '').replace(/\D/g, '');
+    if (respPhone.length < 8) {
+      throw new Error('A pessoa responsável precisa ter um número de celular cadastrado com DDD.');
+    }
+  }
+
+  return await savePerson({
+    ...guest,
+    phone_responsible_person_id: responsiblePersonId || null,
+  });
 }
 
 export async function linkPeopleRelationship(
@@ -960,6 +989,23 @@ export async function getInviteByToken(token: string): Promise<Invite | null> {
 
   const invites = await getAllInvites();
   return invites.find((i) => i.id === token) || null;
+}
+
+export async function getPersonsForInvite(invite: Invite): Promise<Person[]> {
+  const allPersons = await getAllPersons();
+  const involvedIds = new Set<string>();
+  if (invite.head_person_id) involvedIds.add(invite.head_person_id);
+  if (invite.companion_person_ids) {
+    invite.companion_person_ids.forEach((id) => involvedIds.add(id));
+  }
+
+  allPersons.forEach((p) => {
+    if (p.phone_responsible_person_id && p.phone_responsible_person_id === invite.head_person_id) {
+      involvedIds.add(p.id);
+    }
+  });
+
+  return allPersons.filter((p) => involvedIds.has(p.id));
 }
 
 function createFullInvite(id: string, invite: Partial<Invite>): Invite {

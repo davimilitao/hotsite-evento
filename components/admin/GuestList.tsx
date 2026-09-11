@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole, ChildCategory } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory, linkPersonPhoneResponsible } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import { PersonRelationshipModal } from './PersonRelationshipModal';
@@ -86,6 +86,11 @@ export function GuestList({
   const [isRelationshipOpen, setIsRelationshipOpen] = useState<boolean>(false);
   const [editModalPerson, setEditModalPerson] = useState<Person | null>(null);
   const [isPersonEditOpen, setIsPersonEditOpen] = useState<boolean>(false);
+
+  // Estado do Modal de Vínculo de Telefone Responsável
+  const [phoneLinkModalPerson, setPhoneLinkModalPerson] = useState<Person | null>(null);
+  const [isPhoneLinkModalOpen, setIsPhoneLinkModalOpen] = useState<boolean>(false);
+  const [selectedPhoneRespId, setSelectedPhoneRespId] = useState<string>('');
 
   // Estados de Edição Inline & Menu Dropdown na DataTable
   const [editingCell, setEditingCell] = useState<{ inviteId: string; field: 'name' | 'phone'; value: string } | null>(null);
@@ -299,7 +304,7 @@ export function GuestList({
     onRefresh();
   };
 
-  // Função utilitária para capturar todos os integrantes vinculados a uma pessoa (via relationships e family_id)
+  // Função utilitária para capturar todos os integrantes vinculados a uma pessoa (via relationships, family_id e vínculo de telefone)
   const getPersonFamilyMemberIds = (person: Person, allPersons: Person[]): string[] => {
     const familySet = new Set<string>();
 
@@ -318,6 +323,12 @@ export function GuestList({
         }
       });
     }
+
+    allPersons.forEach((p) => {
+      if (p.phone_responsible_person_id === person.id && p.id !== person.id) {
+        familySet.add(p.id);
+      }
+    });
 
     return Array.from(familySet);
   };
@@ -909,19 +920,41 @@ export function GuestList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
-                {sortedPersons.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-400 font-medium">
-                      Nenhum convidado encontrado na busca ou filtro selecionado.
-                    </td>
-                  </tr>
-                ) : (
-                  sortedPersons.map((person) => {
+                {(() => {
+                  const familyIndexMap = new Map<string, number>();
+                  let familyCounter = 0;
+                  sortedPersons.forEach((p) => {
+                    const famKey = p.family_id || p.family_name || (p.relationships && p.relationships.length > 0 ? `fam-rel-${p.id}` : null);
+                    if (famKey && !familyIndexMap.has(famKey)) {
+                      familyIndexMap.set(famKey, familyCounter++);
+                    }
+                  });
+
+                  if (sortedPersons.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400 font-medium">
+                          Nenhum convidado encontrado na busca ou filtro selecionado.
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return sortedPersons.map((person) => {
                     const childCat = calculateChildCategory(person.age, config);
                     const hasFamily = Boolean(person.family_name || person.family_id || (person.relationships && person.relationships.length > 0));
+                    const famKey = person.family_id || person.family_name || (person.relationships && person.relationships.length > 0 ? `fam-rel-${person.id}` : null);
+                    const famIndex = famKey !== null ? familyIndexMap.get(famKey) : null;
+                    const isZebraEven = famIndex !== undefined && famIndex !== null && famIndex % 2 === 0;
+
+                    const rowBgClass = sortField === 'family' && famIndex !== null && famIndex !== undefined
+                      ? isZebraEven
+                        ? 'bg-purple-950/25 dark:bg-purple-950/35 hover:bg-purple-900/40 border-l-4 border-l-purple-500/60'
+                        : 'bg-slate-900/50 dark:bg-slate-900/60 hover:bg-slate-800/70 border-l-4 border-l-slate-700/60'
+                      : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/30';
 
                     return (
-                      <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                      <tr key={person.id} className={`transition-colors ${rowBgClass}`}>
                         {/* Nome */}
                         <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-100">
                           <div className="flex items-center gap-2">
@@ -934,50 +967,111 @@ export function GuestList({
                           </div>
                         </td>
 
-                        {/* Telefone (Editável Inline) */}
+                        {/* Telefone (Editável Inline ou Vinculado a Responsável) */}
                         <td className="py-3 px-2.5 font-medium text-slate-600 dark:text-slate-300">
-                          {editingPhonePersonId === person.id ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={tempPhone}
-                                onChange={(e) => setTempPhone(e.target.value)}
-                                placeholder="(11) 99999-9999"
-                                className="w-32 px-2 py-1 bg-slate-900 border border-purple-500 rounded text-[11px] font-mono text-white focus:outline-none"
-                                autoFocus
-                              />
-                              <button
-                                onClick={async () => {
-                                  await savePerson({ ...person, phone: tempPhone });
-                                  setEditingPhonePersonId(null);
-                                  onRefresh();
-                                }}
-                                className="p-1 text-emerald-400 hover:bg-emerald-950 rounded cursor-pointer"
-                                title="Salvar Telefone"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setEditingPhonePersonId(null)}
-                                className="p-1 text-slate-400 hover:bg-slate-800 rounded cursor-pointer"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              onClick={() => {
-                                setEditingPhonePersonId(person.id);
-                                setTempPhone(person.phone || '');
-                              }}
-                              className="inline-flex items-center gap-1.5 font-mono text-[11px] cursor-pointer hover:text-purple-400 transition-colors group"
-                              title="Clique para editar o telefone"
-                            >
-                              <MessageCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              <span>{person.phone ? formatPhoneDisplay(person.phone) : 'Sem Celular'}</span>
-                              <Edit className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          )}
+                          {(() => {
+                            if (editingPhonePersonId === person.id) {
+                              return (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={tempPhone}
+                                    onChange={(e) => setTempPhone(e.target.value)}
+                                    placeholder="(11) 99999-9999"
+                                    className="w-32 px-2 py-1 bg-slate-900 border border-purple-500 rounded text-[11px] font-mono text-white focus:outline-none"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={async () => {
+                                      await savePerson({ ...person, phone: tempPhone });
+                                      setEditingPhonePersonId(null);
+                                      onRefresh();
+                                    }}
+                                    className="p-1 text-emerald-400 hover:bg-emerald-950 rounded cursor-pointer"
+                                    title="Salvar Telefone"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPhonePersonId(null)}
+                                    className="p-1 text-slate-400 hover:bg-slate-800 rounded cursor-pointer"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            const hasOwnPhone = (person.phone || '').replace(/\D/g, '').length >= 8;
+                            const respPerson = person.phone_responsible_person_id
+                              ? persons.find((p) => p.id === person.phone_responsible_person_id)
+                              : null;
+
+                            if (hasOwnPhone) {
+                              return (
+                                <div
+                                  onClick={() => {
+                                    setEditingPhonePersonId(person.id);
+                                    setTempPhone(person.phone || '');
+                                  }}
+                                  className="inline-flex items-center gap-1.5 font-mono text-[11px] cursor-pointer hover:text-purple-400 transition-colors group"
+                                  title="Clique para editar o telefone"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                  <span>{formatPhoneDisplay(person.phone || '')}</span>
+                                  <Edit className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              );
+                            }
+
+                            if (respPerson) {
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded font-bold border border-purple-500/30 flex items-center gap-1">
+                                    <Link2 className="w-3 h-3 text-purple-400" />
+                                    <span>Resp: {respPerson.name.split(' ')[0]}</span>
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      setPhoneLinkModalPerson(person);
+                                      setSelectedPhoneRespId(person.phone_responsible_person_id || '');
+                                      setIsPhoneLinkModalOpen(true);
+                                    }}
+                                    className="text-[10px] text-slate-400 hover:text-purple-400 underline cursor-pointer"
+                                    title="Alterar pessoa responsável pelo WhatsApp"
+                                  >
+                                    Alterar
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setEditingPhonePersonId(person.id);
+                                    setTempPhone('');
+                                  }}
+                                  className="text-[10px] bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Plus className="w-3 h-3" /> Celular
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setPhoneLinkModalPerson(person);
+                                    setSelectedPhoneRespId('');
+                                    setIsPhoneLinkModalOpen(true);
+                                  }}
+                                  className="text-[10px] bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 px-2 py-1 rounded font-bold border border-purple-500/30 flex items-center gap-1 cursor-pointer"
+                                  title="Vincular a uma pessoa que possui celular cadastrado"
+                                >
+                                  <Link2 className="w-3 h-3" /> Vincular Wpp
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Faixa Etária (Select Inline) */}
@@ -1075,8 +1169,8 @@ export function GuestList({
                         </td>
                       </tr>
                     );
-                  })
-                )}
+                  });
+                })()}
               </tbody>
             </table>
           </div>
@@ -2292,6 +2386,111 @@ export function GuestList({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE VÍNCULO DE TELEFONE RESPONSÁVEL (PARA QUEM NÃO TEM CELULAR) */}
+      {isPhoneLinkModalOpen && phoneLinkModalPerson && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-500/10 text-purple-400 rounded-xl">
+                  <Link2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                    Vincular Responsável pelo WhatsApp
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Para: <strong className="text-purple-400">{phoneLinkModalPerson.name}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPhoneLinkModalOpen(false);
+                  setPhoneLinkModalPerson(null);
+                }}
+                className="text-slate-400 hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Esta pessoa não possui celular próprio (ex: idoso, criança). Selecione abaixo qual convidado da lista que <strong>possua celular cadastrado</strong> será responsável por receber o convite no WhatsApp e confirmar a presença por ela:
+              </p>
+
+              <select
+                value={selectedPhoneRespId}
+                onChange={(e) => setSelectedPhoneRespId(e.target.value)}
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer"
+              >
+                <option value="">-- Selecionar Convidado com Celular --</option>
+                {persons
+                  .filter((p) => p.id !== phoneLinkModalPerson.id && (p.phone || '').replace(/\D/g, '').length >= 8)
+                  .map((p) => {
+                    const table = tables.find((t) => t.id === p.table_id);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name} - {formatPhoneDisplay(p.phone || '')} {table ? `(Mesa: ${table.name})` : ''}
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+              {phoneLinkModalPerson.phone_responsible_person_id ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await linkPersonPhoneResponsible(phoneLinkModalPerson.id, null);
+                    setIsPhoneLinkModalOpen(false);
+                    setPhoneLinkModalPerson(null);
+                    onRefresh();
+                  }}
+                  className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Desvincular
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPhoneLinkModalOpen(false);
+                    setPhoneLinkModalPerson(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedPhoneRespId}
+                  onClick={async () => {
+                    try {
+                      await linkPersonPhoneResponsible(phoneLinkModalPerson.id, selectedPhoneRespId);
+                      setIsPhoneLinkModalOpen(false);
+                      setPhoneLinkModalPerson(null);
+                      onRefresh();
+                    } catch (err: any) {
+                      alert(err.message || 'Erro ao vincular responsável.');
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                >
+                  Salvar Vínculo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

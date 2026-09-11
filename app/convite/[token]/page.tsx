@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { getInviteByToken, getEventConfig, getAllTables, getAllPersons } from '@/lib/db';
+import { getInviteByToken, getEventConfig, getAllTables, getPersonsForInvite } from '@/lib/db';
 import { Invite, EventConfig, Table, EventTheme, Person } from '@/types';
 import { HeaderHero } from '@/components/guest/HeaderHero';
 import { EventLocationCard } from '@/components/guest/EventLocationCard';
@@ -30,17 +30,20 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [inviteData, configData, tablesData, personsData] = await Promise.all([
+      const [inviteData, configData, tablesData] = await Promise.all([
         getInviteByToken(token),
         getEventConfig(),
         getAllTables(),
-        getAllPersons(),
       ]);
 
       setInvite(inviteData);
       setConfig(configData);
       setTables(tablesData);
-      setAllPersons(personsData);
+
+      if (inviteData) {
+        const invitePersons = await getPersonsForInvite(inviteData);
+        setAllPersons(invitePersons);
+      }
     } catch (err) {
       console.error('Erro ao carregar convite:', err);
     } finally {
