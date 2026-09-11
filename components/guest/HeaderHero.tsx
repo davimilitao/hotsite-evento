@@ -98,8 +98,9 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
             <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] tracking-tight font-serif">
               {config.birthday_person}
             </h1>
-            <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider">
-              {config.age_celebrating} Anos 🌸✨
+            <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider flex items-center justify-center gap-1.5">
+              <span>{config.age_celebrating} Anos Inesquecíveis</span>
+              <Sparkles className="w-4 h-4 text-[#c5a059]" />
             </p>
           </div>
 

@@ -21,6 +21,8 @@ import {
   ShieldCheck,
   Key,
   Database,
+  Mail,
+  Phone,
 } from 'lucide-react';
 
 interface SettingsFormProps {
@@ -244,6 +246,64 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
             <p className="text-[10px] text-slate-500">
               PIN para cerimonialistas e assessoras.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SEÇÃO DE CONTATOS DE SUPORTE & RODAPÉ DO HOTSITE */}
+      <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30">
+            <Mail className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              Suporte & Rodapé do Hotsite
+            </h3>
+            <p className="text-xs text-slate-400">
+              Informações de contato e créditos exibidos no rodapé do hotsite do convidado.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              E-mail de Suporte
+            </label>
+            <input
+              type="email"
+              value={formData.support_email || ''}
+              onChange={(e) => setFormData({ ...formData, support_email: e.target.value })}
+              placeholder="suporte@evento.com.br"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              WhatsApp de Suporte (Com DDD)
+            </label>
+            <input
+              type="text"
+              value={formData.support_phone || ''}
+              onChange={(e) => setFormData({ ...formData, support_phone: e.target.value.replace(/\D/g, '') })}
+              placeholder="11999998888"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Assinatura / Créditos do Desenvolvedor
+            </label>
+            <input
+              type="text"
+              value={formData.developer_credits || ''}
+              onChange={(e) => setFormData({ ...formData, developer_credits: e.target.value })}
+              placeholder="Desenvolvido com carinho para Fernanda Seppi"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
           </div>
         </div>
       </div>

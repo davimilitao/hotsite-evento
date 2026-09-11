@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Invite, Guest, EventConfig, Person } from '@/types';
 import { saveInvite, savePerson } from '@/lib/db';
 import { isInviteExpired, formatDateShort } from '@/lib/utils';
-import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RSVPFormProps {
@@ -154,7 +154,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         <div className="bg-rose-500/15 border-2 border-rose-500/40 text-rose-300 p-4 rounded-2xl space-y-2 animate-pulse">
           <div className="flex items-center gap-2 font-extrabold text-sm text-rose-400">
             <AlertTriangle className="w-5 h-5 shrink-0" />
-            <span>⚠️ URGENTE: O Prazo Inicial deste Convite Expirou</span>
+            <span>URGENTE: O Prazo Inicial deste Convite Expirou</span>
           </div>
           <p className="text-xs text-rose-200 leading-relaxed">
             O prazo limite era <strong>{formatDateShort(activeDeadline)}</strong>. Para garantirmos seu lugar antes de reatribuir a vaga para a lista de reserva do buffet, confirme urgentemente se <strong>SIM</strong> ou <strong>NÃO</strong>.
@@ -199,9 +199,9 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
 
             <button
               onClick={() => setIsEditing(true)}
-              className="px-3 py-1.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 hover:bg-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95"
             >
-              <Edit2 className="w-3.5 h-3.5" /> <span>✏️ Alterar Resposta</span>
+              <Edit2 className="w-3.5 h-3.5" /> <span>Alterar Resposta</span>
             </button>
           </div>
 
@@ -209,20 +209,21 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             <ul className="space-y-2">
               {guests.map((g, idx) => (
                 <li key={idx} className="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                  <span className="font-bold text-slate-700 dark:text-slate-200">
-                    {idx === 0 ? '👑 ' : '• '}{g.name}
+                  <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    {idx === 0 ? <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" /> : <span className="text-slate-400">•</span>}
+                    <span>{g.name}</span>
                   </span>
                   {(g.status || 'confirmed') === 'confirmed' ? (
-                    <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 px-2.5 py-0.5 rounded-full font-bold text-[11px]">
-                      🎉 Presença Confirmada
+                    <span className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 px-2.5 py-0.5 rounded-full font-bold text-[11px] flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Presença Confirmada
                     </span>
                   ) : g.status === 'pending_date' ? (
-                    <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 px-2.5 py-0.5 rounded-full font-bold text-[11px]">
-                      🤔 Pediu Prazo {g.requested_date ? `(${formatDateShort(g.requested_date)})` : ''}
+                    <span className="bg-purple-500/20 text-purple-600 dark:text-purple-300 px-2.5 py-0.5 rounded-full font-bold text-[11px] flex items-center gap-1">
+                      <CalendarClock className="w-3 h-3 text-purple-500" /> Pediu Prazo {g.requested_date ? `(${formatDateShort(g.requested_date)})` : ''}
                     </span>
                   ) : (
-                    <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 px-2.5 py-0.5 rounded-full font-bold text-[11px]">
-                      😔 Não Poderá Ir
+                    <span className="bg-rose-500/20 text-rose-600 dark:text-rose-300 px-2.5 py-0.5 rounded-full font-bold text-[11px] flex items-center gap-1">
+                      <XCircle className="w-3 h-3 text-rose-500" /> Não Poderá Ir
                     </span>
                   )}
                 </li>
@@ -251,8 +252,15 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                   className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl space-y-3 relative"
                 >
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2">
-                    <span className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-                      {index === 0 ? '👑 Titular / Contato Principal' : ` integrante #${index + 1} da família`}
+                    <span className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                      {index === 0 ? (
+                        <>
+                          <Crown className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Titular / Contato Principal</span>
+                        </>
+                      ) : (
+                        `Integrante #${index + 1} da família`
+                      )}
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">Assento Reservado</span>
                   </div>
@@ -281,37 +289,40 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                       <button
                         type="button"
                         onClick={() => handleGuestChange(index, 'status', 'confirmed')}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                        className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
                           (guest.status || 'confirmed') === 'confirmed'
                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
                             : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <span>🎉 Vou</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Vou</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleGuestChange(index, 'status', 'pending_date')}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                        className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
                           guest.status === 'pending_date'
                             ? 'bg-purple-600 text-white border-purple-600 shadow-md ring-2 ring-purple-500/20'
                             : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <span>🤔 Prazo</span>
+                        <CalendarClock className="w-3.5 h-3.5 shrink-0" />
+                        <span>Prazo</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleGuestChange(index, 'status', 'declined')}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 border cursor-pointer ${
+                        className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
                           guest.status === 'declined'
                             ? 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-500/20'
                             : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <span>😔 Não vou</span>
+                        <XCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Não vou</span>
                       </button>
                     </div>
                   </div>

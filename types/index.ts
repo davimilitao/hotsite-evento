@@ -186,5 +186,8 @@ export interface EventConfig {
   admin_pin?: string;            // PIN de 4 dígitos para Admin Geral (ex: '4040')
   birthday_person_pin?: string;  // PIN de 4 dígitos para Aniversariante (ex: '1986')
   assessor_pin?: string;         // PIN de 4 dígitos para Cerimonial/Assessora (ex: '2026')
+  support_email?: string;
+  support_phone?: string;
+  developer_credits?: string;
   theme?: EventTheme;
 }

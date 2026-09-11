@@ -56,10 +56,10 @@ export function RSVPFeedbackModal({
 
           <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
             {isConfirmed
-              ? 'Presença Confirmada! 🎉'
+              ? 'Presença Confirmada com Sucesso!'
               : isPendingDate
-              ? 'Pedido de Prazo Registrado ⏳'
-              : 'Resposta Registrada 😔'}
+              ? 'Pedido de Prazo Registrado'
+              : 'Resposta Registrada'}
           </h3>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">

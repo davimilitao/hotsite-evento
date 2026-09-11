@@ -10,7 +10,8 @@ import { SeatCard } from '@/components/guest/SeatCard';
 import { GiftSection } from '@/components/guest/GiftSection';
 import { MobileBottomNav, ActiveTabType } from '@/components/guest/MobileBottomNav';
 import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
-import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2 } from 'lucide-react';
+import { Footer } from '@/components/guest/Footer';
+import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2, MessageCircle } from 'lucide-react';
 
 interface ConvitePageProps {
   params: Promise<{ token: string }>;
@@ -57,30 +58,60 @@ export default function ConvitePage({ params }: ConvitePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex flex-col items-center justify-center p-4">
-        <RefreshCw className="w-8 h-8 text-[#6b4684] animate-spin mb-3" />
-        <p className="text-sm font-semibold text-[#6b4684]">Carregando confirmação de presença...</p>
+      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex flex-col items-center justify-center p-4 font-sans">
+        <div className="max-w-md w-full space-y-4 animate-pulse">
+          <div className="bg-white/80 h-52 rounded-3xl border border-[#c5a059]/30 flex flex-col items-center justify-center space-y-3 p-6 shadow-sm">
+            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-[#6b4684] animate-spin" />
+            </div>
+            <div className="w-48 h-4 bg-purple-200/80 rounded-full" />
+            <div className="w-32 h-3 bg-purple-100 rounded-full" />
+          </div>
+          <div className="bg-white/80 h-64 rounded-3xl border border-slate-200/60 p-6 space-y-4 shadow-sm">
+            <div className="w-40 h-5 bg-slate-200 rounded-lg" />
+            <div className="w-full h-12 bg-slate-100 rounded-xl" />
+            <div className="w-full h-12 bg-slate-100 rounded-xl" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!invite || !config) {
+    const supportPhone = config?.support_phone || '11999998888';
+    const whatsappSupportUrl = `https://wa.me/55${supportPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Tentei acessar meu convite pelo link "${token}", mas deu mensagem de convite não encontrado. Poderia me ajudar?`)}`;
+
     return (
-      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex items-center justify-center p-4">
-        <div className="bg-white border border-[#c5a059]/40 rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
+      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white border border-[#c5a059]/40 rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-2xl">
           <div className="p-4 bg-rose-100 text-rose-600 rounded-full inline-block">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-extrabold text-[#6b4684]">Convite Não Encontrado</h2>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Não encontramos um convite válido para este link. Verifique se a URL foi copiada corretamente pelo WhatsApp.
-          </p>
-          <a
-            href="/"
-            className="inline-block px-5 py-2.5 bg-[#6b4684] hover:bg-[#5a3973] text-white text-xs font-bold rounded-xl transition-all shadow-md"
-          >
-            Ir para a Página Inicial
-          </a>
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold text-[#6b4684]">Convite Não Encontrado</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Não encontramos um convite ativo correspondente a este link. Verifique se a URL no WhatsApp foi copiada por completo.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <a
+              href={whatsappSupportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Reportar Problema no WhatsApp</span>
+            </a>
+
+            <a
+              href="/"
+              className="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+            >
+              Ir para a Página Inicial
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -95,7 +126,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     bg_color: '#faf6f0',
     card_bg_color: '#ffffff',
     text_color: '#2d2138',
-    font_family: 'serif',
+    font_family: 'sans',
   };
 
   // Verifica se o Card do Convite está Ativado (ON) ou Desativado (OFF)
@@ -107,16 +138,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
       style={{
         backgroundColor: theme.bg_color || '#faf6f0',
         color: theme.text_color || '#2d2138',
-        fontFamily:
-          theme.font_family === 'playfair'
-            ? 'Playfair Display, serif'
-            : theme.font_family === 'cinzel'
-            ? 'Cinzel, serif'
-            : theme.font_family === 'script'
-            ? 'Great Vibes, cursive'
-            : theme.font_family === 'sans'
-            ? 'Montserrat, sans-serif'
-            : 'Georgia, serif',
+        fontFamily: 'Plus Jakarta Sans, Montserrat, system-ui, -apple-system, sans-serif',
       }}
     >
       {/* Container Principal Mobile Centralizado */}
@@ -186,13 +208,8 @@ export default function ConvitePage({ params }: ConvitePageProps) {
           </div>
         )}
 
-        {/* Rodapé Fofo Aquarelado */}
-        <footer className="text-center text-xs text-slate-500 pt-8 pb-4 px-4">
-          <p className="flex items-center justify-center gap-1 font-medium">
-            Feito com carinho para <Sparkles className="w-3.5 h-3.5 text-[#c5a059]" />
-            <strong className="text-[#6b4684]">{config.birthday_person}</strong>
-          </p>
-        </footer>
+        {/* Rodapé Configurável */}
+        <Footer config={config} />
       </div>
 
       {/* Barra de Navegação Flutuante Inferior para Mobile (Apenas quando Convite estiver Ativado) */}
