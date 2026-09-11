@@ -21,7 +21,7 @@ export function EventLocationCard({ config }: EventLocationCardProps) {
         </div>
       </div>
 
-      <p className="text-sm text-slate-600 leading-relaxed bg-[#f9f7fd] p-3.5 rounded-xl border border-purple-100 font-medium">
+      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium pt-1">
         {config.address}
       </p>
 

@@ -192,14 +192,12 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         )}
       </div>
 
-      {/* MENSAGEM ACOLHEDORA DE BOAS-VINDAS */}
-      <div className="bg-[#f9f7fd] p-4 sm:p-5 rounded-2xl border border-purple-200/60 space-y-2 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
-          <h3 className="text-sm font-black text-[#1e152d]">{displayGreeting}</h3>
-        </div>
-
-        <p className="text-xs text-slate-600 leading-relaxed font-medium">
+      {/* MENSAGEM ACOLHEDORA DE BOAS-VINDAS (TEXTO DIRETO NO CARD PRINCIPAL SEM EMBALAGEM REDUNDANTE) */}
+      <div className="space-y-2 pt-1 pb-1">
+        <h3 className="text-sm sm:text-base font-black text-[#1e152d]">
+          {displayGreeting}
+        </h3>
+        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
           Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Por favor, informe abaixo se você e sua família poderão comparecer.
         </p>
       </div>
