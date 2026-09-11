@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Invite, Guest, EventConfig, Person } from '@/types';
 import { saveInvite, savePerson } from '@/lib/db';
 import { isInviteExpired, formatDateShort } from '@/lib/utils';
-import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown, Sparkles } from 'lucide-react';
+import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown, Sparkles, Calendar } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RSVPFormProps {
@@ -192,106 +192,63 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         )}
       </div>
 
-      {/* CARD DE BOAS-VINDAS INTIMISTA & ONBOARDING ACOLHEDOR */}
-      <div className="bg-[#f9f7fd] p-5 rounded-2xl border border-purple-200/60 space-y-3 shadow-sm">
+      {/* MENSAGEM ACOLHEDORA DE BOAS-VINDAS */}
+      <div className="bg-[#f9f7fd] p-4 sm:p-5 rounded-2xl border border-purple-200/60 space-y-2 shadow-sm">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4.5 h-4.5 text-purple-600 shrink-0" />
+          <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
           <h3 className="text-sm font-black text-[#1e152d]">{displayGreeting}</h3>
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed font-medium">
-          Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Preparamos este espaço com muito carinho para facilitar sua experiência:
+          Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Por favor, informe abaixo se você e sua família poderão comparecer.
         </p>
-
-        {/* Guia de Navegação em Tópicos Leves */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-[11px]">
-          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
-            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> 1. Confirme sua Presença
-            </span>
-            <p className="text-slate-500 leading-tight">
-              Confirme você e sua família abaixo. Se precisar de mais alguns dias, selecione a opção <strong>&apos;Pedir Prazo&apos;</strong> e diga até quando!
-            </p>
-          </div>
-
-          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
-            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
-              <Utensils className="w-3.5 h-3.5 text-amber-500" /> 2. Local & Sua Mesa
-            </span>
-            <p className="text-slate-500 leading-tight">
-              No menu abaixo, veja a rota do salão (Maps/Waze) e a <strong>mesa reservada para sua família</strong>.
-            </p>
-          </div>
-
-          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
-            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-pink-500" /> 3. Mimos & Presentes
-            </span>
-            <p className="text-slate-500 leading-tight">
-              A Fernanda deixou algumas sugestões de presentes e a vaquinha Pix na aba de presentes.
-            </p>
-          </div>
-
-          <div className="p-2.5 bg-white rounded-xl border border-purple-100/80 space-y-1">
-            <span className="font-extrabold text-[#6d44e4] flex items-center gap-1">
-              <HeartHandshake className="w-3.5 h-3.5 text-purple-600" /> 4. Recados da Festa
-            </span>
-            <p className="text-slate-500 leading-tight">
-              Nossa Cerimonialista enviará recados especiais no WhatsApp para te deixar por dentro de todas as atrações!
-            </p>
-          </div>
-        </div>
       </div>
 
-      {/* MODO RESUMO: Exibição Fixa */}
+      {/* MODO RESUMO: Exibição Fixa Flat em Linha */}
       {!isEditing && isAlreadyResponded ? (
-        <div className="bg-[#f9f7fd] p-5 rounded-2xl border border-purple-200/60 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-purple-100 pb-3">
-            <div className="flex items-center gap-2">
-              {invite.status === 'confirmed' && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-              {invite.status === 'pending_date' && <CalendarClock className="w-5 h-5 text-purple-600" />}
-              {invite.status === 'declined' && <XCircle className="w-5 h-5 text-rose-500" />}
-              <span className="font-extrabold text-sm text-[#1e152d]">
-                Resposta da Família ({invite.confirmed_count} confirmados):
-              </span>
-            </div>
+        <div className="bg-[#f9f7fd] p-4 sm:p-5 rounded-2xl border border-purple-200/60 space-y-3 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-purple-100 pb-2.5">
+            <span className="font-black text-xs sm:text-sm text-[#1e152d]">
+              Resposta Registrada ({invite.confirmed_count} confirmados):
+            </span>
 
             <button
               onClick={() => setIsEditing(true)}
-              className="px-3.5 py-1.5 bg-purple-100 text-[#6d44e4] hover:bg-purple-200/80 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
+              className="px-3 py-1 bg-purple-100 text-[#6d44e4] hover:bg-purple-200/80 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer shrink-0"
             >
-              <Edit2 className="w-3.5 h-3.5" /> <span>Alterar Resposta</span>
+              <Edit2 className="w-3.5 h-3.5" /> <span>Alterar</span>
             </button>
           </div>
 
-          <div className="space-y-2 text-xs">
-            <ul className="space-y-2">
-              {guests.map((g, idx) => (
-                <li key={idx} className="p-3 bg-white rounded-xl border border-purple-100 shadow-sm flex items-center justify-between">
-                  <span className="font-extrabold text-[#1e152d] flex items-center gap-1.5">
-                    {idx === 0 ? <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" /> : <span className="text-purple-300">•</span>}
-                    <span>{g.name}</span>
-                  </span>
+          <div className="divide-y divide-purple-100/80 text-xs">
+            {guests.map((g, idx) => (
+              <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
+                <span className="font-extrabold text-[#1e152d] flex items-center gap-1.5 min-w-0 truncate">
+                  {idx === 0 ? <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" /> : <span className="text-purple-300 font-normal">•</span>}
+                  <span className="truncate">{g.name}</span>
+                </span>
+
+                <div className="shrink-0">
                   {(g.status || 'confirmed') === 'confirmed' ? (
                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Presença Confirmada
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Presença Confirmada
                     </span>
                   ) : g.status === 'pending_date' ? (
                     <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1">
-                      <CalendarClock className="w-3 h-3 text-purple-600" /> Pediu Prazo {g.requested_date ? `(${formatDateShort(g.requested_date)})` : ''}
+                      <Calendar className="w-3 h-3 text-purple-600 shrink-0" /> Pediu Prazo {g.requested_date ? `(${formatDateShort(g.requested_date)})` : ''}
                     </span>
                   ) : (
                     <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1">
-                      <XCircle className="w-3 h-3 text-rose-600" /> Não Poderá Ir
+                      <XCircle className="w-3 h-3 text-rose-600 shrink-0" /> Não Poderá Ir
                     </span>
                   )}
-                </li>
-              ))}
-            </ul>
+                </div>
+              </div>
+            ))}
           </div>
 
           {invite.notes && (
-            <div className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-purple-100 shadow-sm">
+            <div className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-purple-100 shadow-sm mt-2">
               &quot;{invite.notes}&quot;
             </div>
           )}

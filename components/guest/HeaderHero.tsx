@@ -60,19 +60,8 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
     return (
       <header className="relative text-center space-y-4 pt-6 px-4">
         {/* Badge Flutuante de Boas-Vindas */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/90 backdrop-blur-md text-[#6d44e4] rounded-full text-xs font-bold border border-purple-100 shadow-md">
-            <Sparkles className="w-4 h-4 text-purple-500" /> Convite Exclusivo para {invite.head_name}
-          </div>
-
-          <a
-            href={googleCalendarUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
-          >
-            <CalendarPlus className="w-4 h-4 text-amber-300" /> Salvar no Google Agenda
-          </a>
+        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/90 backdrop-blur-md text-[#6d44e4] rounded-full text-xs font-bold border border-purple-100 shadow-md">
+          <Sparkles className="w-4 h-4 text-purple-500" /> Convite Exclusivo para {invite.head_name}
         </div>
 
         {/* Imagem Pura do Convite Físico - Clicável para Ampliar */}
@@ -89,6 +78,18 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
               e.currentTarget.style.display = 'none';
             }}
           />
+        </div>
+
+        {/* Botão Salvar no Google Agenda - Posicionado EXATAMENTE ABAIXO da Imagem */}
+        <div className="pt-2">
+          <a
+            href={googleCalendarUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full text-xs font-extrabold shadow-lg transition-all active:scale-95 cursor-pointer"
+          >
+            <CalendarPlus className="w-4 h-4 text-amber-300" /> Salvar no Meu Google Agenda
+          </a>
         </div>
 
         {/* Modal Lightbox de Zoom */}

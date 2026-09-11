@@ -11,6 +11,7 @@ import { GiftSection } from '@/components/guest/GiftSection';
 import { MobileBottomNav, ActiveTabType } from '@/components/guest/MobileBottomNav';
 import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
 import { Footer } from '@/components/guest/Footer';
+import { HowItWorksAccordion } from '@/components/guest/HowItWorksAccordion';
 import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2, MessageCircle } from 'lucide-react';
 
 interface ConvitePageProps {
@@ -207,6 +208,11 @@ export default function ConvitePage({ params }: ConvitePageProps) {
             )}
           </div>
         )}
+
+        {/* Sanfona explicativa 'Como Funciona' */}
+        <div className="px-4">
+          <HowItWorksAccordion />
+        </div>
 
         {/* Rodapé Configurável */}
         <Footer config={config} />
