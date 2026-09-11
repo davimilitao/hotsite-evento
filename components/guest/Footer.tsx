@@ -26,20 +26,20 @@ export function Footer({ config }: FooterProps) {
     : null;
 
   return (
-    <footer className="mt-16 pt-10 pb-24 border-t border-slate-200/60 dark:border-slate-800 text-center space-y-6 text-xs text-slate-500 font-sans">
+    <footer className="mt-16 pt-10 pb-24 border-t border-purple-200/60 text-center space-y-6 text-xs text-slate-500 font-sans">
       <div className="max-w-md mx-auto px-4 space-y-4">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full text-[11px] font-semibold">
-          <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-[#6d44e4] rounded-full text-[11px] font-extrabold">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#6d44e4]" />
           <span>Atendimento & Suporte ao Convidado</span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-4 text-slate-600 dark:text-slate-300 font-medium">
+        <div className="flex flex-wrap items-center justify-center gap-4 text-slate-600 font-semibold">
           {supportEmail && (
             <a
               href={`mailto:${supportEmail}`}
-              className="inline-flex items-center gap-1.5 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-1 px-3 rounded-lg bg-white/60 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 shadow-sm"
+              className="inline-flex items-center gap-1.5 hover:text-[#6d44e4] transition-colors py-1.5 px-3.5 rounded-xl bg-white border border-purple-100 shadow-sm"
             >
-              <Mail className="w-3.5 h-3.5 text-purple-500" />
+              <Mail className="w-3.5 h-3.5 text-[#6d44e4]" />
               <span>{supportEmail}</span>
             </a>
           )}
@@ -49,7 +49,7 @@ export function Footer({ config }: FooterProps) {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-1 px-3 rounded-lg bg-white/60 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 shadow-sm"
+              className="inline-flex items-center gap-1.5 hover:text-emerald-600 transition-colors py-1.5 px-3.5 rounded-xl bg-white border border-purple-100 shadow-sm"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
               <span>WhatsApp: {formatPhone(supportPhone)}</span>
@@ -58,7 +58,7 @@ export function Footer({ config }: FooterProps) {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-slate-200/40 dark:border-slate-800/60 text-[11px] text-slate-400 space-y-1">
+      <div className="pt-4 border-t border-purple-100 text-[11px] text-slate-400 space-y-1">
         <p className="flex items-center justify-center gap-1">
           <span>{developerCredits}</span>
           <Heart className="w-3 h-3 text-rose-500 fill-rose-500/30" />

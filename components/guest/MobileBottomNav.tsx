@@ -17,20 +17,20 @@ export function MobileBottomNav({
   hasAssignedTable,
 }: MobileBottomNavProps) {
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#c5a059]/30 shadow-2xl px-3 py-2">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-purple-100 shadow-2xl px-3 py-2">
       <div className="flex items-center justify-around max-w-md mx-auto">
         {/* Aba 1: RSVP & Convite */}
         <button
           onClick={() => onChangeTab('rsvp')}
           className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all ${
             activeTab === 'rsvp'
-              ? 'text-[#6b4684] font-bold scale-105'
+              ? 'text-[#6d44e4] font-extrabold scale-105'
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
           <div
             className={`p-1.5 rounded-xl ${
-              activeTab === 'rsvp' ? 'bg-[#6b4684]/15 border border-[#6b4684]/30' : ''
+              activeTab === 'rsvp' ? 'bg-purple-100/80 border border-purple-200/60 text-[#6d44e4]' : ''
             }`}
           >
             <Mail className="w-5 h-5" />
@@ -43,13 +43,13 @@ export function MobileBottomNav({
           onClick={() => onChangeTab('location')}
           className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all relative ${
             activeTab === 'location'
-              ? 'text-[#6b4684] font-bold scale-105'
+              ? 'text-[#6d44e4] font-extrabold scale-105'
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
           <div
             className={`p-1.5 rounded-xl ${
-              activeTab === 'location' ? 'bg-[#6b4684]/15 border border-[#6b4684]/30' : ''
+              activeTab === 'location' ? 'bg-purple-100/80 border border-purple-200/60 text-[#6d44e4]' : ''
             }`}
           >
             <MapPin className="w-5 h-5" />
@@ -66,13 +66,13 @@ export function MobileBottomNav({
           onClick={() => onChangeTab('gifts')}
           className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all ${
             activeTab === 'gifts'
-              ? 'text-[#6b4684] font-bold scale-105'
+              ? 'text-[#6d44e4] font-extrabold scale-105'
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
           <div
             className={`p-1.5 rounded-xl ${
-              activeTab === 'gifts' ? 'bg-[#6b4684]/15 border border-[#6b4684]/30' : ''
+              activeTab === 'gifts' ? 'bg-purple-100/80 border border-purple-200/60 text-[#6d44e4]' : ''
             }`}
           >
             <Gift className="w-5 h-5" />

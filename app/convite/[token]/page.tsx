@@ -58,19 +58,19 @@ export default function ConvitePage({ params }: ConvitePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex flex-col items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-[#f7f4fc] text-[#1e152d] flex flex-col items-center justify-center p-4 font-sans">
         <div className="max-w-md w-full space-y-4 animate-pulse">
-          <div className="bg-white/80 h-52 rounded-3xl border border-[#c5a059]/30 flex flex-col items-center justify-center space-y-3 p-6 shadow-sm">
+          <div className="bg-white h-52 rounded-3xl border border-purple-100 flex flex-col items-center justify-center space-y-3 p-6 shadow-sm">
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-[#6b4684] animate-spin" />
+              <RefreshCw className="w-6 h-6 text-[#6d44e4] animate-spin" />
             </div>
             <div className="w-48 h-4 bg-purple-200/80 rounded-full" />
             <div className="w-32 h-3 bg-purple-100 rounded-full" />
           </div>
-          <div className="bg-white/80 h-64 rounded-3xl border border-slate-200/60 p-6 space-y-4 shadow-sm">
-            <div className="w-40 h-5 bg-slate-200 rounded-lg" />
-            <div className="w-full h-12 bg-slate-100 rounded-xl" />
-            <div className="w-full h-12 bg-slate-100 rounded-xl" />
+          <div className="bg-white h-64 rounded-3xl border border-purple-100 p-6 space-y-4 shadow-sm">
+            <div className="w-40 h-5 bg-purple-100 rounded-lg" />
+            <div className="w-full h-12 bg-purple-50 rounded-xl" />
+            <div className="w-full h-12 bg-purple-50 rounded-xl" />
           </div>
         </div>
       </div>
@@ -82,13 +82,13 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     const whatsappSupportUrl = `https://wa.me/55${supportPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Tentei acessar meu convite pelo link "${token}", mas deu mensagem de convite não encontrado. Poderia me ajudar?`)}`;
 
     return (
-      <div className="min-h-screen bg-[#faf6f0] text-[#2d2138] flex items-center justify-center p-4 font-sans">
-        <div className="bg-white border border-[#c5a059]/40 rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-2xl">
+      <div className="min-h-screen bg-[#f7f4fc] text-[#1e152d] flex items-center justify-center p-4 font-sans">
+        <div className="bg-white border border-purple-100 rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-2xl">
           <div className="p-4 bg-rose-100 text-rose-600 rounded-full inline-block">
             <AlertCircle className="w-8 h-8" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-extrabold text-[#6b4684]">Convite Não Encontrado</h2>
+            <h2 className="text-xl font-extrabold text-[#6d44e4]">Convite Não Encontrado</h2>
             <p className="text-xs text-slate-600 leading-relaxed">
               Não encontramos um convite ativo correspondente a este link. Verifique se a URL no WhatsApp foi copiada por completo.
             </p>
@@ -121,11 +121,11 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const theme: EventTheme = config.theme || {
     preset: 'custom',
     invite_mode: 'custom',
-    primary_color: '#6b4684',
+    primary_color: '#6d44e4',
     accent_color: '#c5a059',
-    bg_color: '#faf6f0',
+    bg_color: '#f7f4fc',
     card_bg_color: '#ffffff',
-    text_color: '#2d2138',
+    text_color: '#1e152d',
     font_family: 'sans',
   };
 
@@ -136,8 +136,8 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     <main
       className="min-h-screen font-sans pb-24 sm:pb-16 transition-colors duration-300"
       style={{
-        backgroundColor: theme.bg_color || '#faf6f0',
-        color: theme.text_color || '#2d2138',
+        backgroundColor: theme.bg_color || '#f7f4fc',
+        color: theme.text_color || '#1e152d',
         fontFamily: 'Plus Jakarta Sans, Montserrat, system-ui, -apple-system, sans-serif',
       }}
     >

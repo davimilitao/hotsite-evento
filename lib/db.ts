@@ -42,12 +42,12 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
     preset: 'lavender_floral',
     invite_mode: 'custom', // 'off' | 'upload' | 'custom'
     uploaded_invite_url: '',
-    primary_color: '#6b4684', // Roxo Lavanda Elegante do Convite Impresso
-    accent_color: '#c5a059',  // Dourado Nobre das Letras
-    bg_color: '#faf6f0',      // Creme Suave / Marfim do Papel Aquarelado
-    card_bg_color: '#ffffff', // Branco Puro para os Cards de Conteúdo
-    text_color: '#2d2138',    // Violeta Escuro Profundo Legível
-    font_family: 'serif',
+    primary_color: '#6d44e4', // Violeta Vibrante do Tema Pinterest
+    accent_color: '#c5a059',  // Dourado Elegante
+    bg_color: '#f7f4fc',      // Lilás Marfim Suave Iluminado
+    card_bg_color: '#ffffff', // Branco Puro para os Cards
+    text_color: '#1e152d',    // Violeta Profundo Escuro Legível
+    font_family: 'sans',
     banner_image_url: '',
   },
   gift_suggestions: [
@@ -740,12 +740,12 @@ export async function getEventConfig(): Promise<EventConfig> {
     preset: 'lavender_floral',
     invite_mode: 'custom',
     uploaded_invite_url: '',
-    primary_color: '#6b4684',
+    primary_color: '#6d44e4',
     accent_color: '#c5a059',
-    bg_color: '#faf6f0',
+    bg_color: '#f7f4fc',
     card_bg_color: '#ffffff',
-    text_color: '#2d2138',
-    font_family: 'serif',
+    text_color: '#1e152d',
+    font_family: 'sans',
     banner_image_url: '',
   };
 

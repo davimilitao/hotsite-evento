@@ -56,19 +56,18 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
   if (isUploadMode) {
     return (
       <header className="relative text-center space-y-4 pt-6 px-4">
-        {/* Badge Flutuante de Boas-Vindas */}
-        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/80 backdrop-blur-md text-[#6b4684] rounded-full text-xs font-extrabold border border-[#c5a059]/30 shadow-md">
-          <Sparkles className="w-4 h-4 text-[#c5a059]" /> Convite Exclusivo para {invite.head_name}
+        {/* Badge Flutuante de Boas-Vindas em Pílula Lilás */}
+        <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/90 backdrop-blur-md text-[#6d44e4] rounded-full text-xs font-bold border border-purple-100 shadow-md">
+          <Sparkles className="w-4 h-4 text-purple-500" /> Convite Exclusivo para {invite.head_name}
         </div>
 
-        {/* Imagem Pura do Convite Físico - Flutuante com Sombra Direta (Sem fundo branco e sem bordas) */}
+        {/* Imagem Pura do Convite Físico */}
         <div className="max-w-md mx-auto pt-2">
           <img
             src={theme.uploaded_invite_url}
             alt={`Arte do Convite - ${config.title}`}
             className="w-full h-auto max-h-[600px] object-contain rounded-3xl shadow-2xl mx-auto border-0 block"
             onError={(e) => {
-              // Fallback de segurança se a imagem falhar ao carregar
               e.currentTarget.style.display = 'none';
             }}
           />
@@ -79,15 +78,15 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
 
   return (
     <header className="relative text-center space-y-6 pt-6 px-4">
-      {/* Moldura de Boas-Vindas Floral Elegante */}
-      <div className="bg-white/90 rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-[#c5a059]/40 relative overflow-hidden backdrop-blur-sm">
-        {/* Detalhe sutil de aquarela de fundo */}
-        <div className="absolute -top-12 -right-12 w-40 h-40 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
+      {/* Moldura de Boas-Vindas Clean & Luxe */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-purple-100 relative overflow-hidden backdrop-blur-sm">
+        {/* Detalhe sutil de aquarela lavanda no fundo */}
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-purple-100/50 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-indigo-100/40 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative space-y-4">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6b4684]/10 text-[#6b4684] rounded-full text-xs font-extrabold border border-[#6b4684]/20">
-            <Sparkles className="w-3.5 h-3.5 text-[#c5a059]" /> Convite Exclusivo para {invite.head_name}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-100/80 text-[#6d44e4] rounded-full text-xs font-bold border border-purple-200/60">
+            <Sparkles className="w-3.5 h-3.5 text-purple-500" /> Convite Exclusivo para {invite.head_name}
           </div>
 
           {/* MODO CARD DIGITAL CUSTOMIZADO */}
@@ -95,10 +94,10 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
             <span className="text-xs font-extrabold uppercase tracking-widest text-[#c5a059] block">
               SAVE THE DATE
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#6b4684] tracking-tight font-serif">
+            <h1 className="text-3xl sm:text-4xl font-black text-[#1e152d] tracking-tight">
               {config.birthday_person}
             </h1>
-            <p className="text-sm font-extrabold text-[#c5a059] uppercase tracking-wider flex items-center justify-center gap-1.5">
+            <p className="text-sm font-extrabold text-[#6d44e4] uppercase tracking-wider flex items-center justify-center gap-1.5">
               <span>{config.age_celebrating} Anos Inesquecíveis</span>
               <Sparkles className="w-4 h-4 text-[#c5a059]" />
             </p>
@@ -106,7 +105,7 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
 
           {/* Banner Secundário (se configurado) */}
           {theme.banner_image_url && (
-            <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-[#c5a059]/30">
+            <div className="my-4 rounded-2xl overflow-hidden shadow-lg border border-purple-100">
               <img
                 src={theme.banner_image_url}
                 alt="Arte do Convite"
@@ -115,22 +114,22 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
             </div>
           )}
 
-          {/* Data & Localização Detalhada (Apenas no Modo Digital Customizado) */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 text-xs font-bold text-[#2d2138]">
-            <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
-              <Calendar className="w-4 h-4 text-[#6b4684]" />
+          {/* Data & Localização Detalhada */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 text-xs font-bold text-[#1e152d]">
+            <div className="flex items-center gap-1.5 bg-[#f4effd] px-3.5 py-2 rounded-xl border border-purple-200/50">
+              <Calendar className="w-4 h-4 text-[#6d44e4]" />
               <span>Sábado, 07 de Novembro • 17h às 23h</span>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-[#faf6f0] px-3.5 py-2 rounded-xl border border-[#c5a059]/30">
-              <MapPin className="w-4 h-4 text-[#6b4684]" />
+            <div className="flex items-center gap-1.5 bg-[#f4effd] px-3.5 py-2 rounded-xl border border-purple-200/50">
+              <MapPin className="w-4 h-4 text-[#6d44e4]" />
               <span>{config.location_name}</span>
             </div>
           </div>
 
-          {/* Contador Regressivo Dourado (Apenas no Modo Digital Customizado) */}
-          <div className="pt-4 border-t border-[#c5a059]/20">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6b4684] block mb-2">
+          {/* Contador Regressivo Clean */}
+          <div className="pt-4 border-t border-purple-100">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-600 block mb-2">
               Contagem Regressiva para a Festa
             </span>
             <div className="grid grid-cols-4 gap-2 max-w-xs mx-auto">
@@ -142,12 +141,12 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
               ].map((item, index) => (
                 <div
                   key={index}
-                  className="bg-gradient-to-b from-[#faf6f0] to-white p-2 rounded-2xl border border-[#c5a059]/40 shadow-sm text-center"
+                  className="bg-[#f4effd] p-2 rounded-2xl border border-purple-200/50 shadow-sm text-center"
                 >
-                  <span className="block text-xl font-black text-[#6b4684] font-serif">
+                  <span className="block text-xl font-black text-[#6d44e4]">
                     {String(item.value).padStart(2, '0')}
                   </span>
-                  <span className="text-[9px] font-bold text-[#c5a059] uppercase">{item.label}</span>
+                  <span className="text-[9px] font-extrabold text-purple-500 uppercase">{item.label}</span>
                 </div>
               ))}
             </div>
