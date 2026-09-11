@@ -336,12 +336,12 @@ export async function getAllPersons(): Promise<Person[]> {
   if (isFirebaseConfigured) {
     try {
       const snap = await getDocs(collection(db, 'persons'));
-      if (!snap.empty && snap.docs.length >= 50) {
+      if (!snap.empty) {
         return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Person));
       } else {
-        console.log('Populando Firestore com as 119 pessoas físicas...');
+        console.log('Populando Firestore com as pessoas físicas iniciais...');
         for (const person of INITIAL_PERSONS) {
-          await setDoc(doc(db, 'persons', person.id), person);
+          await setDoc(doc(db, 'persons', person.id), cleanUndefinedForFirestore(person));
         }
         setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
         return INITIAL_PERSONS;
@@ -352,12 +352,12 @@ export async function getAllPersons(): Promise<Person[]> {
   }
 
   const cached = getLS<Person[]>(LS_KEYS.PERSONS, INITIAL_PERSONS);
-  if (!cached || cached.length < 50) {
-    setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
-    return INITIAL_PERSONS;
+  if (cached && cached.length > 0) {
+    return cached;
   }
 
-  return cached;
+  setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
+  return INITIAL_PERSONS;
 }
 
 export function calculateChildCategory(age?: number, config?: EventConfig): ChildCategory {
