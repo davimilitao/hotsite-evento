@@ -117,6 +117,7 @@ export interface Invite {
   requested_date_reason?: string | null; // Motivo informado ao pedir prazo
   requested_date_status?: 'pending' | 'accepted' | 'rejected'; // Decisão da aniversariante/admin sobre o prazo
   declined_message?: string | null;   // Recado carinhoso enviado ao recusar o convite
+  split_from_invite_id?: string | null; // ID do convite pai caso tenha sido desmembrado individualmente
   
   // Homenagem Surpresa
   surprise_sent?: boolean;            // Status geral de recebimento

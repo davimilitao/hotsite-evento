@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole, ChildCategory } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory, linkPersonPhoneResponsible } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory, linkPersonPhoneResponsible, splitCompanionToIndividualInvite } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164 } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import { PersonRelationshipModal } from './PersonRelationshipModal';
@@ -510,7 +510,58 @@ export function GuestList({
     onRefresh();
   };
 
-  const handleWhatsAppDispatch = async (invite: Invite) => {
+  const handleSplitAndDispatchCompanion = async (person: Person, parentInvite: Invite) => {
+    const targetPhone = person.phone || '';
+    const cleanDigits = targetPhone.replace(/\D/g, '');
+
+    if (cleanDigits.length < 8) {
+      alert(
+        `O telefone de "${person.name}" está em branco ou incompleto. Por favor, cadastre o número com DDD antes de realizar o disparo direto.`
+      );
+      setEditingPhonePersonId(person.id);
+      setTempPhone(person.phone || '');
+      return;
+    }
+
+    if (
+      !confirm(
+        `Deseja desmembrar e enviar um convite direto no WhatsApp de ${person.name} (${formatPhoneDisplay(
+          targetPhone
+        )})?\n\nEle(a) manterá a mesma mesa e grupo familiar, mas terá um link próprio para confirmar sua presença individualmente.`
+      )
+    ) {
+      return;
+    }
+
+    setLoadingForm(true);
+    try {
+      const newInvite = await splitCompanionToIndividualInvite(person.id, parentInvite.id);
+      await markInviteAsSent(newInvite.id);
+      onRefresh();
+
+      const waUrl = buildWhatsAppLink(newInvite.head_name, newInvite.phone, newInvite.id);
+      window.open(waUrl, '_blank');
+    } catch (err) {
+      console.error('Erro ao desmembrar e enviar convite individual:', err);
+      alert('Ocorreu um erro ao gerar o convite individual.');
+    } finally {
+      setLoadingForm(false);
+    }
+  };
+
+  const handleWhatsAppDispatch = async (invite: Invite, targetPerson?: Person) => {
+    if (targetPerson) {
+      const isHead =
+        invite.head_person_id === targetPerson.id ||
+        (!invite.head_person_id && invite.head_name.trim().toLowerCase() === targetPerson.name.trim().toLowerCase());
+      const isCompanion = !isHead && (invite.companion_person_ids?.includes(targetPerson.id) || false);
+
+      if (isCompanion) {
+        await handleSplitAndDispatchCompanion(targetPerson, invite);
+        return;
+      }
+    }
+
     const cleanDigits = invite.phone ? invite.phone.replace(/\D/g, '') : '';
     if (!cleanDigits || cleanDigits.length < 8) {
       alert(
@@ -1479,13 +1530,19 @@ export function GuestList({
                         <td className="py-2.5 px-2 text-center">
                           {invite ? (
                             <button
-                              onClick={() => handleWhatsAppDispatch(invite)}
+                              onClick={() => handleWhatsAppDispatch(invite, person)}
                               className={`p-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center ${
                                 isSent
                                   ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-300'
                                   : 'bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-950 dark:hover:bg-purple-900 dark:text-purple-300'
                               }`}
-                              title={isSent ? 'Convite já enviado no WhatsApp (Clique para re-enviar)' : 'Enviar convite no WhatsApp'}
+                              title={
+                                isCompanion
+                                  ? 'Enviar convite direto no WhatsApp deste integrante'
+                                  : isSent
+                                  ? 'Convite já enviado no WhatsApp (Clique para re-enviar)'
+                                  : 'Enviar convite no WhatsApp'
+                              }
                             >
                               <MessageCircle className="w-4 h-4" />
                             </button>
@@ -1579,6 +1636,19 @@ export function GuestList({
                               <div className={`absolute right-0 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 dark:divide-slate-800 text-xs animate-fade-in ${
                                 openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
                               }`}>
+                                {invite && isCompanion && (
+                                  <button
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleSplitAndDispatchCompanion(person, invite);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-bold flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Send className="w-4 h-4 text-purple-500" />
+                                    <span>Enviar Convite Direto (WhatsApp)</span>
+                                  </button>
+                                )}
+
                                 {invite && (
                                   <button
                                     onClick={() => {

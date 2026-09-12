@@ -1254,6 +1254,60 @@ export async function markInviteAsSent(id: string): Promise<Invite | null> {
   });
 }
 
+export async function splitCompanionToIndividualInvite(
+  personId: string,
+  parentInviteId: string
+): Promise<Invite> {
+  const persons = await getAllPersons();
+  const targetPerson = persons.find((p) => p.id === personId);
+  if (!targetPerson) throw new Error('Convidado não encontrado para desmembramento.');
+
+  const parentInvite = (await getAllInvites()).find((i) => i.id === parentInviteId);
+  if (!parentInvite) throw new Error('Convite de origem não encontrado.');
+
+  // 1. Remover a pessoa da lista de acompanhantes do convite pai
+  const updatedCompanions = (parentInvite.companion_person_ids || []).filter((id) => id !== personId);
+  const updatedGuestsOfParent = (parentInvite.guests || []).filter(
+    (g) => g.person_id !== personId && g.name.trim().toLowerCase() !== targetPerson.name.trim().toLowerCase()
+  );
+  const newParentMaxGuests = Math.max(1, 1 + updatedCompanions.length);
+  const newParentConfirmedCount = updatedGuestsOfParent.filter((g) => g.status === 'confirmed').length;
+
+  await saveInvite({
+    ...parentInvite,
+    companion_person_ids: updatedCompanions,
+    guests: updatedGuestsOfParent,
+    max_guests: newParentMaxGuests,
+    confirmed_count: newParentConfirmedCount,
+  });
+
+  // 2. Criar um novo convite individual para a pessoa
+  const newIndividualInvite = await saveInvite({
+    invite_type: 'individual',
+    head_person_id: targetPerson.id,
+    head_name: targetPerson.name,
+    phone: targetPerson.phone || parentInvite.phone || '',
+    max_guests: 1,
+    table_id: targetPerson.table_id || parentInvite.table_id || null,
+    tier: parentInvite.tier || 'main',
+    split_from_invite_id: parentInvite.id,
+    status: 'pending',
+    confirmed_count: 0,
+    sent_status: 'not_sent',
+    opened_at: null,
+    opened_count: 0,
+  });
+
+  // 3. Atualizar o cadastro da pessoa para apontar para o novo convite individual como Head
+  await savePerson({
+    ...targetPerson,
+    invite_id: newIndividualInvite.id,
+    role_in_invite: 'head',
+  });
+
+  return newIndividualInvite;
+}
+
 export async function getAllTables(): Promise<Table[]> {
   if (isFirebaseConfigured) {
     try {
