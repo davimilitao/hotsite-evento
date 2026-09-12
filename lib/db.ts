@@ -1006,6 +1006,28 @@ export async function getInviteByToken(token: string): Promise<Invite | null> {
   return invites.find((i) => i.id === token) || null;
 }
 
+export async function trackInviteOpen(token: string): Promise<void> {
+  try {
+    const invite = await getInviteByToken(token);
+    if (!invite) return;
+
+    const now = new Date().toISOString();
+    const openedAt = invite.opened_at || now;
+    const openedCount = (invite.opened_count || 0) + 1;
+
+    const updated: Invite = {
+      ...invite,
+      opened_at: openedAt,
+      opened_count: openedCount,
+      updated_at: now,
+    };
+
+    await saveInvite(updated);
+  } catch (err) {
+    console.warn(`Erro ao registrar abertura do token ${token}:`, err);
+  }
+}
+
 export async function getPersonsForInvite(invite: Invite): Promise<Person[]> {
   const allPersons = await getAllPersons();
   const involvedIds = new Set<string>();

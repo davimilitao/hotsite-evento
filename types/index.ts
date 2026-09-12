@@ -109,8 +109,14 @@ export interface Invite {
   tier?: InviteTier;                  // 'main' ou 'reserve'
   sent_at?: string | null;
   sent_status?: 'not_sent' | 'sent';
+  opened_at?: string | null;          // Data/Hora da primeira abertura do hotsite pelo convidado
+  opened_count?: number;              // Quantidade de acessos ao hotsite
+  responded_at?: string | null;       // Data/Hora do envio do formulário de RSVP
   individual_deadline?: string | null; // ISO Date String
   requested_date?: string | null;     // Data informada pelo convidado na opção 'pending_date'
+  requested_date_reason?: string | null; // Motivo informado ao pedir prazo
+  requested_date_status?: 'pending' | 'accepted' | 'rejected'; // Decisão da aniversariante/admin sobre o prazo
+  declined_message?: string | null;   // Recado carinhoso enviado ao recusar o convite
   
   // Homenagem Surpresa
   surprise_sent?: boolean;            // Status geral de recebimento

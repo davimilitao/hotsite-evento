@@ -18,11 +18,14 @@ interface RSVPFormProps {
 export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeedback }: RSVPFormProps) {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [notes, setNotes] = useState<string>(invite.notes || '');
+  const [declinedMessage, setDeclinedMessage] = useState<string>(invite.declined_message || '');
+  const [requestedDateReason, setRequestedDateReason] = useState<string>(invite.requested_date_reason || '');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<boolean>(invite.status === 'pending');
 
   const isExpired = isInviteExpired(invite, config.deadline_rsvp);
   const activeDeadline = invite.individual_deadline || config.deadline_rsvp;
+  const maxDeadlineDate = activeDeadline ? activeDeadline.slice(0, 10) : '';
   const isAlreadyResponded = invite.status !== 'pending';
 
   const headPerson = allPersons?.find((p) => p.id === invite.head_person_id || p.name.trim().toLowerCase() === invite.head_name.trim().toLowerCase());
@@ -127,13 +130,40 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         }
       }
 
+      const firstRequestedDate = guests.find((g) => g.requested_date)?.requested_date || invite.requested_date || null;
+      const now = new Date().toISOString();
+
       const updatedInvite = await saveInvite({
         ...invite,
         status: overallStatus,
         confirmed_count: confirmedCount,
         guests,
         notes,
+        declined_message: overallStatus === 'declined' ? declinedMessage : (invite.declined_message || null),
+        requested_date: overallStatus === 'pending_date' ? firstRequestedDate : (invite.requested_date || null),
+        requested_date_reason: overallStatus === 'pending_date' ? requestedDateReason : (invite.requested_date_reason || null),
+        requested_date_status: overallStatus === 'pending_date' ? 'pending' : (invite.requested_date_status || undefined),
+        responded_at: now,
       });
+
+      // Dispara e-mail de notificação para a aniversariante via Resend (em background)
+      fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: overallStatus,
+          token: invite.id,
+          headName: invite.head_name,
+          confirmedCount,
+          guests,
+          notes,
+          declinedMessage: overallStatus === 'declined' ? declinedMessage : '',
+          requestedDate: firstRequestedDate ? formatDateShort(firstRequestedDate) : '',
+          requestedDateReason: overallStatus === 'pending_date' ? requestedDateReason : '',
+          eventTitle: config.title,
+          recipientEmail: config.support_email || 'suporte@evento.com.br',
+        }),
+      }).catch((err) => console.warn('Erro ao disparar e-mail Resend:', err));
 
       if (confirmedCount > 0) {
         confetti({
@@ -210,12 +240,19 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
               Resposta Registrada ({invite.confirmed_count} confirmados):
             </span>
 
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-3 py-1 bg-purple-100 text-[#6d44e4] hover:bg-purple-200/80 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer shrink-0"
-            >
-              <Edit2 className="w-3.5 h-3.5" /> <span>Alterar</span>
-            </button>
+            {/* Trava: Convidado CONFIRMADO não pode alterar sozinho no hotsite (Apenas Admin/Aniversariante) */}
+            {invite.status !== 'confirmed' ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-3 py-1 bg-purple-100 text-[#6d44e4] hover:bg-purple-200/80 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer shrink-0"
+              >
+                <Edit2 className="w-3.5 h-3.5" /> <span>Alterar</span>
+              </button>
+            ) : (
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Presença Confirmada
+              </span>
+            )}
           </div>
 
           <div className="divide-y divide-purple-100/80 text-xs">
@@ -244,6 +281,26 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
               </div>
             ))}
           </div>
+
+          {/* Orientação para Confirmados */}
+          {invite.status === 'confirmed' && (
+            <div className="text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-emerald-200/80 shadow-sm flex items-start gap-2.5 mt-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-extrabold text-[#1e152d] block">Presença Registrada com Sucesso!</span>
+                <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                  Sua resposta está salva e contamos com você no evento! Caso ocorra algum imprevisto grave que impeça seu comparecimento, por favor entre em contato direto com a aniversariante ou cerimonial.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Exibição do recado carinhoso enviado ao recusar */}
+          {invite.declined_message && (
+            <div className="text-xs text-rose-700 italic bg-rose-50/60 p-3 rounded-xl border border-rose-100 shadow-sm mt-2">
+              &quot;{invite.declined_message}&quot;
+            </div>
+          )}
 
           {invite.notes && (
             <div className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-purple-100 shadow-sm mt-2">
@@ -343,17 +400,38 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
 
                   {/* Campo de Data se Pediu Prazo */}
                   {guest.status === 'pending_date' && (
-                    <div className="p-3 bg-[#f4effd] rounded-xl border border-purple-200/60 space-y-1.5 animate-fade-in">
-                      <label className="block text-[11px] font-bold text-[#6d44e4]">
-                        Até qual data precisa de prazo para {guest.name}?
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={guest.requested_date ? guest.requested_date.slice(0, 10) : ''}
-                        onChange={(e) => handleGuestChange(index, 'requested_date', e.target.value)}
-                        className="w-full p-2 bg-white border border-purple-300 rounded-lg text-xs font-bold text-[#1e152d]"
-                      />
+                    <div className="p-3.5 bg-[#f4effd] rounded-xl border border-purple-200/60 space-y-2 animate-fade-in">
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#6d44e4] mb-1">
+                          Até qual data precisa de prazo para {guest.name}?
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          max={maxDeadlineDate}
+                          value={guest.requested_date ? guest.requested_date.slice(0, 10) : ''}
+                          onChange={(e) => handleGuestChange(index, 'requested_date', e.target.value)}
+                          className="w-full p-2 bg-white border border-purple-300 rounded-lg text-xs font-bold text-[#1e152d]"
+                        />
+                        {activeDeadline && (
+                          <span className="text-[10px] text-slate-500 block mt-0.5">
+                            * Data limite máxima contratada com o buffet: {formatDateShort(activeDeadline)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#6d44e4] mb-1">
+                          Motivo do pedido de prazo (opcional):
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Aguardando escala de trabalho no hospital"
+                          value={requestedDateReason}
+                          onChange={(e) => setRequestedDateReason(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs text-[#1e152d] focus:ring-1 focus:ring-[#6d44e4] focus:outline-none"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -373,6 +451,22 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                 </div>
               ))}
             </div>
+
+            {/* Recado Carinhoso se Recusar */}
+            {guests.every((g) => g.status === 'declined') && (
+              <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-2 animate-fade-in">
+                <label className="block text-xs font-extrabold text-rose-800">
+                  Uma pena que não poderá vir! Quer deixar um recado carinhoso para a Fernanda?
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Escreva sua mensagem de carinho e felicitações..."
+                  value={declinedMessage}
+                  onChange={(e) => setDeclinedMessage(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-rose-200 rounded-xl text-xs font-medium text-[#1e152d] focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+            )}
 
             {/* Recado para a Aniversariante */}
             <div>

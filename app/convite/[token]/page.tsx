@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { getInviteByToken, getEventConfig, getAllTables, getPersonsForInvite } from '@/lib/db';
+import { getInviteByToken, getEventConfig, getAllTables, getPersonsForInvite, trackInviteOpen } from '@/lib/db';
 import { Invite, EventConfig, Table, EventTheme, Person } from '@/types';
 import { HeaderHero } from '@/components/guest/HeaderHero';
 import { EventLocationCard } from '@/components/guest/EventLocationCard';
@@ -46,6 +46,8 @@ export default function ConvitePage({ params }: ConvitePageProps) {
       if (inviteData) {
         const invitePersons = await getPersonsForInvite(inviteData);
         setAllPersons(invitePersons);
+        // Registra o gatilho silencioso de abertura do hotsite pelo convidado
+        trackInviteOpen(token);
       }
     } catch (err) {
       console.error('Erro ao carregar convite:', err);

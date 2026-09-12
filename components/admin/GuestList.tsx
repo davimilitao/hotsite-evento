@@ -76,7 +76,9 @@ export function GuestList({
   const activeTab = externalActiveTab || internalActiveTab;
   const setActiveTab = externalSetActiveTab || setInternalActiveTab;
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined' | 'unopened_48h' | 'unresponded_24h'
+  >('all');
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
@@ -231,8 +233,68 @@ export function GuestList({
       return deadlineInfo.expired;
     }
 
+    if (statusFilter === 'unopened_48h') {
+      if (!invite || invite.sent_status !== 'sent' || invite.opened_at) return false;
+      const sentTime = invite.sent_at ? new Date(invite.sent_at).getTime() : 0;
+      const hoursSinceSent = (Date.now() - sentTime) / (1000 * 60 * 60);
+      return hoursSinceSent >= 48;
+    }
+
+    if (statusFilter === 'unresponded_24h') {
+      if (!invite || !invite.opened_at || invite.status !== 'pending') return false;
+      const openTime = new Date(invite.opened_at).getTime();
+      const hoursSinceOpened = (Date.now() - openTime) / (1000 * 60 * 60);
+      return hoursSinceOpened >= 24;
+    }
+
     return true;
   });
+
+  const handleAcceptRequestedDate = async (inv: Invite) => {
+    const requestedDateStr = inv.requested_date ? formatDateShort(inv.requested_date) : 'a data solicitada';
+    await saveInvite({
+      ...inv,
+      requested_date_status: 'accepted',
+    });
+
+    const text = encodeURIComponent(
+      `Olá, ${inv.head_name}! Super entendemos! Já deixamos o seu lugar reservado temporariamente até o dia ${requestedDateStr}. Aguardamos ansiosos pela sua confirmação final!`
+    );
+    const targetPhone = formatPhoneE164(inv.phone);
+    if (targetPhone) {
+      window.open(`https://wa.me/${targetPhone}?text=${text}`, '_blank');
+    }
+    onRefresh();
+  };
+
+  const handleRejectRequestedDate = async (inv: Invite) => {
+    const requestedDateStr = inv.requested_date ? formatDateShort(inv.requested_date) : 'a data solicitada';
+    await saveInvite({
+      ...inv,
+      status: 'declined',
+      requested_date_status: 'rejected',
+      confirmed_count: 0,
+    });
+
+    const text = encodeURIComponent(
+      `Olá, ${inv.head_name}! Infelizmente precisamos fechar a lista com o buffet hoje e não conseguiremos aguardar até o dia ${requestedDateStr}. Agradecemos por considerar vir e comemoraremos juntos em breve!`
+    );
+    const targetPhone = formatPhoneE164(inv.phone);
+    if (targetPhone) {
+      window.open(`https://wa.me/${targetPhone}?text=${text}`, '_blank');
+    }
+    onRefresh();
+  };
+
+  const handleReopenConfirmedInvite = async (inv: Invite) => {
+    if (confirm(`Deseja reabrir e liberar a confirmação de ${inv.head_name} para edição?`)) {
+      await saveInvite({
+        ...inv,
+        status: 'pending',
+      });
+      onRefresh();
+    }
+  };
 
   const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status' | 'family') => {
     if (sortField === field) {
@@ -915,6 +977,8 @@ export function GuestList({
             { id: 'uninvited', label: 'Sem Convite' },
             { id: 'confirmed', label: 'Confirmados' },
             { id: 'pending_date', label: 'Pediram Prazo' },
+            { id: 'unopened_48h', label: '⚠️ 48h Sem Abrir' },
+            { id: 'unresponded_24h', label: '👁️ Aberto +24h' },
             { id: 'expired', label: 'Prazo Vencido' },
             { id: 'declined', label: 'Não Poderão Ir' },
           ].map((item) => (
@@ -1437,22 +1501,65 @@ export function GuestList({
 
                         <td className="py-2.5 px-2.5">
                           {invite ? (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                                rsvpStatus === 'confirmed'
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
-                                  : rsvpStatus === 'declined'
-                                  ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300'
-                                  : rsvpStatus === 'pending_date'
-                                  ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
-                                  : 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
-                              }`}
-                            >
-                              {rsvpStatus === 'confirmed' && '🎉 Confirmado'}
-                              {rsvpStatus === 'declined' && '😔 Não Vai'}
-                              {rsvpStatus === 'pending_date' && '🤔 Pediu Prazo'}
-                              {rsvpStatus === 'pending' && '⏳ Pendente'}
-                            </span>
+                            <div className="flex flex-col gap-1 items-start">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                  rsvpStatus === 'confirmed'
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                                    : rsvpStatus === 'declined'
+                                    ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300'
+                                    : rsvpStatus === 'pending_date'
+                                    ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                                    : 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                                }`}
+                              >
+                                {rsvpStatus === 'confirmed' && '🎉 Confirmado'}
+                                {rsvpStatus === 'declined' && '😔 Não Vai'}
+                                {rsvpStatus === 'pending_date' && '🤔 Pediu Prazo'}
+                                {rsvpStatus === 'pending' && '⏳ Pendente'}
+                              </span>
+
+                              {invite.status === 'pending_date' && invite.requested_date && (
+                                <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold">
+                                  Data sol.: {formatDateShort(invite.requested_date)}
+                                </span>
+                              )}
+                              {invite.status === 'pending_date' && invite.requested_date_reason && (
+                                <span className="text-[9px] text-slate-500 max-w-[140px] truncate" title={invite.requested_date_reason}>
+                                  "{invite.requested_date_reason}"
+                                </span>
+                              )}
+                              {invite.status === 'pending_date' && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <button
+                                    onClick={() => handleAcceptRequestedDate(invite)}
+                                    className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[9px] font-extrabold cursor-pointer transition-colors"
+                                    title="Aceitar Prazo e enviar mensagem no WhatsApp"
+                                  >
+                                    Aceitar Prazo
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectRequestedDate(invite)}
+                                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[9px] font-extrabold cursor-pointer transition-colors"
+                                    title="Não é possível aguardar e enviar mensagem no WhatsApp"
+                                  >
+                                    Não Dá
+                                  </button>
+                                </div>
+                              )}
+
+                              {invite.status === 'declined' && invite.declined_message && (
+                                <span className="text-[9px] text-rose-500 italic max-w-[140px] truncate" title={invite.declined_message}>
+                                  "{invite.declined_message}"
+                                </span>
+                              )}
+
+                              {invite.opened_at && (
+                                <span className="text-[9px] text-slate-400 font-medium">
+                                  👁️ {invite.opened_count || 1}x ({formatDateShort(invite.opened_at)})
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-[10px] text-slate-400 italic">Sem Convite</span>
                           )}
@@ -1509,6 +1616,44 @@ export function GuestList({
                                     <ExternalLink className="w-4 h-4 text-blue-500" />
                                     <span>Acessar Hotsite</span>
                                   </a>
+                                )}
+
+                                {invite && (invite.status === 'confirmed' || rsvpStatus === 'confirmed') && (
+                                  <button
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleReopenConfirmedInvite(invite);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Clock className="w-4 h-4 text-amber-500" />
+                                    <span>Reabrir Confirmação</span>
+                                  </button>
+                                )}
+
+                                {invite && invite.status === 'pending_date' && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setOpenDropdownId(null);
+                                        handleAcceptRequestedDate(invite);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                      <span>Aceitar Prazo Solicitado</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setOpenDropdownId(null);
+                                        handleRejectRequestedDate(invite);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <UserX className="w-4 h-4 text-rose-500" />
+                                      <span>Não É Possível Aguardar</span>
+                                    </button>
+                                  </>
                                 )}
 
                                 {person.table_id && (
