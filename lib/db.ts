@@ -21,19 +21,24 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   buffet_capacity: 100, // Limite de 100 vagas no buffet
   child_free_max_age: 5, // Crianças de 0 a 5 anos são isentas no buffet
   child_half_max_age: 11, // Crianças de 6 a 11 anos pagam meia-entrada
-  location_name: 'Buffet Espaço Estupendo',
-  address: 'São Bernardo do Campo - SP',
-  maps_url: 'https://maps.google.com/?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
-  waze_url: 'https://waze.com/ul?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
-  location_website: 'https://espacoestupendo.com.br',
+  location_name: 'Buffet Estupendo',
+  address: 'Rua Giacinto Tognato, 87 - Baeta Neves, São Bernardo do Campo - SP',
+  maps_url: 'https://maps.google.com/?q=Rua+Giacinto+Tognato+87+Baeta+Neves+Sao+Bernardo+do+Campo',
+  waze_url: 'https://waze.com/ul?q=Rua+Giacinto+Tognato+87+Baeta+Neves+Sao+Bernardo+do+Campo',
+  location_website: 'https://buffetestupendo.com.br/',
   location_phone: '11999998888',
   location_video_url: '',
   location_photos: [
-    'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80'
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/espaco-baeta002.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/espaco-baeta004.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/espaco-moinho003.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/espaco-moinho005.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/gastronomia001.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/gastronomia029.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/espaco-baeta021.jpg',
+    'https://buffetestupendo.com.br/wp-content/uploads/2021/03/gastronomia005.jpg'
   ],
-  location_about: 'O Buffet Espaço Estupendo oferece um ambiente refinado, climatizado e com gastronomia de alto padrão. Conta com amplo salão de festas, lounge aconchegante, estacionamento e acessibilidade completa para todos os convidados.',
+  location_about: 'Fundado com a missão de eternizar momentos únicos, o Buffet Estupendo oferece alta gastronomia artesanal e infraestrutura completa no ABC Paulista. Com salão climatizado, iluminação cênica, espaço lounge e equipe especializada, proporciona uma experiência inesquecível para todos os convidados.',
   pix_key: 'fernanda.seppi40@email.com',
   pix_name: 'Fernanda Seppi (Vaquinha da Comemoração)',
   pix_bank: 'Banco Nubank',
