@@ -162,6 +162,19 @@ export function VenueBuffetShowcase({
                 <img
                   src={url}
                   alt={`Foto do Espaço ${idx + 1}`}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // Fallback para imagens elegantes de salão de eventos caso o servidor bloqueie hotlink
+                    const fallbacks = [
+                      'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80',
+                      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=800&q=80',
+                      'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80',
+                      'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&q=80',
+                      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80',
+                      'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80',
+                    ];
+                    (e.target as HTMLImageElement).src = fallbacks[idx % fallbacks.length];
+                  }}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </button>
@@ -198,6 +211,7 @@ export function VenueBuffetShowcase({
             <img
               src={selectedPhoto}
               alt="Ampliação da Foto do Espaço"
+              referrerPolicy="no-referrer"
               className="w-full h-auto max-h-[75vh] object-contain rounded-2xl"
             />
           </div>
