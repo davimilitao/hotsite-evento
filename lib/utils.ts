@@ -48,7 +48,8 @@ export function buildWhatsAppLink(
   headName: string,
   phone: string,
   token: string,
-  customTemplate?: string
+  customTemplate?: string,
+  deadlineIso?: string | null
 ): string {
   const cleanPhone = formatPhoneE164(phone);
   
@@ -57,11 +58,15 @@ export function buildWhatsAppLink(
     : 'https://seusite.com.br';
 
   const inviteUrl = `${siteUrl}/convite/${token}`;
+  const formattedDeadline = deadlineIso ? formatDateShort(deadlineIso) : '25/10/2026';
 
-  const defaultMessage = `Olá ${headName}! Você é nosso(a) convidado(a) especial para celebrar os 40 Anos da Fernanda Seppi! 🌸✨\n\nPor favor, confirme sua presença pelo link exclusivo abaixo:\n👉 ${inviteUrl}\n\nEspero por você!`;
+  const defaultMessage = `Olá ${headName}! Você é nosso(a) convidado(a) especial para celebrar os 40 Anos da Fernanda Seppi! 🌸✨\n\nComo teremos uma comemoração inesquecível e precisamos fechar a lista oficial com o buffet, pedimos com carinho que confirme sua presença até o dia *${formattedDeadline}*!\n\nAcesse seu convite e veja sua mesa reservada pelo link:\n👉 ${inviteUrl}\n\nContamos com a sua confirmação! ❤️`;
   
   const message = customTemplate
-    ? customTemplate.replace('{nome}', headName).replace('{link}', inviteUrl)
+    ? customTemplate
+        .replace('{nome}', headName)
+        .replace('{link}', inviteUrl)
+        .replace('{prazo}', formattedDeadline)
     : defaultMessage;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;

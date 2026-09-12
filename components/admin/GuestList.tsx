@@ -495,7 +495,7 @@ export function GuestList({
       if (dispatchWhatsApp && saved) {
         await markInviteAsSent(saved.id);
         onRefresh();
-        const waUrl = buildWhatsAppLink(saved.head_name, saved.phone, saved.id);
+        const waUrl = buildWhatsAppLink(saved.head_name, saved.phone, saved.id, undefined, saved.individual_deadline || config.deadline_rsvp);
         window.open(waUrl, '_blank');
       }
     } catch (err) {
@@ -539,7 +539,7 @@ export function GuestList({
       await markInviteAsSent(newInvite.id);
       onRefresh();
 
-      const waUrl = buildWhatsAppLink(newInvite.head_name, newInvite.phone, newInvite.id);
+      const waUrl = buildWhatsAppLink(newInvite.head_name, newInvite.phone, newInvite.id, undefined, newInvite.individual_deadline || config.deadline_rsvp);
       window.open(waUrl, '_blank');
     } catch (err) {
       console.error('Erro ao desmembrar e enviar convite individual:', err);
@@ -573,7 +573,7 @@ export function GuestList({
 
     await markInviteAsSent(invite.id);
     onRefresh();
-    const waUrl = buildWhatsAppLink(invite.head_name, invite.phone, invite.id);
+    const waUrl = buildWhatsAppLink(invite.head_name, invite.phone, invite.id, undefined, invite.individual_deadline || config.deadline_rsvp);
     window.open(waUrl, '_blank');
   };
 

@@ -223,14 +223,33 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         )}
       </div>
 
-      {/* MENSAGEM ACOLHEDORA DE BOAS-VINDAS (TEXTO DIRETO NO CARD PRINCIPAL SEM EMBALAGEM REDUNDANTE) */}
-      <div className="space-y-2 pt-1 pb-1">
+      {/* MENSAGEM ACOLHEDORA DE BOAS-VINDAS & PRAZO DESTACADO */}
+      <div className="space-y-3 pt-1 pb-1">
         <h3 className="text-sm sm:text-base font-black text-[#1e152d]">
           {displayGreeting}
         </h3>
         <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
           Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Por favor, informe abaixo se você e sua família poderão comparecer.
         </p>
+
+        {activeDeadline && (
+          <div className="bg-[#f4effd] border border-purple-200/80 p-4 rounded-2xl flex items-start gap-3 text-xs sm:text-sm text-[#1e152d] shadow-sm">
+            <div className="p-2.5 bg-[#6d44e4] text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
+              <CalendarClock className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-extrabold text-[#6d44e4] flex items-center gap-2 flex-wrap">
+                <span>Data Límite de Confirmação:</span>
+                <span className="bg-[#6d44e4] text-white px-2.5 py-0.5 rounded-lg text-xs font-black">
+                  Até {formatDateShort(activeDeadline)}
+                </span>
+              </p>
+              <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                Como teremos uma comemoração inesquecível preparada com muito amor no buffet, pedimos gentilmente que confirme sua presença até o dia <strong>{formatDateShort(activeDeadline)}</strong> para garantirmos a sua vaga na lista oficial!
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODO RESUMO: Exibição Fixa Flat em Linha */}
