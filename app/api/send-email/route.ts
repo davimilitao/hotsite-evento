@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       requestedDate = '',
       requestedDateReason = '',
       eventTitle = 'Fernanda Seppi - 40 Anos',
-      recipientEmail = 'suporte@evento.com.br',
+      recipientEmail = 'militao46@gmail.com',
     } = body;
 
     if (!apiKey) {

@@ -161,7 +161,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
           requestedDate: firstRequestedDate ? formatDateShort(firstRequestedDate) : '',
           requestedDateReason: overallStatus === 'pending_date' ? requestedDateReason : '',
           eventTitle: config.title,
-          recipientEmail: config.support_email || 'suporte@evento.com.br',
+          recipientEmail: config.support_email || 'militao46@gmail.com',
         }),
       }).catch((err) => console.warn('Erro ao disparar e-mail Resend:', err));
 

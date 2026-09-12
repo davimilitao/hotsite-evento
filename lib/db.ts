@@ -47,7 +47,7 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   admin_pin: '4040',
   birthday_person_pin: '1986',
   assessor_pin: '2026',
-  support_email: 'suporte@evento.com.br',
+  support_email: 'militao46@gmail.com',
   support_phone: '11999998888',
   developer_credits: 'Desenvolvido com carinho para Fernanda Seppi',
   theme: {
