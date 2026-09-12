@@ -169,6 +169,11 @@ export interface EventConfig {
   address: string;
   maps_url: string;
   waze_url: string;
+  location_website?: string;      // Site oficial do Buffet/Espaço de Eventos
+  location_phone?: string;        // Telefone/WhatsApp oficial do Buffet
+  location_video_url?: string;    // Link ou ID do Vídeo de Apresentação no YouTube
+  location_photos?: string[];     // Fotos do Buffet para a galeria do Hotsite
+  location_about?: string;        // Texto "Sobre o Buffet / Estrutura do Espaço"
   pix_key: string;
   pix_name?: string;
   pix_bank?: string;

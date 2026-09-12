@@ -23,6 +23,9 @@ import {
   Database,
   Mail,
   Phone,
+  Building2,
+  Play,
+  Globe,
 } from 'lucide-react';
 
 interface SettingsFormProps {
@@ -303,6 +306,134 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
               onChange={(e) => setFormData({ ...formData, developer_credits: e.target.value })}
               placeholder="Desenvolvido com carinho para Fernanda Seppi"
               className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SEÇÃO DE CONFIGURAÇÃO DO BUFFET / LOCAL DO EVENTO (HOTSITE NO HOTSITE) */}
+      <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-5 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-500/20 text-indigo-400 rounded-2xl border border-indigo-500/30">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              Vitrine do Buffet & Local do Evento ("Hotsite no Hotsite")
+            </h3>
+            <p className="text-xs text-slate-400">
+              Cadastre as informações do Buffet para apresentar aos convidados na aba &quot;Local &amp; Mesa&quot;.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {/* Nome do Espaço */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Nome Oficial do Buffet / Espaço
+            </label>
+            <input
+              type="text"
+              value={formData.location_name || ''}
+              onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
+              placeholder="Buffet Espaço Estupendo"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Endereço Completo */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Endereço Completo (Bairro, Cidade - UF)
+            </label>
+            <input
+              type="text"
+              value={formData.address || ''}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              placeholder="Rua Exemplo, 123 - São Bernardo do Campo - SP"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Site Oficial do Buffet */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Site Oficial do Buffet (URL)
+            </label>
+            <input
+              type="url"
+              value={formData.location_website || ''}
+              onChange={(e) => setFormData({ ...formData, location_website: e.target.value })}
+              placeholder="https://espacoestupendo.com.br"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Telefone/WhatsApp do Buffet */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Telefone / WhatsApp do Buffet
+            </label>
+            <input
+              type="text"
+              value={formData.location_phone || ''}
+              onChange={(e) => setFormData({ ...formData, location_phone: e.target.value.replace(/\D/g, '') })}
+              placeholder="11999998888"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Link do Vídeo no YouTube */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Vídeo de Apresentação no YouTube (Link Completo ou ID)
+            </label>
+            <input
+              type="text"
+              value={formData.location_video_url || ''}
+              onChange={(e) => setFormData({ ...formData, location_video_url: e.target.value })}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500">
+              O vídeo será incorporado responsivamente no topo da aba &quot;Local &amp; Mesa&quot; dos convidados.
+            </p>
+          </div>
+
+          {/* Sobre o Buffet / Descrição */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Descrição do Espaço / Sobre o Buffet
+            </label>
+            <textarea
+              rows={3}
+              value={formData.location_about || ''}
+              onChange={(e) => setFormData({ ...formData, location_about: e.target.value })}
+              placeholder="Descreva a infraestrutura, diferenciais, estacionamento e acessibilidade do espaço..."
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Links das Fotos da Galeria */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2 sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-200">
+              URLs das Fotos da Galeria do Buffet (Uma por linha ou separadas por vírgula)
+            </label>
+            <textarea
+              rows={3}
+              value={(formData.location_photos || []).join('\n')}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  location_photos: e.target.value
+                    .split(/[\n,]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder="https://images.unsplash.com/photo-1519167758481-83f550bb49b3&#10;https://images.unsplash.com/photo-1464366400600-7168b8af9bc3"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono text-indigo-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
         </div>

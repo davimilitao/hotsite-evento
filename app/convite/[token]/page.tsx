@@ -11,7 +11,8 @@ import { GiftSection } from '@/components/guest/GiftSection';
 import { MobileBottomNav, ActiveTabType } from '@/components/guest/MobileBottomNav';
 import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
 import { Footer } from '@/components/guest/Footer';
-import { HowItWorksAccordion } from '@/components/guest/HowItWorksAccordion';
+import { VenueBuffetShowcase } from '@/components/guest/VenueBuffetShowcase';
+import { HelpTab } from '@/components/guest/HelpTab';
 import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2, MessageCircle } from 'lucide-react';
 
 interface ConvitePageProps {
@@ -147,11 +148,13 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         {/* CONDICIONAL: MÓDULO CONVITE DIGITAL ATIVADO (COMPLETO) VS MODO RSVP PURO (DESATIVADO) */}
         {isFullDigitalInviteEnabled ? (
           <>
-            {/* Header Hero com Arte Impressa ou Card Customizado */}
-            <HeaderHero config={config} invite={invite} />
+            {/* Header Hero com Arte Impressa ou Card Customizado (EXIBIDO APENAS NA ABA RSVP & CONVITE) */}
+            {activeTab === 'rsvp' && (
+              <HeaderHero config={config} invite={invite} />
+            )}
 
             {/* Visualização por Abas no Mobile / Visão Completa no Desktop */}
-            <div className="px-4 space-y-6">
+            <div className="px-4 space-y-6 pt-4">
               {/* ABA 1: RSVP & Formulário */}
               <div className={`${activeTab === 'rsvp' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
                 <RSVPForm
@@ -163,15 +166,24 @@ export default function ConvitePage({ params }: ConvitePageProps) {
                 />
               </div>
 
-              {/* ABA 2: Assento Reservado & Localização */}
+              {/* ABA 2: Local & Vitrine do Buffet & Assento Reservado */}
               <div className={`${activeTab === 'location' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
-                <SeatCard invite={invite} tables={tables} />
-                <EventLocationCard config={config} />
+                <VenueBuffetShowcase
+                  config={config}
+                  invite={invite}
+                  tables={tables}
+                  persons={allPersons}
+                />
               </div>
 
               {/* ABA 3: Guia de Presentes & Pix */}
               <div className={`${activeTab === 'gifts' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
                 <GiftSection config={config} />
+              </div>
+
+              {/* ABA 4: Central de Ajuda & Suporte */}
+              <div className={`${activeTab === 'ajuda' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
+                <HelpTab config={config} invite={invite} />
               </div>
             </div>
           </>
@@ -208,11 +220,6 @@ export default function ConvitePage({ params }: ConvitePageProps) {
             )}
           </div>
         )}
-
-        {/* Sanfona explicativa 'Como Funciona' */}
-        <div className="px-4">
-          <HowItWorksAccordion />
-        </div>
 
         {/* Rodapé Configurável */}
         <Footer config={config} />

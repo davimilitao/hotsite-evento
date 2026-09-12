@@ -25,6 +25,15 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
   address: 'São Bernardo do Campo - SP',
   maps_url: 'https://maps.google.com/?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
   waze_url: 'https://waze.com/ul?q=Buffet+Espaco+Estupendo+Sao+Bernardo+do+Campo',
+  location_website: 'https://espacoestupendo.com.br',
+  location_phone: '11999998888',
+  location_video_url: '',
+  location_photos: [
+    'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80'
+  ],
+  location_about: 'O Buffet Espaço Estupendo oferece um ambiente refinado, climatizado e com gastronomia de alto padrão. Conta com amplo salão de festas, lounge aconchegante, estacionamento e acessibilidade completa para todos os convidados.',
   pix_key: 'fernanda.seppi40@email.com',
   pix_name: 'Fernanda Seppi (Vaquinha da Comemoração)',
   pix_bank: 'Banco Nubank',
