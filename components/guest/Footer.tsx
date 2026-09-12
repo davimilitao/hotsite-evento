@@ -2,14 +2,15 @@
 
 import React from 'react';
 import { EventConfig } from '@/types';
-import { Mail, MessageCircle, Heart, ShieldCheck } from 'lucide-react';
+import { Mail, MessageCircle, Heart, ShieldCheck, Lock } from 'lucide-react';
 
 interface FooterProps {
   config?: EventConfig;
+  onOpenTerms?: () => void;
 }
 
-export function Footer({ config }: FooterProps) {
-  const supportEmail = config?.support_email || 'suporte@evento.com.br';
+export function Footer({ config, onOpenTerms }: FooterProps) {
+  const supportEmail = config?.support_email || 'militao46@gmail.com';
   const supportPhone = config?.support_phone || '';
   const developerCredits = config?.developer_credits || 'Desenvolvido com carinho para Fernanda Seppi';
 
@@ -58,14 +59,25 @@ export function Footer({ config }: FooterProps) {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-purple-100 text-[11px] text-slate-400 space-y-1">
+      <div className="pt-4 border-t border-purple-100 text-[11px] text-slate-400 space-y-1.5">
         <p className="flex items-center justify-center gap-1">
           <span>{developerCredits}</span>
           <Heart className="w-3 h-3 text-rose-500 fill-rose-500/30" />
         </p>
-        <p className="text-[10px] text-slate-400/80">
-          Fernanda Seppi - 40 Anos Inesquecíveis © 2026
-        </p>
+
+        <div className="flex items-center justify-center gap-3 text-[10px] text-slate-400 font-medium">
+          <span>Fernanda Seppi - 40 Anos © 2026</span>
+          <span>•</span>
+          {onOpenTerms && (
+            <button
+              onClick={onOpenTerms}
+              className="hover:text-purple-600 underline transition-colors cursor-pointer inline-flex items-center gap-1"
+            >
+              <Lock className="w-3 h-3 text-emerald-500" />
+              <span>Termos de Uso & LGPD</span>
+            </button>
+          )}
+        </div>
       </div>
     </footer>
   );

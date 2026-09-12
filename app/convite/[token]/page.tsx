@@ -13,6 +13,8 @@ import { RSVPFeedbackModal } from '@/components/guest/RSVPFeedbackModal';
 import { Footer } from '@/components/guest/Footer';
 import { VenueBuffetShowcase } from '@/components/guest/VenueBuffetShowcase';
 import { HelpTab } from '@/components/guest/HelpTab';
+import { LGPDCookieBanner } from '@/components/ui/LGPDCookieBanner';
+import { PrivacyTermsModal } from '@/components/ui/PrivacyTermsModal';
 import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2, MessageCircle } from 'lucide-react';
 
 interface ConvitePageProps {
@@ -29,6 +31,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTabType>('rsvp');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -224,7 +227,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         )}
 
         {/* Rodapé Configurável */}
-        <Footer config={config} />
+        <Footer config={config} onOpenTerms={() => setIsTermsModalOpen(true)} />
       </div>
 
       {/* Barra de Navegação Flutuante Inferior para Mobile (Apenas quando Convite estiver Ativado) */}
@@ -243,6 +246,16 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         invite={invite}
         assignedTable={assignedTable}
         onGoToLocation={() => setActiveTab('location')}
+      />
+
+      {/* Banner de Consentimento de Cookies LGPD */}
+      <LGPDCookieBanner onOpenTerms={() => setIsTermsModalOpen(true)} />
+
+      {/* Modal de Termos de Uso & Política de Privacidade LGPD */}
+      <PrivacyTermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+        birthdayPersonName={config.birthday_person || 'Fernanda Seppi'}
       />
     </main>
   );
