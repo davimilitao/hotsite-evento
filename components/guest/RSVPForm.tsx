@@ -162,6 +162,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
           requestedDateReason: overallStatus === 'pending_date' ? requestedDateReason : '',
           eventTitle: config.title,
           recipientEmail: config.support_email || 'militao46@gmail.com',
+          ccEmail: config.admin_cc_email || '',
         }),
       }).catch((err) => console.warn('Erro ao disparar e-mail Resend:', err));
 

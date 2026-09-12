@@ -18,6 +18,7 @@ export async function POST(req: Request) {
       requestedDateReason = '',
       eventTitle = 'Fernanda Seppi - 40 Anos',
       recipientEmail = 'militao46@gmail.com',
+      ccEmail = '',
     } = body;
 
     if (!apiKey) {
@@ -161,12 +162,18 @@ export async function POST(req: Request) {
       </html>
     `;
 
-    const data = await resend.emails.send({
+    const emailOptions: any = {
       from: 'Fernanda Seppi 40 Anos <notificacoes@cachorrosalsicha.com.br>',
       to: [recipientEmail],
       subject: subject,
       html: htmlContent,
-    });
+    };
+
+    if (ccEmail && ccEmail.trim() && ccEmail.trim().toLowerCase() !== recipientEmail.trim().toLowerCase()) {
+      emailOptions.cc = [ccEmail.trim()];
+    }
+
+    const data = await resend.emails.send(emailOptions);
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {

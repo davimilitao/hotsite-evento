@@ -253,7 +253,7 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
         </div>
       </div>
 
-      {/* SEÇÃO DE CONTATOS DE SUPORTE & RODAPÉ DO HOTSITE */}
+      {/* SEÇÃO DE CONTATOS DE SUPORTE & NOTIFICAÇÕES DE E-MAIL */}
       <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30">
@@ -261,31 +261,46 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-              Suporte & Rodapé do Hotsite
+              Notificações por E-mail & Suporte
             </h3>
             <p className="text-xs text-slate-400">
-              Informações de contato e créditos exibidos no rodapé do hotsite do convidado.
+              Configure para onde os e-mails de confirmação de presença (RSVP) serão entregues em tempo real.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
           <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
             <label className="block text-xs font-bold text-slate-200">
-              E-mail de Suporte
+              E-mail da Aniversariante / Host
             </label>
             <input
               type="email"
               value={formData.support_email || ''}
               onChange={(e) => setFormData({ ...formData, support_email: e.target.value })}
-              placeholder="suporte@evento.com.br"
+              placeholder="militao46@gmail.com"
               className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
+            <p className="text-[10px] text-slate-500">Recebe os avisos das confirmações.</p>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
             <label className="block text-xs font-bold text-slate-200">
-              WhatsApp de Suporte (Com DDD)
+              E-mail do Admin (Cópia CC)
+            </label>
+            <input
+              type="email"
+              value={formData.admin_cc_email || ''}
+              onChange={(e) => setFormData({ ...formData, admin_cc_email: e.target.value })}
+              placeholder="admin@produtora.com.br"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-purple-300 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500">Cópia para gestão SaaS do evento.</p>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              WhatsApp de Suporte (DDD)
             </label>
             <input
               type="text"
@@ -294,11 +309,12 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
               placeholder="11999998888"
               className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
+            <p className="text-[10px] text-slate-500">Exibido no rodapé do hotsite.</p>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
             <label className="block text-xs font-bold text-slate-200">
-              Assinatura / Créditos do Desenvolvedor
+              Assinatura / Créditos
             </label>
             <input
               type="text"
@@ -307,6 +323,7 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
               placeholder="Desenvolvido com carinho para Fernanda Seppi"
               className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
+            <p className="text-[10px] text-slate-500">Rodapé de direitos do produtor.</p>
           </div>
         </div>
       </div>
