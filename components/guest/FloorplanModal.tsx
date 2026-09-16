@@ -91,38 +91,6 @@ export function FloorplanModal({
 
         {/* Conteúdo Principal do Modal (Scrollable) */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 scroll-smooth">
-          {/* Banner de Reserva do Convidado */}
-          {currentAssignedTable ? (
-            <div className="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 p-4 rounded-2xl flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="relative flex items-center justify-center">
-                  <span className="w-3.5 h-3.5 bg-amber-400 rounded-full animate-ping absolute opacity-75" />
-                  <span className="w-3 h-3 bg-amber-400 rounded-full relative" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Sua Mesa Reservada
-                  </span>
-                  <h4 className="text-base font-extrabold text-white">{currentAssignedTable.name}</h4>
-                  {currentAssignedTable.description && (
-                    <p className="text-xs text-amber-200/80">{currentAssignedTable.description}</p>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => handleSelectTable(currentAssignedTable)}
-                className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
-              >
-                Ver no Mapa
-              </button>
-            </div>
-          ) : (
-            <div className="bg-slate-800/60 border border-slate-700/60 p-3.5 rounded-2xl flex items-center gap-2 text-xs text-slate-300">
-              <Info className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Sua mesa será atribuída em breve pelo anfitrião do evento. Explore o mapa abaixo!</span>
-            </div>
-          )}
-
           {/* CONTAINER DA PLANTA BAIXA COM IMAGEM DO SALÃO + HOTSPOTS INTERATIVOS */}
           <div ref={mapContainerRef} className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 group">
             {/* Imagem de Fundo da Planta Baixa Real do Salão */}
