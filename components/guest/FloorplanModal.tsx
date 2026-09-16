@@ -131,7 +131,7 @@ export function FloorplanModal({
           <div ref={mapContainerRef} className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 group">
             {/* Imagem de Fundo da Planta Baixa Real do Salão */}
             <img
-              src="/salao-planta-baixa.jpg"
+              src="/salao-planta-baixa.jpg?v=20260916"
               alt="Planta Baixa Interativa do Salão - Buffet Espaço Estupendo"
               className="w-full h-auto object-cover select-none"
             />

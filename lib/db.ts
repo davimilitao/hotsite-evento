@@ -1309,18 +1309,26 @@ export async function splitCompanionToIndividualInvite(
 }
 
 export async function getAllTables(): Promise<Table[]> {
+  let list: Table[] = [];
   if (isFirebaseConfigured) {
     try {
       const snap = await getDocs(collection(db, 'tables'));
       if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Table));
+        list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Table));
       }
     } catch (err) {
       console.warn('Erro ao buscar mesas no Firestore:', err);
     }
   }
 
-  return getLS<Table[]>(LS_KEYS.TABLES, INITIAL_TABLES);
+  if (list.length === 0) {
+    list = getLS<Table[]>(LS_KEYS.TABLES, INITIAL_TABLES);
+  }
+
+  return list.map((t, idx) => ({
+    ...t,
+    position: getTablePosition(t, idx),
+  }));
 }
 
 export async function saveTable(table: Partial<Table> & { id?: string }): Promise<Table> {

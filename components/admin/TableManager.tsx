@@ -241,7 +241,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
             {/* Imagem do Salão com Overlays das Mesas */}
             <div ref={mapRef} className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
               <img
-                src="/salao-planta-baixa.jpg"
+                src="/salao-planta-baixa.jpg?v=20260916"
                 alt="Planta Baixa Interativa do Salão"
                 className="w-full h-auto object-cover select-none"
               />
