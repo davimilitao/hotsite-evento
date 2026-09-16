@@ -246,16 +246,16 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
 
           let Icon = Camera;
           let badgeColor = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-          let badgeLabel = 'Foto 📸';
+          let badgeLabel = 'Foto';
 
           if (camp.type === 'video') {
             Icon = Video;
             badgeColor = 'bg-pink-500/20 text-pink-300 border-pink-500/30';
-            badgeLabel = 'Vídeo 🎥';
+            badgeLabel = 'Vídeo';
           } else if (camp.type === 'text') {
             Icon = MessageSquareText;
             badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-            badgeLabel = 'Recado ✍️';
+            badgeLabel = 'Recado';
           }
 
           return (
@@ -382,9 +382,9 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
                 <label className="block text-xs font-black text-slate-300 mb-1">Tipo de Mídia *</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'photo', label: 'Foto 📸', icon: Camera },
-                    { id: 'video', label: 'Vídeo 🎥', icon: Video },
-                    { id: 'text', label: 'Recado ✍️', icon: MessageSquareText },
+                    { id: 'photo', label: 'Foto', icon: Camera },
+                    { id: 'video', label: 'Vídeo', icon: Video },
+                    { id: 'text', label: 'Recado', icon: MessageSquareText },
                   ].map((t) => {
                     const isSelected = formType === t.id;
                     return (

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Invite, Table } from '@/types';
 import { formatDateShort } from '@/lib/utils';
-import { CheckCircle2, XCircle, Armchair, Navigation, X, CalendarClock } from 'lucide-react';
+import { CheckCircle2, XCircle, Armchair, Navigation, X, CalendarClock, MessageCircle } from 'lucide-react';
 
 interface RSVPFeedbackModalProps {
   isOpen: boolean;
@@ -115,7 +115,8 @@ export function RSVPFeedbackModal({
                 rel="noopener noreferrer"
                 className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 border border-emerald-400/40"
               >
-                <span>💬 Entrar no Grupo VIP da Festa no WhatsApp</span>
+                <MessageCircle className="w-4 h-4 text-emerald-200" />
+                <span>Entrar no Grupo VIP da Festa no WhatsApp</span>
               </a>
             )}
           </div>

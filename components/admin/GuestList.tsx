@@ -945,7 +945,7 @@ export function GuestList({
                     }`}
                   >
                     <Sparkles className="w-4 h-4 text-purple-900 dark:text-purple-300" />
-                    <span>🧹 Normalizar Base</span>
+                    <span>Normalizar Base</span>
                     {incompleteCount > 0 ? (
                       <span className="bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded-full text-[10px] font-black">
                         {incompleteCount}
@@ -1034,8 +1034,8 @@ export function GuestList({
             { id: 'uninvited', label: 'Sem Convite' },
             { id: 'confirmed', label: 'Confirmados' },
             { id: 'pending_date', label: 'Pediram Prazo' },
-            { id: 'unopened_48h', label: '⚠️ 48h Sem Abrir' },
-            { id: 'unresponded_24h', label: '👁️ Aberto +24h' },
+            { id: 'unopened_48h', label: '48h Sem Abrir' },
+            { id: 'unresponded_24h', label: 'Aberto +24h' },
             { id: 'expired', label: 'Prazo Vencido' },
             { id: 'declined', label: 'Não Poderão Ir' },
           ].map((item) => (

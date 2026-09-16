@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EventConfig, Invite, EventTheme } from '@/types';
-import { Calendar, MapPin, Sparkles, CalendarPlus, ZoomIn } from 'lucide-react';
+import { Calendar, MapPin, Sparkles, CalendarPlus, ZoomIn, MessageCircle } from 'lucide-react';
 import { getGoogleCalendarUrl } from '@/lib/utils';
 import { ImageLightboxModal } from './ImageLightboxModal';
 
@@ -172,7 +172,8 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
               >
-                <span>💬 Grupo VIP no WhatsApp</span>
+                <MessageCircle className="w-4 h-4 text-emerald-200" />
+                <span>Grupo VIP no WhatsApp</span>
               </a>
             )}
           </div>
