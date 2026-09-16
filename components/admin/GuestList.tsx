@@ -966,7 +966,7 @@ export function GuestList({
                 }}
                 className="min-h-[42px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
-                <UserPlus className="w-4 h-4 text-emerald-100" /> <span>+ Cadastrar Convidado</span>
+                <UserPlus className="w-4 h-4 text-emerald-100" /> <span>Cadastrar Convidado</span>
               </button>
 
               <button

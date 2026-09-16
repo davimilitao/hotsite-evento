@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Invite, SurpriseCampaign, CampaignType } from '@/types';
+import { Invite, Person, Table, EventConfig, SurpriseCampaign, CampaignType } from '@/types';
 import { saveInvite, getAllSurpriseCampaigns, saveSurpriseCampaign, deleteSurpriseCampaign } from '@/lib/db';
 import { buildSurprisePhotoLink, buildSurpriseVideoLink, buildSurpriseTextLink, exportContactsToVCF, formatPhoneE164 } from '@/lib/utils';
 import {
@@ -26,14 +26,21 @@ import {
   ArrowRight,
   Zap,
   HelpCircle,
+  ShieldAlert,
+  Users,
+  MessageCircle,
+  UserCheck,
 } from 'lucide-react';
 
 interface SurpriseDashboardProps {
   invites: Invite[];
+  persons?: Person[];
+  tables?: Table[];
+  config?: EventConfig;
   onRefresh: () => void;
 }
 
-export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps) {
+export function SurpriseDashboard({ invites, persons = [], tables = [], config, onRefresh }: SurpriseDashboardProps) {
   // Lista de Campanhas Surpresa Dinâmicas
   const [campaigns, setCampaigns] = useState<SurpriseCampaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
@@ -45,7 +52,7 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
 
   // Busca e Filtros dentro do Modal de Disparo
   const [modalSearchTerm, setModalSearchTerm] = useState('');
-  const [modalStatusFilter, setModalStatusFilter] = useState<'all' | 'pending' | 'received'>('all');
+  const [modalStatusFilter, setModalStatusFilter] = useState<'all' | 'unlocked' | 'locked' | 'received'>('all');
 
   // Campos do Formulário de Criação/Edição de Campanha
   const [formTitle, setFormTitle] = useState('');
@@ -71,8 +78,35 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
     loadCampaigns();
   }, []);
 
-  // Convites confirmados
-  const confirmedInvites = invites.filter((i) => i.status === 'confirmed');
+  // FILTRAGEM & CLASSIFICAÇÃO DOS CONVIDADOS EM 3 ESTADOS (Desbloqueados, Bloqueados/Spoiler, Ocultos)
+  // Exclui completamente quem recusou o convite ('declined')
+  const nonDeclinedInvites = invites.filter((i) => i.status !== 'declined');
+
+  const getGuestEligibility = (invite: Invite) => {
+    const isConfirmed = invite.status === 'confirmed';
+    const isSeated = Boolean(invite.table_id);
+
+    if (isConfirmed && isSeated) {
+      return {
+        status: 'unlocked' as const,
+        label: 'Desbloqueado / Pronto',
+        reason: 'Presença confirmada e mesa atribuída',
+      };
+    }
+
+    let reason = 'Aguardando Confirmação de Presença';
+    if (isConfirmed && !isSeated) {
+      reason = 'Aguardando Atribuição de Mesa na Planta';
+    } else if (invite.status === 'pending_date') {
+      reason = 'Pediu Prazo (Reserva Temporária)';
+    }
+
+    return {
+      status: 'locked' as const,
+      label: 'Bloqueado (Spoiler)',
+      reason,
+    };
+  };
 
   // Handlers do Formulário de Campanha (Criar / Editar)
   const handleOpenCreateForm = () => {
@@ -160,6 +194,25 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
     window.open(waUrl, '_blank');
   };
 
+  // Disparo para o Grupo VIP do WhatsApp
+  const handleDispatchToVipGroup = (campaign: SurpriseCampaign) => {
+    if (config?.whatsapp_group_link) {
+      window.open(config.whatsapp_group_link, '_blank');
+    } else {
+      alert('O link do Grupo VIP do WhatsApp ainda não foi cadastrado em Configurações.');
+    }
+  };
+
+  // Disparo para o WhatsApp da Cerimonialista / Suporte
+  const handleDispatchToCeremonialist = (campaign: SurpriseCampaign) => {
+    const targetPhone = config?.location_phone || config?.support_phone || '11999998888';
+    const cleanPhone = formatPhoneE164(targetPhone);
+    const text = encodeURIComponent(
+      `[TEMPLATE CERIMONIAL - ${campaign.title}]\n\n${campaign.message_template}`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
+  };
+
   const handleToggleMediaStatus = async (invite: Invite, type: CampaignType) => {
     if (type === 'photo') {
       await saveInvite({ ...invite, surprise_photo_sent: !invite.surprise_photo_sent });
@@ -171,26 +224,20 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
     onRefresh();
   };
 
-  const handleSaveSurpriseTextNote = async (invite: Invite, textNote: string) => {
-    await saveInvite({
-      ...invite,
-      surprise_message: textNote,
-      surprise_text_sent: !!textNote,
-    });
-    onRefresh();
-  };
-
   // Filtragem no Modal de Disparo
   const modalFilteredInvites = activeCampaignModal
-    ? confirmedInvites.filter((inv) => {
+    ? nonDeclinedInvites.filter((inv) => {
         const matchesSearch =
           inv.head_name.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
           inv.phone.includes(modalSearchTerm);
 
         if (!matchesSearch) return false;
 
+        const eligibility = getGuestEligibility(inv);
         const isReceived = getCampaignStatusForInvite(inv, activeCampaignModal.type);
-        if (modalStatusFilter === 'pending') return !isReceived;
+
+        if (modalStatusFilter === 'unlocked') return eligibility.status === 'unlocked' && !isReceived;
+        if (modalStatusFilter === 'locked') return eligibility.status === 'locked';
         if (modalStatusFilter === 'received') return isReceived;
 
         return true;
@@ -198,7 +245,11 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
     : [];
 
   const nextPendingGuestInQueue = activeCampaignModal
-    ? modalFilteredInvites.find((inv) => !getCampaignStatusForInvite(inv, activeCampaignModal.type))
+    ? modalFilteredInvites.find((inv) => {
+        const eligibility = getGuestEligibility(inv);
+        const isReceived = getCampaignStatusForInvite(inv, activeCampaignModal.type);
+        return eligibility.status === 'unlocked' && !isReceived;
+      })
     : null;
 
   return (
@@ -207,20 +258,20 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
       <div className="bg-gradient-to-r from-pink-950 via-purple-950 to-slate-900 border border-pink-500/40 p-5 sm:p-6 rounded-3xl text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full text-xs font-extrabold border border-pink-500/30">
-            <Lock className="w-3.5 h-3.5 text-pink-400" /> SEGREDO DA FESTA • Visível apenas para Assessor & Admin
+            <Lock className="w-3.5 h-3.5 text-pink-400" /> SEGREDO DA FESTA • Painel do Cerimonial & Assessoria
           </div>
           <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2 font-serif">
-            Hub de Campanhas da Homenagem Surpresa <Sparkles className="w-5 h-5 text-amber-400" />
+            Hub de Campanhas Surpresa <Sparkles className="w-5 h-5 text-amber-400" />
           </h2>
           <p className="text-xs text-pink-100 max-w-xl leading-relaxed">
-            Crie e gerencie múltiplas campanhas personalizadas para coletar fotos, vídeos e mensagens dos convidados confirmados.
+            Visão unificada das campanhas com status de liberação automático (Elegíveis com mesa alocada vs Spoiler/Bloqueados).
           </p>
         </div>
 
         {/* Botão de Criar Nova Campanha & Baixar VCF */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
-            onClick={() => exportContactsToVCF(confirmedInvites)}
+            onClick={() => exportContactsToVCF(invites.filter((i) => i.status === 'confirmed'))}
             className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-2xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-2"
             title="Exportar contatos dos confirmados para arquivo VCF"
           >
@@ -233,7 +284,7 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
             className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-2xl text-xs font-black shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 border border-pink-400/40"
           >
             <Plus className="w-4 h-4 text-amber-300" />
-            <span>+ Criar Nova Campanha</span>
+            <span>Criar Nova Campanha</span>
           </button>
         </div>
       </div>
@@ -241,8 +292,10 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
       {/* Grid de Cards das Campanhas Criadas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {campaigns.map((camp) => {
-          const receivedCount = confirmedInvites.filter((i) => getCampaignStatusForInvite(i, camp.type)).length;
-          const pendingCount = Math.max(0, confirmedInvites.length - receivedCount);
+          const unlockedInvites = nonDeclinedInvites.filter((i) => getGuestEligibility(i).status === 'unlocked');
+          const lockedInvites = nonDeclinedInvites.filter((i) => getGuestEligibility(i).status === 'locked');
+          const receivedCount = nonDeclinedInvites.filter((i) => getCampaignStatusForInvite(i, camp.type)).length;
+          const pendingUnlockedCount = unlockedInvites.filter((i) => !getCampaignStatusForInvite(i, camp.type)).length;
 
           let Icon = Camera;
           let badgeColor = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
@@ -310,20 +363,34 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
                 </div>
               </div>
 
-              {/* Métricas e Progresso */}
-              <div className="space-y-2 pt-3 border-t border-slate-800/80">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-400">Respostas Recebidas:</span>
+              {/* Status de Liberação & Métricas */}
+              <div className="space-y-2 pt-3 border-t border-slate-800/80 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Desbloqueados (Prontos):
+                  </span>
+                  <span className="font-black text-emerald-400">{unlockedInvites.length}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-amber-400" /> Bloqueados (Spoiler):
+                  </span>
+                  <span className="font-extrabold text-amber-400">{lockedInvites.length}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 font-bold">
+                  <span className="text-slate-300">Respostas Coletadas:</span>
                   <span className="text-white font-black">
-                    {receivedCount} <span className="text-slate-500">/ {confirmedInvites.length} confirmados</span>
+                    {receivedCount} <span className="text-slate-500">/ {unlockedInvites.length} libertos</span>
                   </span>
                 </div>
 
-                <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 mt-1">
                   <div
                     className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-300"
                     style={{
-                      width: `${confirmedInvites.length > 0 ? (receivedCount / confirmedInvites.length) * 100 : 0}%`,
+                      width: `${unlockedInvites.length > 0 ? (receivedCount / unlockedInvites.length) * 100 : 0}%`,
                     }}
                   />
                 </div>
@@ -339,7 +406,7 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
                 className="w-full min-h-[42px] px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
               >
                 <Send className="w-4 h-4 text-amber-300" />
-                <span>Gerenciar & Disparar ({pendingCount} Pendentes)</span>
+                <span>Gerenciar Fila ({pendingUnlockedCount} Elegíveis)</span>
               </button>
             </div>
           );
@@ -472,7 +539,7 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
         </div>
       )}
 
-      {/* MODAL DE DISPARO DA CAMPANHA SELECIONADA */}
+      {/* MODAL DE DISPARO & FILA DO CERIMONIAL */}
       {activeCampaignModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-3xl w-full space-y-5 shadow-2xl my-8">
@@ -493,12 +560,31 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
               </button>
             </div>
 
-            {/* Fila Rápida de Disparo */}
+            {/* BARRA DE CANAIS DE DISPARO (GRUPO VIP & CERIMONIAL) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-950 rounded-2xl border border-slate-800">
+              <button
+                onClick={() => handleDispatchToVipGroup(activeCampaignModal)}
+                className="px-3.5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <span>Disparar no Grupo VIP do WhatsApp</span>
+              </button>
+
+              <button
+                onClick={() => handleDispatchToCeremonialist(activeCampaignModal)}
+                className="px-3.5 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <UserCheck className="w-4 h-4 text-purple-400" />
+                <span>Enviar Template para Celular da Assessora</span>
+              </button>
+            </div>
+
+            {/* Fila Rápida de Disparo Individual */}
             {nextPendingGuestInQueue && (
               <div className="bg-gradient-to-r from-purple-950/60 to-pink-950/60 border border-purple-500/40 p-4 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="space-y-1">
                   <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5 fill-amber-400" /> Próximo da Fila Pendente:
+                    <Zap className="w-3.5 h-3.5 fill-amber-400" /> Próximo Desbloqueado da Fila:
                   </span>
                   <h4 className="text-sm font-black text-white">{nextPendingGuestInQueue.head_name}</h4>
                   <p className="text-[11px] text-slate-400">{nextPendingGuestInQueue.phone}</p>
@@ -527,16 +613,17 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
                 />
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
                 {[
                   { id: 'all', label: 'Todos' },
-                  { id: 'pending', label: 'Pendentes' },
-                  { id: 'received', label: 'Recebidos' },
+                  { id: 'unlocked', label: '🟢 Desbloqueados' },
+                  { id: 'locked', label: '🔒 Spoiler (Bloqueados)' },
+                  { id: 'received', label: '✓ Recebidos' },
                 ].map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setModalStatusFilter(f.id as any)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-extrabold cursor-pointer transition-all whitespace-nowrap ${
                       modalStatusFilter === f.id
                         ? 'bg-purple-600 text-white shadow-md'
                         : 'bg-slate-950 text-slate-400 hover:bg-slate-800 border border-slate-800'
@@ -548,7 +635,7 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
               </div>
             </div>
 
-            {/* Tabela de Convidados Elegíveis */}
+            {/* Tabela de Convidados com Status de Liberação */}
             <div className="max-h-80 overflow-y-auto border border-slate-800 rounded-2xl divide-y divide-slate-800/80">
               {modalFilteredInvites.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
@@ -556,13 +643,29 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
                 </div>
               ) : (
                 modalFilteredInvites.map((inv) => {
+                  const eligibility = getGuestEligibility(inv);
                   const isReceived = getCampaignStatusForInvite(inv, activeCampaignModal.type);
+                  const isUnlocked = eligibility.status === 'unlocked';
 
                   return (
                     <div key={inv.id} className="p-3 hover:bg-slate-850 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-black text-white truncate">{inv.head_name}</h5>
-                        <p className="text-[11px] text-slate-400 truncate">{inv.phone}</p>
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h5 className="text-xs font-black text-white truncate">{inv.head_name}</h5>
+                          {isUnlocked ? (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              🟢 Elegível
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                              <Lock className="w-2.5 h-2.5" /> Spoiler
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {inv.phone} {!isUnlocked && <span className="text-amber-400/90 font-medium">({eligibility.reason})</span>}
+                        </p>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
@@ -578,9 +681,14 @@ export function SurpriseDashboard({ invites, onRefresh }: SurpriseDashboardProps
                         </button>
 
                         <button
+                          disabled={!isUnlocked}
                           onClick={() => handleDispatchSingle(inv, activeCampaignModal)}
-                          className="p-2 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-xl transition-all cursor-pointer"
-                          title="Disparar Mensagem no WhatsApp"
+                          className={`p-2 rounded-xl transition-all ${
+                            isUnlocked
+                              ? 'bg-slate-800 hover:bg-slate-700 text-purple-300 cursor-pointer'
+                              : 'bg-slate-950 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50'
+                          }`}
+                          title={isUnlocked ? 'Disparar Mensagem no WhatsApp' : `Bloqueado: ${eligibility.reason}`}
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>

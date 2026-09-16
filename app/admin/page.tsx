@@ -274,8 +274,14 @@ export default function AdminPage() {
               />
             )}
             {activeTab === 'tables' && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} />}
-            {activeTab === 'surprise' && currentRole !== 'birthday_person' && (
-              <SurpriseDashboard invites={invites} onRefresh={loadAll} />
+            {activeTab === 'surprise' && currentRole !== 'birthday_person' && config && (
+              <SurpriseDashboard
+                invites={invites}
+                persons={persons}
+                tables={tables}
+                config={config}
+                onRefresh={loadAll}
+              />
             )}
             {activeTab === 'settings' && currentRole === 'admin' && config && (
               <SettingsForm
