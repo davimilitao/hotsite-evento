@@ -154,16 +154,27 @@ export function HeaderHero({ config, invite }: HeaderHeroProps) {
             </div>
           </div>
 
-          {/* Botão de Salvar no Google Calendar */}
-          <div className="pt-1">
+          {/* Botão de Salvar no Google Calendar & Grupo VIP */}
+          <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
             <a
               href={googleCalendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <CalendarPlus className="w-4 h-4 text-amber-300" /> Salvar no Meu Google Agenda
             </a>
+
+            {invite.status === 'confirmed' && config.whatsapp_group_link && (
+              <a
+                href={config.whatsapp_group_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer border border-emerald-400/40"
+              >
+                <span>💬 Grupo VIP no WhatsApp</span>
+              </a>
+            )}
           </div>
 
           {/* Contador Regressivo Clean */}

@@ -250,6 +250,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         invite={invite}
         assignedTable={assignedTable}
         onGoToLocation={() => setActiveTab('location')}
+        whatsappGroupLink={config.whatsapp_group_link}
       />
 
       {/* Banner de Consentimento de Cookies LGPD */}

@@ -313,6 +313,20 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
           </div>
 
           <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200 text-emerald-400">
+              Link do Grupo VIP do WhatsApp
+            </label>
+            <input
+              type="text"
+              value={formData.whatsapp_group_link || ''}
+              onChange={(e) => setFormData({ ...formData, whatsapp_group_link: e.target.value })}
+              placeholder="https://chat.whatsapp.com/G..."
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-emerald-500/40 rounded-xl text-xs font-medium text-emerald-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500">Exibido ao confirmar presença pós-RSVP.</p>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
             <label className="block text-xs font-bold text-slate-200">
               Assinatura / Créditos
             </label>

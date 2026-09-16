@@ -11,6 +11,7 @@ interface RSVPFeedbackModalProps {
   invite: Invite;
   assignedTable?: Table;
   onGoToLocation: () => void;
+  whatsappGroupLink?: string;
 }
 
 export function RSVPFeedbackModal({
@@ -19,6 +20,7 @@ export function RSVPFeedbackModal({
   invite,
   assignedTable,
   onGoToLocation,
+  whatsappGroupLink,
 }: RSVPFeedbackModalProps) {
   if (!isOpen) return null;
 
@@ -27,10 +29,10 @@ export function RSVPFeedbackModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-purple-500/30 text-center space-y-5 p-6 relative">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-purple-500/30 text-center space-y-4 p-6 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-200 rounded-full hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-200 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -76,31 +78,45 @@ export function RSVPFeedbackModal({
         </div>
 
         {isConfirmed && (
-          <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 text-left space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-200">
-              <span>Acompanhantes Registrados:</span>
-              <span className="text-purple-600 dark:text-purple-400">{invite.confirmed_count} vagas</span>
+          <div className="space-y-3">
+            <div className="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700/60 text-left space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-200">
+                <span>Acompanhantes Registrados:</span>
+                <span className="text-purple-600 dark:text-purple-400">{invite.confirmed_count} vagas</span>
+              </div>
+
+              <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1 pl-2 border-l-2 border-purple-500">
+                {invite.guests.map((g, idx) => (
+                  <li key={idx} className="truncate">
+                    • {g.name} {g.dietary ? `(${g.dietary})` : ''}
+                  </li>
+                ))}
+              </ul>
+
+              {assignedTable ? (
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                    <Armchair className="w-3.5 h-3.5 text-amber-400" /> Mesa Atribuída:
+                  </span>
+                  <span className="text-xs font-bold text-amber-500">{assignedTable.name}</span>
+                </div>
+              ) : (
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-400 italic">
+                  Sua mesa será atribuída em breve pelo anfitrião.
+                </div>
+              )}
             </div>
 
-            <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1 pl-2 border-l-2 border-purple-500">
-              {invite.guests.map((g, idx) => (
-                <li key={idx} className="truncate">
-                  • {g.name} {g.dietary ? `(${g.dietary})` : ''}
-                </li>
-              ))}
-            </ul>
-
-            {assignedTable ? (
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Armchair className="w-3.5 h-3.5 text-amber-400" /> Mesa Atribuída:
-                </span>
-                <span className="text-xs font-bold text-amber-500">{assignedTable.name}</span>
-              </div>
-            ) : (
-              <div className="pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-400 italic">
-                Sua mesa será atribuída em breve pelo anfitrião.
-              </div>
+            {/* BOTÃO ESPECIAL PARA ENTRAR NO GRUPO VIP DO WHATSAPP */}
+            {whatsappGroupLink && (
+              <a
+                href={whatsappGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 border border-emerald-400/40"
+              >
+                <span>💬 Entrar no Grupo VIP da Festa no WhatsApp</span>
+              </a>
             )}
           </div>
         )}
@@ -112,7 +128,7 @@ export function RSVPFeedbackModal({
                 onClose();
                 onGoToLocation();
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
             >
               <Navigation className="w-4 h-4" />
               <span>Ver Localização & Mapa da Mesa</span>
@@ -121,7 +137,7 @@ export function RSVPFeedbackModal({
 
           <button
             onClick={onClose}
-            className="w-full py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:underline"
+            className="w-full py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
           >
             Fechar
           </button>

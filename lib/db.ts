@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory, SurpriseCampaign } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
@@ -1533,6 +1533,106 @@ export async function resetAllInvitesData(): Promise<void> {
   }
 
   setLS(LS_KEYS.PERSONS, resetPersons);
+}
+
+export const LS_KEYS_EXT = {
+  CAMPAIGNS: 'hotsite_surprise_campaigns_v1',
+};
+
+export async function getAllSurpriseCampaigns(): Promise<SurpriseCampaign[]> {
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(collection(db, 'surprise_campaigns'));
+      if (!snap.empty) {
+        return snap.docs.map((docSnap) => docSnap.data() as SurpriseCampaign);
+      }
+    } catch (err) {
+      console.warn('Erro ao ler campanhas do Firestore, usando fallback LS:', err);
+    }
+  }
+
+  const local = getLS<SurpriseCampaign[]>(LS_KEYS_EXT.CAMPAIGNS, []);
+  if (local && local.length > 0) return local;
+
+  // Campanhas Padrão Iniciais
+  const defaultCampaigns: SurpriseCampaign[] = [
+    {
+      id: 'camp-mural-fotos',
+      title: 'Fotos para o Mural Surpresa da Festa 📸',
+      type: 'photo',
+      description: 'Fotos marcantes com a aniversariante para serem exibidas no Telão/Mural do buffet.',
+      message_template: 'Segredo! 🤫 Shhh... Estamos preparando uma Homenagem Surpresa especial para os 40 Anos da Fernanda Seppi!\n\nPor favor, envie aqui neste WhatsApp uma foto marcante de vocês juntos para colocarmos no Mural/Telão da festa! 📸✨',
+      target_tier: 'all',
+      active: true,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: 'camp-video-depoimento',
+      title: 'Vídeos de Homenagem (15-30s) 🎥',
+      type: 'video',
+      description: 'Envio de vídeos curtos de carinho mandando um grande abraço.',
+      message_template: 'Segredo! 🤫 Estamos preparando uma Homenagem Surpresa em Vídeo para os 40 Anos da Fernanda Seppi!\n\nEnvie um vídeo curto (15 a 30 segundos) mandando um abraço carinhoso para ela!\n\n{orientacao} 🎥✨',
+      video_orientation: 'horizontal',
+      target_tier: 'all',
+      active: true,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: 'camp-livro-ouro',
+      title: 'Recados para o Livro de Ouro ✍️',
+      type: 'text',
+      description: 'Mensagens e depoimentos por escrito para guardar de recordação.',
+      message_template: 'Segredo! 🤫 Estamos organizando um livro de depoimentos surpresa para os 40 Anos da Fernanda Seppi!\n\nPor favor, responda esta mensagem com um recado ou mensagem carinhosa de aniversário por escrito! ✍️❤️',
+      target_tier: 'all',
+      active: true,
+      created_at: new Date().toISOString(),
+    },
+  ];
+
+  setLS(LS_KEYS_EXT.CAMPAIGNS, defaultCampaigns);
+  return defaultCampaigns;
+}
+
+export async function saveSurpriseCampaign(campaign: SurpriseCampaign): Promise<SurpriseCampaign> {
+  const updatedCampaign = {
+    ...campaign,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured) {
+    try {
+      await setDoc(doc(db, 'surprise_campaigns', updatedCampaign.id), updatedCampaign);
+    } catch (err) {
+      console.warn('Erro ao salvar campanha no Firestore:', err);
+    }
+  }
+
+  const campaigns = await getAllSurpriseCampaigns();
+  const index = campaigns.findIndex((c) => c.id === updatedCampaign.id);
+  let newCampaigns: SurpriseCampaign[];
+  if (index >= 0) {
+    newCampaigns = [...campaigns];
+    newCampaigns[index] = updatedCampaign;
+  } else {
+    newCampaigns = [updatedCampaign, ...campaigns];
+  }
+
+  setLS(LS_KEYS_EXT.CAMPAIGNS, newCampaigns);
+  return updatedCampaign;
+}
+
+export async function deleteSurpriseCampaign(campaignId: string): Promise<void> {
+  if (isFirebaseConfigured) {
+    try {
+      await deleteDoc(doc(db, 'surprise_campaigns', campaignId));
+    } catch (err) {
+      console.warn('Erro ao deletar campanha no Firestore:', err);
+    }
+  }
+
+  const campaigns = await getAllSurpriseCampaigns();
+  const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
+  setLS(LS_KEYS_EXT.CAMPAIGNS, newCampaigns);
 }
 
 

@@ -29,6 +29,21 @@ export interface AppUser {
   expiresAt?: number;       // Timestamp (ms) de expiração da sessão em 24h
 }
 
+export type CampaignType = 'photo' | 'video' | 'text';
+
+export interface SurpriseCampaign {
+  id: string;
+  title: string;
+  type: CampaignType;
+  description?: string;
+  message_template: string;
+  video_orientation?: 'horizontal' | 'vertical' | 'selfie';
+  target_tier?: 'all' | 'main' | 'reserve';
+  active?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface SurpriseContribution {
   invite_id: string;
   head_name: string;
@@ -201,6 +216,7 @@ export interface EventConfig {
   support_email?: string;
   admin_cc_email?: string;
   support_phone?: string;
+  whatsapp_group_link?: string;   // Link de convite oficial para o Grupo VIP do WhatsApp (ex: https://chat.whatsapp.com/...)
   developer_credits?: string;
   theme?: EventTheme;
 }
