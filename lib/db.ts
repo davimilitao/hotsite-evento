@@ -111,33 +111,88 @@ export const DEFAULT_TABLE_POSITIONS: Record<string, { x: number; y: number }> =
 };
 
 export function getTablePosition(table: Table, index: number): { x: number; y: number } {
+  if (!table) return { x: 50, y: 50 };
+
   const nameLower = (table.name || '').toLowerCase();
-  const numMatch = table.name.match(/\d+/)?.[0];
-  const numKey = numMatch ? `mesa-${numMatch.padStart(2, '0')}` : '';
+  const idLower = (table.id || '').toLowerCase();
 
-  if (DEFAULT_TABLE_POSITIONS[table.id]) {
-    return DEFAULT_TABLE_POSITIONS[table.id];
+  // Coordenadas das 11 Mesas Físicas na Arte do Salão
+  const POS_MESA_1  = { x: 69.5, y: 17.0 }; // Topo Direita
+  const POS_MESA_2  = { x: 55.5, y: 17.0 }; // Topo Centro-Direita
+  const POS_MESA_3  = { x: 41.5, y: 17.0 }; // Topo Centro
+  const POS_MESA_4  = { x: 27.5, y: 17.0 }; // Topo Centro-Esquerda
+  const POS_MESA_5  = { x: 13.5, y: 17.0 }; // Topo Esquerda
+  const POS_MESA_6  = { x: 41.5, y: 65.0 }; // Centro Direita
+  const POS_MESA_7  = { x: 26.5, y: 65.0 }; // Centro Esquerda
+  const POS_MESA_8  = { x: 62.5, y: 83.0 }; // Base Direita
+  const POS_MESA_9  = { x: 46.5, y: 83.0 }; // Base Centro-Direita
+  const POS_MESA_10 = { x: 30.5, y: 83.0 }; // Base Centro-Esquerda
+  const POS_MESA_11 = { x: 14.5, y: 83.0 }; // Base Esquerda
+
+  // 1. Nomenclatura Histórica do Evento ("01 á esquerda", "01 á direita", etc.)
+  if (nameLower.includes('dir') || nameLower.includes('direita')) {
+    if (nameLower.includes('01') || nameLower.includes('1')) return POS_MESA_7;
+    if (nameLower.includes('02') || nameLower.includes('2')) return POS_MESA_8;
+    if (nameLower.includes('03') || nameLower.includes('3')) return POS_MESA_9;
+    if (nameLower.includes('04') || nameLower.includes('4')) return POS_MESA_10;
+    if (nameLower.includes('05') || nameLower.includes('5')) return POS_MESA_11;
   }
 
-  if (numKey && DEFAULT_TABLE_POSITIONS[numKey]) {
-    return DEFAULT_TABLE_POSITIONS[numKey];
+  if (nameLower.includes('esq') || nameLower.includes('esquerda')) {
+    if (nameLower.includes('01') || nameLower.includes('1')) return POS_MESA_1;
+    if (nameLower.includes('02') || nameLower.includes('2')) return POS_MESA_2;
+    if (nameLower.includes('03') || nameLower.includes('3')) return POS_MESA_3;
+    if (nameLower.includes('04') || nameLower.includes('4')) return POS_MESA_4;
+    if (nameLower.includes('05') || nameLower.includes('5')) return POS_MESA_5;
+    if (nameLower.includes('06') || nameLower.includes('6')) return POS_MESA_6;
   }
 
-  const fallbackPositions = [
-    { x: 69.5, y: 17.0 }, // Mesa 1
-    { x: 55.5, y: 17.0 }, // Mesa 2
-    { x: 41.5, y: 17.0 }, // Mesa 3
-    { x: 27.5, y: 17.0 }, // Mesa 4
-    { x: 13.5, y: 17.0 }, // Mesa 5
-    { x: 41.5, y: 65.0 }, // Mesa 6
-    { x: 26.5, y: 65.0 }, // Mesa 7
-    { x: 62.5, y: 83.0 }, // Mesa 8
-    { x: 46.5, y: 83.0 }, // Mesa 9
-    { x: 30.5, y: 83.0 }, // Mesa 10
-    { x: 14.5, y: 83.0 }, // Mesa 11
+  // 2. Mapeamento Direto por ID (mesa-01 a mesa-11)
+  if (idLower.includes('mesa-01') || idLower === 'mesa-1') return POS_MESA_1;
+  if (idLower.includes('mesa-02') || idLower === 'mesa-2') return POS_MESA_2;
+  if (idLower.includes('mesa-03') || idLower === 'mesa-3') return POS_MESA_3;
+  if (idLower.includes('mesa-04') || idLower === 'mesa-4') return POS_MESA_4;
+  if (idLower.includes('mesa-05') || idLower === 'mesa-5') return POS_MESA_5;
+  if (idLower.includes('mesa-06') || idLower === 'mesa-6') return POS_MESA_6;
+  if (idLower.includes('mesa-07') || idLower === 'mesa-7') return POS_MESA_7;
+  if (idLower.includes('mesa-08') || idLower === 'mesa-8') return POS_MESA_8;
+  if (idLower.includes('mesa-09') || idLower === 'mesa-9') return POS_MESA_9;
+  if (idLower.includes('mesa-10')) return POS_MESA_10;
+  if (idLower.includes('mesa-11')) return POS_MESA_11;
+
+  // 3. Mapeamento por Número Absoluto no Nome (1 a 11)
+  const numMatch = (table.name || '').match(/\d+/)?.[0];
+  if (numMatch) {
+    const num = parseInt(numMatch, 10);
+    if (num === 1) return POS_MESA_1;
+    if (num === 2) return POS_MESA_2;
+    if (num === 3) return POS_MESA_3;
+    if (num === 4) return POS_MESA_4;
+    if (num === 5) return POS_MESA_5;
+    if (num === 6) return POS_MESA_6;
+    if (num === 7) return POS_MESA_7;
+    if (num === 8) return POS_MESA_8;
+    if (num === 9) return POS_MESA_9;
+    if (num === 10) return POS_MESA_10;
+    if (num === 11) return POS_MESA_11;
+  }
+
+  // 4. Fallback por Índice Cíclico
+  const fallbackList = [
+    POS_MESA_1,
+    POS_MESA_2,
+    POS_MESA_3,
+    POS_MESA_4,
+    POS_MESA_5,
+    POS_MESA_6,
+    POS_MESA_7,
+    POS_MESA_8,
+    POS_MESA_9,
+    POS_MESA_10,
+    POS_MESA_11,
   ];
 
-  return fallbackPositions[index % fallbackPositions.length];
+  return fallbackList[index % fallbackList.length];
 }
 
 export const INITIAL_TABLES: Table[] = [
