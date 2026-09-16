@@ -322,3 +322,22 @@ export function getGoogleCalendarUrl(config: { title: string; birthday_person: s
   }
 }
 
+/**
+ * Dispara feedback tátil (micro-vibração) em dispositivos móveis compatíveis
+ */
+export function triggerHaptic(type: 'light' | 'medium' | 'success' = 'light'): void {
+  if (typeof window === 'undefined' || !('navigator' in window) || !('vibrate' in navigator)) return;
+
+  try {
+    if (type === 'light') {
+      navigator.vibrate(15);
+    } else if (type === 'medium') {
+      navigator.vibrate(25);
+    } else if (type === 'success') {
+      navigator.vibrate([20, 50, 20]);
+    }
+  } catch {
+    // Ignora se não for suportado
+  }
+}
+

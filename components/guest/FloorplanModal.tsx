@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Table, Person } from '@/types';
 import { getAllPersons, getTablePosition } from '@/lib/db';
-import { X, Map, Sparkles, Users, Armchair, UserCheck, Info } from 'lucide-react';
+import { triggerHaptic } from '@/lib/utils';
+import { X, Map, Sparkles, Users, Armchair, UserCheck, Info, ChevronUp } from 'lucide-react';
 
 interface FloorplanModalProps {
   isOpen: boolean;
@@ -22,6 +23,9 @@ export function FloorplanModal({
 }: FloorplanModalProps) {
   const [persons, setPersons] = useState<Person[]>(initialPersons || []);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const tableDetailsRef = useRef<HTMLDivElement>(null);
 
   // Carrega lista de pessoas se não tiver sido fornecida via props
   useEffect(() => {
@@ -45,6 +49,14 @@ export function FloorplanModal({
       setSelectedTable(tables[0]);
     }
   }, [isOpen, assignedTableId, tables]);
+
+  const handleSelectTable = (table: Table) => {
+    setSelectedTable(table);
+    triggerHaptic('light');
+    setTimeout(() => {
+      tableDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   if (!isOpen) return null;
 
@@ -71,7 +83,10 @@ export function FloorplanModal({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              triggerHaptic('light');
+              onClose();
+            }}
             className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -79,7 +94,7 @@ export function FloorplanModal({
         </div>
 
         {/* Conteúdo Principal do Modal (Scrollable) */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 scroll-smooth">
           {/* Banner de Reserva do Convidado */}
           {currentAssignedTable ? (
             <div className="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 p-4 rounded-2xl flex items-center justify-between gap-3">
@@ -99,8 +114,8 @@ export function FloorplanModal({
                 </div>
               </div>
               <button
-                onClick={() => setSelectedTable(currentAssignedTable)}
-                className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
+                onClick={() => handleSelectTable(currentAssignedTable)}
+                className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
               >
                 Ver no Mapa
               </button>
@@ -113,7 +128,7 @@ export function FloorplanModal({
           )}
 
           {/* CONTAINER DA PLANTA BAIXA COM IMAGEM DO SALÃO + HOTSPOTS INTERATIVOS */}
-          <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 group">
+          <div ref={mapContainerRef} className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 group">
             {/* Imagem de Fundo da Planta Baixa Real do Salão */}
             <img
               src="/salao-planta-baixa.jpg"
@@ -121,7 +136,7 @@ export function FloorplanModal({
               className="w-full h-auto object-cover select-none"
             />
 
-            {/* HOTSPOTS SOBREPOSTOS DAS MESAS */}
+            {/* HOTSPOTS SOBREPOSTOS DAS MESAS (SEM NUMERAÇÃO DE TEXTO NA DIV FLUTUANTE) */}
             {tables.map((table, idx) => {
               const isAssigned = table.id === assignedTableId;
               const isSelected = activeTable?.id === table.id;
@@ -134,46 +149,46 @@ export function FloorplanModal({
                   className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                 >
                   <button
-                    onClick={() => setSelectedTable(table)}
+                    onClick={() => handleSelectTable(table)}
                     className={`relative group/btn flex items-center justify-center transition-all cursor-pointer ${
                       isAssigned
-                        ? 'w-9 h-9 sm:w-11 sm:h-11 text-xs font-black'
+                        ? 'w-7 h-7 sm:w-9 sm:h-9'
                         : isSelected
-                        ? 'w-8 h-8 sm:w-10 sm:h-10 text-xs font-bold'
-                        : 'w-7 h-7 sm:w-9 sm:h-9 text-[11px] font-semibold hover:scale-115'
+                        ? 'w-6 h-6 sm:w-8 sm:h-8'
+                        : 'w-5 h-5 sm:w-7 sm:h-7 hover:scale-125'
                     }`}
                     title={table.name}
                   >
                     {/* Efeito Halo / Anel Pulsante Dourado para a Mesa Reservada do Convidado */}
                     {isAssigned && (
                       <>
-                        <span className="absolute -inset-2 rounded-full bg-amber-400/40 animate-ping" />
+                        <span className="absolute -inset-2 rounded-full bg-amber-400/50 animate-ping" />
                         <span className="absolute -inset-1 rounded-full border-2 border-amber-400 animate-pulse" />
                       </>
                     )}
 
-                    {/* Botão Hotspot da Mesa */}
+                    {/* Botão Hotspot Indicativo da Mesa (Sem número gravado por cima) */}
                     <span
-                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md text-[10px] sm:text-xs font-black ${
+                      className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-xl backdrop-blur-md ${
                         isAssigned
-                          ? 'bg-amber-400 text-slate-950 border-amber-300 ring-4 ring-amber-400/50 shadow-amber-500/50'
+                          ? 'bg-amber-400 text-slate-950 border-amber-200 ring-4 ring-amber-400/60 shadow-amber-500/60 scale-110'
                           : isSelected
-                          ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50 font-black'
-                          : 'bg-slate-950/85 text-amber-300 border-amber-500/70 hover:bg-amber-500 hover:text-slate-950'
+                          ? 'bg-purple-600 text-white border-purple-200 ring-4 ring-purple-500/60 scale-105'
+                          : 'bg-slate-950/75 text-amber-300 border-amber-500/80 hover:bg-amber-400 hover:text-slate-950 hover:border-amber-300'
                       }`}
                     >
-                      {(() => {
-                        const n = table.name.toLowerCase();
-                        const num = table.name.match(/\d+/)?.[0] || '';
-                        if (n.includes('esquerda')) return `E-${num}`;
-                        if (n.includes('direita')) return `D-${num}`;
-                        if (n.includes('mesa')) return `M-${num}`;
-                        return table.name.substring(0, 5);
-                      })()}
+                      {/* Indicador Minimalista Luxe (Pontos / Ícones de Status) */}
+                      {isAssigned ? (
+                        <Sparkles className="w-3.5 h-3.5 text-slate-950 animate-spin" style={{ animationDuration: '6s' }} />
+                      ) : isSelected ? (
+                        <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-amber-400/90" />
+                      )}
                     </span>
 
-                    {/* Tooltip com Nome da Mesa no Hover */}
-                    <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/btn:block bg-slate-950 text-amber-300 text-[10px] font-bold px-2 py-1 rounded-md border border-amber-500/40 whitespace-nowrap z-20 pointer-events-none shadow-xl">
+                    {/* Tooltip com Nome da Mesa no Hover/Touch */}
+                    <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/btn:block bg-slate-950/95 text-amber-300 text-[10px] font-extrabold px-2.5 py-1 rounded-lg border border-amber-500/40 whitespace-nowrap z-20 pointer-events-none shadow-2xl backdrop-blur-md">
                       {table.name}
                     </span>
                   </button>
@@ -196,14 +211,14 @@ export function FloorplanModal({
               <span className="text-slate-300">Mesa Selecionada</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-slate-900 border border-amber-500/60" />
+              <span className="w-3 h-3 rounded-full bg-slate-950 border border-amber-500/80" />
               <span>Outras Mesas do Salão</span>
             </div>
           </div>
 
           {/* CARD POPUP DE DETALHES DA MESA SELECIONADA */}
           {activeTable && (
-            <div className="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 space-y-4 shadow-xl animate-fade-in">
+            <div ref={tableDetailsRef} className="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 space-y-4 shadow-xl animate-fade-in scroll-mt-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700 pb-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -263,6 +278,20 @@ export function FloorplanModal({
                   </p>
                 )}
               </div>
+
+              {/* CTA DESLIZAR DE VOLTA PARA A PLANTA BAIXA */}
+              <div className="pt-2 flex justify-center border-t border-slate-700/60">
+                <button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                >
+                  <ChevronUp className="w-4 h-4 text-amber-300 animate-bounce" />
+                  <span>Voltar para a Planta Baixa / Ver Salão</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -273,7 +302,10 @@ export function FloorplanModal({
             Planta oficial do Buffet Espaço Estupendo (São Bernardo do Campo - SP)
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              triggerHaptic('light');
+              onClose();
+            }}
             className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer ml-auto"
           >
             Fechar Mapa

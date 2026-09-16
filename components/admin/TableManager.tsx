@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Table, Invite, Person } from '@/types';
 import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition } from '@/lib/db';
+import { triggerHaptic } from '@/lib/utils';
 import {
   Plus,
   Trash2,
@@ -17,6 +18,7 @@ import {
   Map,
   LayoutGrid,
   Sparkles,
+  ChevronUp,
 } from 'lucide-react';
 
 interface TableManagerProps {
@@ -30,6 +32,9 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const [viewMode, setViewMode] = useState<'cards' | 'floorplan'>('cards');
   const [activeFloorplanTable, setActiveFloorplanTable] = useState<Table | null>(tables[0] || null);
 
+  const mapRef = useRef<HTMLDivElement>(null);
+  const inspectorRef = useRef<HTMLDivElement>(null);
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
   const [tableName, setTableName] = useState('');
@@ -37,6 +42,14 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const [shape, setShape] = useState<'round' | 'square' | 'lounge'>('round');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleSelectFloorplanTable = (table: Table) => {
+    setActiveFloorplanTable(table);
+    triggerHaptic('light');
+    setTimeout(() => {
+      inspectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   // Modal para alocar pessoa 1:1 no assento específico
   const [selectedAssignment, setSelectedAssignment] = useState<{
@@ -226,7 +239,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
             </div>
 
             {/* Imagem do Salão com Overlays das Mesas */}
-            <div className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
+            <div ref={mapRef} className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
               <img
                 src="/salao-planta-baixa.jpg"
                 alt="Planta Baixa Interativa do Salão"
@@ -235,7 +248,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
 
               {tables.map((table, idx) => {
                 const tablePersons = persons.filter((p) => p.table_id === table.id);
-                const isSelected = inspectorTable?.id === table.id;
+                const isSelected = activeFloorplanTable?.id === table.id;
                 const isFull = tablePersons.length >= table.capacity;
                 const isHalf = tablePersons.length > 0 && tablePersons.length < table.capacity;
 
@@ -248,42 +261,47 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                     className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                   >
                     <button
-                      onClick={() => setActiveFloorplanTable(table)}
-                      className={`relative flex items-center justify-center transition-all cursor-pointer ${
+                      onClick={() => handleSelectFloorplanTable(table)}
+                      className={`relative group/btn flex items-center justify-center transition-all cursor-pointer ${
                         isSelected
-                          ? 'w-9 h-9 sm:w-11 sm:h-11 scale-110'
-                          : 'w-7 h-7 sm:w-9 sm:h-9 hover:scale-115'
+                          ? 'w-7 h-7 sm:w-9 sm:h-9'
+                          : 'w-5 h-5 sm:w-7 sm:h-7 hover:scale-125'
                       }`}
-                      title={`${table.name} (${tablePersons.length}/${table.capacity})`}
+                      title={`${table.name} (${tablePersons.length}/${table.capacity} lugares ocupados)`}
                     >
                       {isSelected && (
-                        <span className="absolute -inset-2 rounded-full border-2 border-purple-400 animate-pulse" />
+                        <>
+                          <span className="absolute -inset-2 rounded-full bg-purple-500/40 animate-ping" />
+                          <span className="absolute -inset-1 rounded-full border-2 border-purple-400 animate-pulse" />
+                        </>
                       )}
 
+                      {/* Botão Hotspot Indicativo (Sem texto numérico impresso sobreposto) */}
                       <span
-                        className={`w-full h-full rounded-full flex flex-col items-center justify-center border-2 shadow-lg backdrop-blur-md text-[9px] sm:text-[10px] font-black leading-none ${
+                        className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md ${
                           isSelected
-                            ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/50'
+                            ? 'bg-purple-600 text-white border-purple-200 ring-4 ring-purple-500/60 scale-110'
                             : isFull
-                            ? 'bg-emerald-600 text-white border-emerald-300'
+                            ? 'bg-emerald-500 text-white border-emerald-300 ring-2 ring-emerald-500/40'
                             : isHalf
-                            ? 'bg-amber-500 text-slate-950 border-amber-300'
-                            : 'bg-slate-950/85 text-amber-300 border-amber-500/70'
+                            ? 'bg-amber-400 text-slate-950 border-amber-200 ring-2 ring-amber-400/40'
+                            : 'bg-slate-950/80 text-amber-300 border-amber-500/70 hover:bg-amber-400 hover:text-slate-950'
                         }`}
                       >
-                        <span>
-                          {(() => {
-                            const n = table.name.toLowerCase();
-                            const num = table.name.match(/\d+/)?.[0] || '';
-                            if (n.includes('esquerda')) return `E-${num}`;
-                            if (n.includes('direita')) return `D-${num}`;
-                            if (n.includes('mesa')) return `M-${num}`;
-                            return table.name.substring(0, 5);
-                          })()}
-                        </span>
-                        <span className="text-[8px] opacity-90 mt-0.5 font-bold">
-                          {tablePersons.length}/{table.capacity}
-                        </span>
+                        {isSelected ? (
+                          <Sparkles className="w-3.5 h-3.5 text-white animate-spin" style={{ animationDuration: '6s' }} />
+                        ) : isFull ? (
+                          <span className="w-2.5 h-2.5 rounded-full bg-white font-extrabold" />
+                        ) : isHalf ? (
+                          <span className="w-2 h-2 rounded-full bg-slate-950 font-extrabold" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        )}
+                      </span>
+
+                      {/* Tooltip com Nome da Mesa no Hover/Touch */}
+                      <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/btn:block bg-slate-950/95 text-amber-300 text-[10px] font-extrabold px-2 py-1 rounded-lg border border-amber-500/40 whitespace-nowrap z-20 pointer-events-none shadow-xl">
+                        {table.name} ({tablePersons.length}/{table.capacity})
                       </span>
                     </button>
                   </div>
@@ -313,7 +331,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
           </div>
 
           {/* Lado Direito: Inspector da Mesa Selecionada com Cadeiras 1:1 */}
-          <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-purple-500/40 shadow-xl space-y-5">
+          <div ref={inspectorRef} className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-purple-500/40 shadow-xl space-y-5 scroll-mt-4">
             {inspectorTable ? (
               (() => {
                 const tablePersons = persons.filter((p) => p.table_id === inspectorTable.id);
@@ -574,6 +592,20 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* CTA DESLIZAR DE VOLTA PARA A PLANTA BAIXA */}
+                  <div className="pt-3 flex justify-center border-t border-slate-200 dark:border-slate-700/80">
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                      className="px-5 py-2.5 bg-slate-900 dark:bg-slate-950 text-white hover:bg-slate-800 rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer border border-slate-700"
+                    >
+                      <ChevronUp className="w-4 h-4 text-amber-400 animate-bounce" />
+                      <span>Voltar para a Planta Baixa / Ver Salão</span>
+                    </button>
                   </div>
                 </div>
               </div>
