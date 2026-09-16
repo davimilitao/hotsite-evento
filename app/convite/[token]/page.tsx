@@ -171,14 +171,18 @@ export default function ConvitePage({ params }: ConvitePageProps) {
                 />
               </div>
 
-              {/* ABA 2: Local & Vitrine do Buffet & Assento Reservado */}
+              {/* ABA 2: Assento Reservado, Como Chegar GPS & Vitrine do Buffet em Tabs */}
               <div className={`${activeTab === 'location' ? 'block' : 'hidden sm:block'} space-y-6 transition-all duration-300`}>
-                <VenueBuffetShowcase
-                  config={config}
-                  invite={invite}
-                  tables={tables}
-                  persons={allPersons}
-                />
+                {/* 1º Assento Reservado da Família (se confirmado) */}
+                {invite.status === 'confirmed' && (
+                  <SeatCard invite={invite} tables={tables} persons={allPersons} />
+                )}
+
+                {/* 2º Como Chegar / Rotas GPS (Google Maps & Waze) */}
+                <EventLocationCard config={config} />
+
+                {/* 3º Vitrine do Buffet em 1 Card Único com 3 Tabs (Sobre, Vídeo, Fotos) */}
+                <VenueBuffetShowcase config={config} />
               </div>
 
               {/* ABA 3: Guia de Presentes & Pix */}

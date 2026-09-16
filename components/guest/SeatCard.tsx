@@ -41,14 +41,13 @@ export function SeatCard({ invite, tables, persons }: SeatCardProps) {
         {/* Inner White Box */}
         {assignedTable ? (
           <div className="bg-white text-[#1e152d] p-4 sm:p-5 rounded-2xl shadow-sm space-y-2">
-            <p className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed">
-              Sua mesa reservada para este dia especial é{' '}
-              <strong className="text-[#1e152d] font-black">{assignedTable.name}</strong>.
+            <p className="text-xs sm:text-sm font-medium text-slate-700 leading-relaxed">
+              Seu lugar e de sua família está garantido com muito carinho nesta mesa. Abra a planta baixa interativa para ver a localização no salão!
             </p>
             {assignedTable.description && (
-              <p className="text-xs text-slate-500 flex items-center gap-1 pt-0.5">
+              <p className="text-xs text-purple-700 font-bold flex items-center gap-1 pt-1 border-t border-purple-50">
                 <MapPin className="w-3.5 h-3.5 text-[#6d44e4] shrink-0" />
-                <span>Localização: {assignedTable.description}</span>
+                <span>Setor: {assignedTable.description}</span>
               </p>
             )}
           </div>
@@ -60,12 +59,12 @@ export function SeatCard({ invite, tables, persons }: SeatCardProps) {
           </div>
         )}
 
-        {/* Botão Branco para abrir a Planta do Salão */}
+        {/* Botão CTA Amarelo Dourado de Alto Impacto */}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 text-[#1e152d] font-extrabold text-xs sm:text-sm rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+          className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-[#1e152d] font-black text-xs sm:text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2.5 transition-all active:scale-95 cursor-pointer border-2 border-amber-300/80 tracking-wide"
         >
-          <Compass className="w-4 h-4 text-emerald-600" />
+          <Compass className="w-5 h-5 text-[#1e152d] animate-pulse" />
           <span>Ver Localização na Planta do Salão</span>
         </button>
       </section>

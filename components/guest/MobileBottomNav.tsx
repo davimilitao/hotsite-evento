@@ -77,7 +77,7 @@ export function MobileBottomNav({
           >
             <Gift className="w-5 h-5" />
           </div>
-          <span className="text-[10px]">Presentes & Pix</span>
+          <span className="text-[10px]">Presentes</span>
         </button>
 
         {/* Aba 4: Ajuda */}
