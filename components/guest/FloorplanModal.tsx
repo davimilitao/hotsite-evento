@@ -27,16 +27,12 @@ export function FloorplanModal({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const tableDetailsRef = useRef<HTMLDivElement>(null);
 
-  // Carrega lista de pessoas se não tiver sido fornecida via props
+  // Carrega a lista completa de pessoas do evento para exibir a lotação real de todas as mesas
   useEffect(() => {
     if (isOpen) {
-      if (initialPersons && initialPersons.length > 0) {
-        setPersons(initialPersons);
-      } else {
-        getAllPersons().then(setPersons).catch(console.error);
-      }
+      getAllPersons().then(setPersons).catch(console.error);
     }
-  }, [isOpen, initialPersons]);
+  }, [isOpen]);
 
   // Define a mesa reservada do convidado como selecionada por padrão ao abrir
   useEffect(() => {
