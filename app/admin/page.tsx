@@ -155,11 +155,11 @@ export default function AdminPage() {
       )}
 
       {/* Header Unificado Responsivo do Admin */}
-      <header className="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-40 shadow-xl backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 pt-3 pb-2 space-y-3">
+      <header className="bg-slate-900/95 border-b border-slate-800 relative sm:sticky sm:top-0 z-40 shadow-xl backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-2.5 sm:px-4 pt-2.5 sm:pt-3 pb-2 space-y-2 sm:space-y-3">
           {/* Header do Usuário Logado & Ações do Sistema */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
               <AdminUserHeader currentRole={currentRole} onRoleChange={handleRoleChange} />
             </div>
 
@@ -168,20 +168,20 @@ export default function AdminPage() {
               {(currentRole === 'birthday_person' || user?.role === 'birthday_person') && (
                 <button
                   onClick={() => setShowBirthdayOnboarding(true)}
-                  className="min-h-[40px] px-3.5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="min-h-[36px] sm:min-h-[40px] px-3 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                   title="Revisar e alterar os dados da festa"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>Revisar Dados da Festa</span>
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
+                  <span>Revisar Dados</span>
                 </button>
               )}
 
               <button
                 onClick={loadAll}
-                className="min-h-[40px] px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="min-h-[36px] sm:min-h-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
                 title="Atualizar Dados"
               >
-                <RefreshCw className={`w-4 h-4 text-purple-400 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden xs:inline">Atualizar</span>
               </button>
             </div>
@@ -196,40 +196,40 @@ export default function AdminPage() {
           )}
 
           {/* Abas Principais Responsivas em Pílulas com Scroll Suave */}
-          <div className="flex space-x-1.5 overflow-x-auto scrollbar-none pt-1 pb-1">
+          <div className="flex space-x-1.5 overflow-x-auto scrollbar-none pt-0.5 pb-0.5">
             <button
               onClick={() => setActiveTab('guests')}
-              className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                 activeTab === 'guests'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
                   : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Lista de Convidados</span>
             </button>
 
             <button
               onClick={() => setActiveTab('invites')}
-              className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                 activeTab === 'invites'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
                   : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Convites & Confirmações</span>
             </button>
 
             <button
               onClick={() => setActiveTab('tables')}
-              className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                 activeTab === 'tables'
                   ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-900/40'
                   : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <Armchair className="w-4 h-4" />
+              <Armchair className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Gestão de Mesas</span>
             </button>
 
@@ -237,17 +237,17 @@ export default function AdminPage() {
             {currentRole !== 'birthday_person' ? (
               <button
                 onClick={() => setActiveTab('surprise')}
-                className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                   activeTab === 'surprise'
                     ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40'
                     : 'bg-slate-950/80 text-pink-400/80 hover:text-pink-200 hover:bg-slate-800'
                 }`}
               >
-                <Gift className="w-4 h-4 text-pink-400" />
+                <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400" />
                 <span>Homenagem Surpresa</span>
               </button>
             ) : (
-              <div className="min-h-[42px] px-3.5 py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
+              <div className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
                 <Lock className="w-3.5 h-3.5" /> <span className="italic">Homenagem (Restrito)</span>
               </div>
             )}
@@ -256,17 +256,17 @@ export default function AdminPage() {
             {currentRole === 'admin' ? (
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`min-h-[42px] px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                   activeTab === 'settings'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
                     : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                 }`}
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Configurações</span>
               </button>
             ) : (
-              <div className="min-h-[42px] px-3.5 py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
+              <div className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
                 <Lock className="w-3.5 h-3.5" /> <span className="italic">Configurações (Restrito)</span>
               </div>
             )}
