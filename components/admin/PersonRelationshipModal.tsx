@@ -36,7 +36,6 @@ export function PersonRelationshipModal({
   const [currentPerson, setCurrentPerson] = useState<Person | null>(person);
   const [livePersonsList, setLivePersonsList] = useState<Person[]>(allPersons);
   const [searchTerm, setSearchTerm] = useState('');
-  const [mobileTab, setMobileTab] = useState<'members' | 'add'>('members');
 
   // Estado empilhado (Staged) em memória
   const [stagedFamilyName, setStagedFamilyName] = useState<string>('');
@@ -103,7 +102,7 @@ export function PersonRelationshipModal({
       setStagedFamilyName(updatedPerson.family_name || '');
       setStagedRelationships(updatedPerson.relationships || []);
 
-      setSuccessMessage('Vínculos da família gravados com sucesso!');
+      setSuccessMessage('Vínculos do grupo familiar salvos no banco de dados!');
       setTimeout(() => setSuccessMessage(null), 3500);
 
       onRefresh();
@@ -135,9 +134,9 @@ export function PersonRelationshipModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden">
-      <div className="bg-slate-900 rounded-2xl sm:rounded-3xl max-w-5xl w-full h-[95vh] sm:h-[88vh] flex flex-col shadow-2xl border border-slate-800 text-slate-100 overflow-hidden">
-        {/* HEADER COMPACTO E RESPONSIVO */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 shrink-0">
+      <div className="bg-slate-900 rounded-2xl sm:rounded-3xl max-w-5xl w-full h-[95vh] sm:h-[90vh] flex flex-col shadow-2xl border border-slate-800 text-slate-100 overflow-hidden">
+        {/* HEADER MODAL */}
+        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 pr-2">
             <div className="p-2 bg-purple-950/80 border border-purple-800/80 text-purple-300 rounded-xl shrink-0">
               <Users2 className="w-5 h-5" />
@@ -145,7 +144,7 @@ export function PersonRelationshipModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-extrabold text-white truncate">
-                  {currentPerson.name}
+                  Agrupamento Familiar: <span className="text-purple-400">{currentPerson.name}</span>
                 </h2>
                 {isDirty && (
                   <span className="px-2 py-0.5 bg-amber-950/90 text-amber-300 border border-amber-800 text-[10px] font-black rounded-full animate-pulse shrink-0">
@@ -153,8 +152,8 @@ export function PersonRelationshipModal({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-purple-300/80 truncate font-medium">
-                Agrupamento Familiar ({totalMembers} {totalMembers === 1 ? 'membro' : 'membros'})
+              <p className="text-[11px] text-slate-400 truncate font-medium">
+                Vincule acompanhantes e defina o nome do grupo ({totalMembers} {totalMembers === 1 ? 'membro' : 'membros'})
               </p>
             </div>
           </div>
@@ -167,35 +166,7 @@ export function PersonRelationshipModal({
           </button>
         </div>
 
-        {/* NAVEGAÇÃO DE ABAS NO MOBILE */}
-        <div className="lg:hidden flex border-b border-slate-800 bg-slate-950/60 p-1.5 gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setMobileTab('members')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-              mobileTab === 'members'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 bg-slate-800/40'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Grupo ({totalMembers})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('add')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-              mobileTab === 'add'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 bg-slate-800/40'
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Buscar Convidado</span>
-          </button>
-        </div>
-
-        {/* ALERTA DE NOTIFICAÇÃO */}
+        {/* ALERTA DE SUCESSO */}
         {successMessage && (
           <div className="mx-4 sm:mx-6 mt-3 p-2.5 bg-emerald-950/90 border border-emerald-600 text-emerald-200 text-xs font-bold rounded-xl flex items-center gap-2 shrink-0">
             <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -203,15 +174,11 @@ export function PersonRelationshipModal({
           </div>
         )}
 
-        {/* CORPO MODAL (DUAS COLUNAS NO DESKTOP / ABAS NO MOBILE) */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden min-h-0">
-          {/* COLUNA 1: INTEGRANTES E GRUPO FAMILIAR */}
-          <div
-            className={`lg:col-span-5 p-4 sm:p-5 border-r border-slate-800 bg-slate-900/60 flex flex-col space-y-4 overflow-y-auto ${
-              mobileTab === 'members' ? 'flex' : 'hidden lg:flex'
-            }`}
-          >
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+        {/* CORPO MODAL (DUAS COLUNAS EM LAYOUT DIRETO SEM ABA QUE ESCONDA A BUSCA) */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-y-auto md:overflow-hidden min-h-0">
+          {/* COLUNA 1: GRUPO FAMILIAR E INTEGRANTES (5 cols em md:) */}
+          <div className="md:col-span-5 p-4 sm:p-5 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900/60 flex flex-col space-y-4 overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
               <h3 className="font-extrabold text-xs sm:text-sm text-slate-200 flex items-center gap-2">
                 <Users className="w-4 h-4 text-purple-400" />
                 Integrantes do Grupo ({totalMembers})
@@ -222,7 +189,7 @@ export function PersonRelationshipModal({
             <div className="p-3 bg-purple-950/30 border border-purple-900/60 rounded-xl space-y-1.5">
               <label className="block text-[11px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-purple-400" />
-                <span>Nome do Grupo Familiar:</span>
+                <span>Nome do Grupo / Família:</span>
               </label>
               <input
                 type="text"
@@ -234,7 +201,7 @@ export function PersonRelationshipModal({
               />
             </div>
 
-            {/* CARTÃO DA PESSOA TITULAR */}
+            {/* CARTÃO DO TITULAR */}
             <div className="p-3 bg-slate-800/70 border border-purple-500/40 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-black text-xs shrink-0">
@@ -252,10 +219,10 @@ export function PersonRelationshipModal({
               </div>
             </div>
 
-            {/* LISTA DE VÍNCULOS NA FILA */}
-            <div className="space-y-2 flex-1 min-h-0 overflow-y-auto">
+            {/* LISTA DE ACOMPANHANTES NA FILA */}
+            <div className="space-y-2 flex-1 min-h-[120px] overflow-y-auto">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                Acompanhantes ({stagedRelationships.length})
+                Acompanhantes Vinculados ({stagedRelationships.length})
               </span>
 
               {stagedRelationships.length > 0 ? (
@@ -268,14 +235,14 @@ export function PersonRelationshipModal({
                     return (
                       <div
                         key={rel.target_person_id}
-                        className={`p-3 rounded-xl border flex items-center justify-between transition-colors ${
+                        className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
                           isNewInStage
                             ? 'bg-purple-950/40 border-purple-500/70'
                             : 'bg-slate-800/60 border-slate-700/80'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="p-2 bg-slate-900 rounded-lg border border-slate-700 shrink-0">
+                          <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-700 shrink-0">
                             <Users className="w-3.5 h-3.5 text-purple-400" />
                           </div>
                           <div className="min-w-0">
@@ -315,32 +282,11 @@ export function PersonRelationshipModal({
                   })}
                 </div>
               ) : (
-                <div className="p-4 bg-slate-800/30 border border-slate-800 rounded-xl text-center">
-                  <p className="text-xs text-slate-400">Nenhum acompanhante adicionado.</p>
+                <div className="p-3 bg-slate-800/30 border border-slate-800 rounded-xl text-center">
+                  <p className="text-xs text-slate-400">Nenhum acompanhante adicionado ainda.</p>
                 </div>
               )}
             </div>
-
-            {/* BOTÃO PRINCIPAL DE GRAVAÇÃO */}
-            <button
-              type="button"
-              disabled={saving || (!isDirty && stagedRelationships.length === 0)}
-              onClick={handleSaveAll}
-              className={`w-full py-3 px-4 rounded-xl font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                isDirty
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-400/50'
-                  : 'bg-purple-600 hover:bg-purple-500 text-white'
-              }`}
-            >
-              <Save className="w-4 h-4" />
-              <span>
-                {saving
-                  ? 'GRAVANDO...'
-                  : isDirty
-                  ? `GRAVAR VÍNCULOS (${stagedRelationships.length})`
-                  : 'VÍNCULOS GRAVADOS'}
-              </span>
-            </button>
 
             {/* RESUMO DE BUFFET */}
             <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
@@ -361,16 +307,12 @@ export function PersonRelationshipModal({
             </div>
           </div>
 
-          {/* COLUNA 2: BUSCA E VINCULAÇÃO DE CONVIDADOS */}
-          <div
-            className={`lg:col-span-7 p-4 sm:p-5 bg-slate-900 flex flex-col space-y-3 min-h-0 ${
-              mobileTab === 'add' ? 'flex' : 'hidden lg:flex'
-            }`}
-          >
-            <div className="border-b border-slate-800/80 pb-2.5 flex items-center justify-between">
+          {/* COLUNA 2: BUSCA E LISTA DE CONVIDADOS DIRETA (7 cols em md:) */}
+          <div className="md:col-span-7 p-4 sm:p-5 bg-slate-900 flex flex-col space-y-3 min-h-0">
+            <div className="border-b border-slate-800/80 pb-2 flex items-center justify-between">
               <h3 className="font-extrabold text-xs sm:text-sm text-purple-400 flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
-                Buscar & Vincular Convidado
+                Buscar e Adicionar Convidado
               </h3>
               <span className="text-[10px] font-bold text-slate-400">
                 {eligiblePersons.length} disponíveis
@@ -382,7 +324,7 @@ export function PersonRelationshipModal({
               <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
               <input
                 type="text"
-                placeholder="Digite nome ou telefone..."
+                placeholder="Digite o nome ou telefone para buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-white placeholder-slate-500"
@@ -390,7 +332,7 @@ export function PersonRelationshipModal({
             </div>
 
             {/* LISTA DE CONVIDADOS ELEGÍVEIS */}
-            <div className="flex-1 min-h-[220px] overflow-y-auto space-y-2 pr-1 border border-slate-800/80 p-2 sm:p-3 rounded-xl bg-slate-950/40">
+            <div className="flex-1 min-h-[240px] max-h-[460px] overflow-y-auto space-y-2 pr-1 border border-slate-800/80 p-2 sm:p-3 rounded-xl bg-slate-950/40">
               {eligiblePersons.length > 0 ? (
                 eligiblePersons.map((p) => {
                   const isAlreadyStaged = stagedPersonIds.has(p.id);
@@ -428,13 +370,8 @@ export function PersonRelationshipModal({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => {
-                            handleStageAdd(p);
-                            if (window.innerWidth < 1024) {
-                              setMobileTab('members');
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-lg shadow transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                          onClick={() => handleStageAdd(p)}
+                          className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-lg shadow transition-all cursor-pointer flex items-center gap-1 shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Adicionar</span>
@@ -444,15 +381,15 @@ export function PersonRelationshipModal({
                   );
                 })
               ) : (
-                <p className="text-xs text-slate-400 text-center py-8">
-                  Nenhum convidado encontrado.
+                <p className="text-xs text-slate-400 text-center py-10">
+                  Nenhum convidado encontrado com esse nome ou telefone.
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* FOOTER DO MODAL */}
+        {/* FOOTER MODAL */}
         <div className="px-4 py-3 sm:px-6 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
           <div className="text-[11px] text-slate-400 min-w-0 pr-2">
             {isDirty ? (
@@ -481,10 +418,10 @@ export function PersonRelationshipModal({
               type="button"
               disabled={saving || (!isDirty && stagedRelationships.length === 0)}
               onClick={handleSaveAll}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
             >
               <Save className="w-4 h-4" />
-              <span>{saving ? 'Gravando...' : 'Gravar'}</span>
+              <span>{saving ? 'Gravando...' : 'Gravar Todos'}</span>
             </button>
           </div>
         </div>
