@@ -34,6 +34,8 @@ import {
   ChevronLeft,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
+  MoreVertical,
   Star,
   Music,
   Crown,
@@ -134,6 +136,9 @@ export function GuestList({
   // Estado de Edição Inline de Telefone na Lista de Convidados
   const [editingPhonePersonId, setEditingPhonePersonId] = useState<string | null>(null);
   const [tempPhone, setTempPhone] = useState<string>('');
+
+  // Estado de Exibição dos Indicadores
+  const [showMetrics, setShowMetrics] = useState<boolean>(false);
 
   // Métricas 1:1 de Pessoas & Assentos
   const buffetCapacity = config.buffet_capacity || 100;
@@ -772,8 +777,26 @@ export function GuestList({
 
   return (
     <div className="space-y-6">
-      {/* Dashboard de Métricas Solicitado (3 Cards Perfeitamente Sincronizados) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Dashboard de Métricas Solicitado (Expansível) */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowMetrics(!showMetrics)}
+          className="text-xs font-bold text-slate-500 hover:text-purple-600 transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          {showMetrics ? (
+            <>
+              <ChevronUp className="w-4 h-4" /> Ocultar Indicadores
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4" /> Exibir Indicadores de Resumo
+            </>
+          )}
+        </button>
+      </div>
+
+      {showMetrics && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in">
         {/* CARD 1: LISTA TOTAL DE CONVIDADOS */}
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
@@ -881,6 +904,7 @@ export function GuestList({
           </div>
         </div>
       </div>
+      )}
 
       {/* CARD 1: PAINEL SUPERIOR DE AÇÕES E CRIAÇÃO (CTAs) */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -1026,7 +1050,7 @@ export function GuestList({
                   <th onClick={() => handleSort('family')} className="py-3 px-2.5 cursor-pointer hover:text-purple-500">
                     Família & Parentescos {sortField === 'family' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="py-3 px-3 text-right">Ações</th>
+                  <th className="py-3 px-3 text-right w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
@@ -1241,11 +1265,7 @@ export function GuestList({
                               className="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                               title="Opções"
                             >
-                              <div className="flex flex-col gap-0.5">
-                                <div className="w-1 h-1 bg-current rounded-full" />
-                                <div className="w-1 h-1 bg-current rounded-full" />
-                                <div className="w-1 h-1 bg-current rounded-full" />
-                              </div>
+                              <MoreVertical className="w-5 h-5" />
                             </button>
                             
                             {openDropdownId === person.id && (
@@ -1379,7 +1399,7 @@ export function GuestList({
                       )}
                     </div>
                   </th>
-                  <th className="py-3 px-3 text-right">Ações</th>
+                  <th className="py-3 px-3 text-right w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
@@ -1620,11 +1640,14 @@ export function GuestList({
                         <td className="py-2.5 px-3 text-right">
                           <div className="relative inline-block text-left">
                             <button
-                              onClick={() => setOpenDropdownId(openDropdownId === person.id ? null : person.id)}
-                              className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(openDropdownId === person.id ? null : person.id);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                              title="Opções"
                             >
-                              <span>Ações</span>
-                              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                              <MoreVertical className="w-5 h-5" />
                             </button>
 
                             {openDropdownId === person.id && (
