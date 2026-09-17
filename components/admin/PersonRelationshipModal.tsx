@@ -62,13 +62,26 @@ export function PersonRelationshipModal({
   // IDs das pessoas atualmente empilhadas (staged)
   const stagedPersonIds = new Set(stagedRelationships.map((r) => r.target_person_id));
 
-  // Pessoas elegíveis para vincular na busca (exclui titular e pessoas já empilhadas)
+  // Pessoas elegíveis para vincular na busca (exclui titular e pessoas já empilhadas ou de outras famílias)
   const eligiblePersons = livePersonsList.filter(
-    (p) =>
-      p.id !== currentPerson.id &&
-      (p.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-        (p.phone && p.phone.includes(searchTerm.trim())))
-  );
+    (p) => {
+      if (p.id === currentPerson.id) return false;
+
+      const belongsToAnotherFamily = p.family_id && p.family_id !== currentPerson.family_id;
+      const hasRelationships = (p.relationships || []).length > 0;
+      const isRelatedToCurrent = (p.relationships || []).some(r => r.target_person_id === currentPerson.id);
+
+      // Bloquear se já pertence a outra família ou tem relações que não incluem a pessoa atual
+      if (belongsToAnotherFamily || (hasRelationships && !isRelatedToCurrent && !stagedPersonIds.has(p.id))) {
+        return false;
+      }
+
+      const searchLower = searchTerm.toLowerCase().trim();
+      if (!searchLower) return true;
+
+      return p.name.toLowerCase().includes(searchLower) || (p.phone && p.phone.includes(searchTerm.trim()));
+    }
+  ).slice(0, 20); // Limita a 20 para não poluir a tela
 
   // Adicionar um relacionamento na fila empilhada em memória como vínculo familiar
   const handleStageAdd = (targetPerson: Person) => {
@@ -78,6 +91,7 @@ export function PersonRelationshipModal({
       ...prev,
       { target_person_id: targetPerson.id, relationship_type: 'relative' },
     ]);
+    setSearchTerm(''); // Limpa a busca ao adicionar
   };
 
   // Remover um relacionamento da fila empilhada em memória
@@ -133,63 +147,74 @@ export function PersonRelationshipModal({
     familyMembers.filter((m) => m.child_category && m.child_category !== 'inteira').length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden">
-      <div className="bg-slate-900 rounded-2xl sm:rounded-3xl max-w-5xl w-full h-[95vh] sm:h-[90vh] flex flex-col shadow-2xl border border-slate-800 text-slate-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/90 backdrop-blur-sm transition-all">
+      <div className="bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full h-[92vh] sm:h-[85vh] max-w-3xl flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] sm:shadow-2xl border-t sm:border border-slate-700 sm:border-slate-800 text-slate-100 overflow-hidden relative">
+        
         {/* HEADER MODAL */}
-        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0 pr-2">
-            <div className="p-2 bg-purple-950/80 border border-purple-800/80 text-purple-300 rounded-xl shrink-0">
+        <div className="px-5 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 shadow-sm z-10">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            <div className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-xl shrink-0 shadow-inner">
               <Users2 className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-extrabold text-white truncate">
-                  Agrupamento Familiar: <span className="text-purple-400">{currentPerson.name}</span>
+                  Agrupamento Familiar
                 </h2>
                 {isDirty && (
-                  <span className="px-2 py-0.5 bg-amber-950/90 text-amber-300 border border-amber-800 text-[10px] font-black rounded-full animate-pulse shrink-0">
+                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black rounded-full animate-pulse shrink-0">
                     Pendente
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400 truncate font-medium">
-                Vincule acompanhantes e defina o nome do grupo ({totalMembers} {totalMembers === 1 ? 'membro' : 'membros'})
+                Vincule acompanhantes a {currentPerson.name}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
+            className="p-2.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors cursor-pointer shrink-0 shadow-sm"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* ALERTA DE SUCESSO */}
+        {/* ALERTA DE SUCESSO (FLUTUANTE) */}
         {successMessage && (
-          <div className="mx-4 sm:mx-6 mt-3 p-2.5 bg-emerald-950/90 border border-emerald-600 text-emerald-200 text-xs font-bold rounded-xl flex items-center gap-2 shrink-0">
-            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md p-3 bg-emerald-900/95 border border-emerald-500 shadow-xl shadow-emerald-900/20 text-emerald-100 text-xs font-bold rounded-2xl flex items-center gap-2 z-20">
+            <div className="p-1 bg-emerald-500 rounded-full shrink-0 text-emerald-950">
+               <Check className="w-3 h-3" />
+            </div>
             <span>{successMessage}</span>
           </div>
         )}
 
-        {/* CORPO MODAL (DUAS COLUNAS EM LAYOUT DIRETO SEM ABA QUE ESCONDA A BUSCA) */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-y-auto md:overflow-hidden min-h-0">
-          {/* COLUNA 1: GRUPO FAMILIAR E INTEGRANTES (5 cols em md:) */}
-          <div className="md:col-span-5 p-4 sm:p-5 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900/60 flex flex-col space-y-4 overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <h3 className="font-extrabold text-xs sm:text-sm text-slate-200 flex items-center gap-2">
+        {/* CORPO DA MODAL: ROLAGEM ÚNICA SEM NESTING SCROLL */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-900/50">
+          
+          {/* SEÇÃO 1: GRUPO FAMILIAR ATUAL */}
+          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/60 p-4 sm:p-5 shadow-inner space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-700/50 pb-3">
+              <h3 className="font-extrabold text-sm text-slate-100 flex items-center gap-2">
                 <Users className="w-4 h-4 text-purple-400" />
-                Integrantes do Grupo ({totalMembers})
+                Membros do Grupo ({totalMembers})
               </h3>
+              
+              <div className="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded-lg border border-slate-700/50">
+                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                 <span className="text-[10px] font-bold text-slate-300">
+                    {totalMembers - totalChildren} Adultos {totalChildren > 0 && `· ${totalChildren} Crianças`}
+                 </span>
+              </div>
             </div>
 
             {/* NOME DO GRUPO FAMILIAR */}
-            <div className="p-3 bg-purple-950/30 border border-purple-900/60 rounded-xl space-y-1.5">
-              <label className="block text-[11px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-purple-400" />
-                <span>Nome do Grupo / Família:</span>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" />
+                <span>Nome da Família / Grupo:</span>
               </label>
               <input
                 type="text"
@@ -197,142 +222,95 @@ export function PersonRelationshipModal({
                 placeholder={`Ex: Família ${currentPerson.name.split(' ')[0]}`}
                 value={stagedFamilyName}
                 onChange={(e) => setStagedFamilyName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-purple-800/80 rounded-xl text-xs font-semibold text-white focus:ring-2 focus:ring-purple-500 focus:outline-none placeholder-slate-500"
+                className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm font-bold text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none placeholder-slate-500 shadow-inner"
               />
             </div>
 
-            {/* CARTÃO DO TITULAR */}
-            <div className="p-3 bg-slate-800/70 border border-purple-500/40 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-black text-xs shrink-0">
-                  {currentPerson.name.charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-xs text-white truncate">{currentPerson.name}</span>
-                    <span className="px-1.5 py-0.5 bg-purple-950 text-purple-300 text-[9px] font-black rounded-md border border-purple-700 shrink-0">
-                      Titular
+            {/* LISTA DE MEMBROS (GRID) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              {/* TITULAR */}
+              <div className="p-3 bg-purple-900/20 border border-purple-500/40 rounded-xl flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-inner">
+                    {currentPerson.name.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs sm:text-sm text-white truncate block">{currentPerson.name}</span>
+                    </div>
+                    <span className="text-[10px] font-black text-purple-400 uppercase tracking-wider block mt-0.5">
+                      Titular do Grupo
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 block truncate">{currentPerson.phone || 'Sem telefone'}</span>
                 </div>
               </div>
-            </div>
 
-            {/* LISTA DE ACOMPANHANTES NA FILA */}
-            <div className="space-y-2 flex-1 min-h-[120px] overflow-y-auto">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                Acompanhantes Vinculados ({stagedRelationships.length})
-              </span>
+              {/* ACOMPANHANTES EMPILHADOS */}
+              {stagedRelationships.map((rel) => {
+                const target = livePersonsList.find((p) => p.id === rel.target_person_id);
+                if (!target) return null;
+                const isNewInStage = !originalRels.some((r) => r.target_person_id === rel.target_person_id);
 
-              {stagedRelationships.length > 0 ? (
-                <div className="space-y-2">
-                  {stagedRelationships.map((rel) => {
-                    const target = livePersonsList.find((p) => p.id === rel.target_person_id);
-                    if (!target) return null;
-                    const isNewInStage = !originalRels.some((r) => r.target_person_id === rel.target_person_id);
-
-                    return (
-                      <div
-                        key={rel.target_person_id}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
-                          isNewInStage
-                            ? 'bg-purple-950/40 border-purple-500/70'
-                            : 'bg-slate-800/60 border-slate-700/80'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="p-1.5 bg-slate-900 rounded-lg border border-slate-700 shrink-0">
-                            <Users className="w-3.5 h-3.5 text-purple-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-extrabold text-xs text-white truncate">
-                                {target.name}
-                              </span>
-                              {isNewInStage && (
-                                <span className="px-1.5 py-0.2 bg-amber-950 text-amber-300 text-[8px] font-bold rounded border border-amber-800 shrink-0">
-                                  Novo
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <span className="text-[9px] font-extrabold text-purple-300 bg-purple-950/80 px-1.5 py-0.2 rounded border border-purple-800/60">
-                                Convidado
-                              </span>
-                              {target.child_category && target.child_category !== 'inteira' && (
-                                <span className="text-[8px] font-bold text-amber-300 bg-amber-950/80 px-1 py-0.2 rounded border border-amber-800">
-                                  {target.child_category}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleStageRemove(rel.target_person_id)}
-                          className="p-1.5 text-rose-400 hover:text-white hover:bg-rose-950/80 rounded-lg border border-transparent hover:border-rose-800 transition-all cursor-pointer shrink-0 ml-1"
-                          title="Remover"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                return (
+                  <div
+                    key={rel.target_person_id}
+                    className={`p-3 rounded-xl border flex items-center justify-between shadow-sm transition-colors ${
+                      isNewInStage
+                        ? 'bg-emerald-900/20 border-emerald-500/40'
+                        : 'bg-slate-800/80 border-slate-600/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center font-black text-sm shrink-0 shadow-inner">
+                        {target.name.charAt(0)}
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-3 bg-slate-800/30 border border-slate-800 rounded-xl text-center">
-                  <p className="text-xs text-slate-400">Nenhum acompanhante adicionado ainda.</p>
-                </div>
-              )}
-            </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs sm:text-sm text-white truncate block">
+                            {target.name}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
+                          Convidado {target.child_category && target.child_category !== 'inteira' ? `(${target.child_category})` : ''}
+                        </span>
+                      </div>
+                    </div>
 
-            {/* RESUMO DE BUFFET */}
-            <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Resumo:</span>
-              </div>
-              <div className="flex gap-1.5">
-                <span className="px-2 py-0.5 bg-slate-800 text-slate-200 rounded-md text-[10px] font-extrabold">
-                  {totalMembers - totalChildren} Adulto(s)
-                </span>
-                {totalChildren > 0 && (
-                  <span className="px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-800 rounded-md text-[10px] font-extrabold">
-                    {totalChildren} Criança(s)
-                  </span>
-                )}
-              </div>
+                    <button
+                      type="button"
+                      onClick={() => handleStageRemove(rel.target_person_id)}
+                      className="p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-rose-600 rounded-lg border border-slate-700 hover:border-rose-500 transition-all cursor-pointer shrink-0 ml-2"
+                      title="Remover"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* COLUNA 2: BUSCA E LISTA DE CONVIDADOS DIRETA (7 cols em md:) */}
-          <div className="md:col-span-7 p-4 sm:p-5 bg-slate-900 flex flex-col space-y-3 min-h-0">
-            <div className="border-b border-slate-800/80 pb-2 flex items-center justify-between">
-              <h3 className="font-extrabold text-xs sm:text-sm text-purple-400 flex items-center gap-2">
-                <UserPlus className="w-4 h-4" />
-                Buscar e Adicionar Convidado
-              </h3>
-              <span className="text-[10px] font-bold text-slate-400">
-                {eligiblePersons.length} disponíveis
-              </span>
-            </div>
-
+          {/* SEÇÃO 2: BUSCA DE NOVOS ACOMPANHANTES */}
+          <div className="bg-slate-950/80 rounded-2xl border border-slate-800 p-4 sm:p-5 shadow-xl space-y-4">
+            <h3 className="font-extrabold text-sm text-purple-400 flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              Adicionar Acompanhante
+            </h3>
+            
             {/* CAMPO DE BUSCA */}
             <div className="relative shrink-0">
-              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-4 top-3.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Digite o nome ou telefone para buscar..."
+                placeholder="Busque pelo nome ou telefone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-white placeholder-slate-500"
+                className="w-full pl-11 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none text-white placeholder-slate-500 shadow-inner"
               />
             </div>
 
-            {/* LISTA DE CONVIDADOS ELEGÍVEIS */}
-            <div className="flex-1 min-h-[240px] max-h-[460px] overflow-y-auto space-y-2 pr-1 border border-slate-800/80 p-2 sm:p-3 rounded-xl bg-slate-950/40">
+            {/* LISTA DE CONVIDADOS ELEGÍVEIS (SE BUSCANDO) */}
+            <div className="space-y-2 mt-2">
               {eligiblePersons.length > 0 ? (
                 eligiblePersons.map((p) => {
                   const isAlreadyStaged = stagedPersonIds.has(p.id);
@@ -340,88 +318,83 @@ export function PersonRelationshipModal({
                   return (
                     <div
                       key={p.id}
-                      className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
                         isAlreadyStaged
-                          ? 'bg-purple-950/30 border-purple-800/60'
-                          : 'bg-slate-800/80 border-slate-700/80 hover:border-purple-500/60'
+                          ? 'bg-purple-900/20 border-purple-500/30'
+                          : 'bg-slate-800 border-slate-700 hover:border-purple-500/50 hover:bg-slate-800/80'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0 shadow-inner">
                           {p.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
-                          <span className="font-extrabold text-white block truncate">{p.name}</span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {p.phone && <span className="text-[10px] text-slate-400 truncate">{p.phone}</span>}
-                            {p.family_name && (
-                              <span className="text-[9px] font-bold text-purple-300 bg-purple-950 px-1.5 py-0.2 rounded border border-purple-800 truncate">
-                                {p.family_name}
-                              </span>
-                            )}
-                          </div>
+                          <span className="font-bold text-sm text-white block truncate">{p.name}</span>
+                          {p.phone && <span className="text-[11px] text-slate-400 block truncate">{p.phone}</span>}
                         </div>
                       </div>
 
                       {isAlreadyStaged ? (
-                        <span className="text-[10px] font-bold text-purple-300 bg-purple-950 px-2.5 py-1 rounded-lg border border-purple-800 flex items-center gap-1 shrink-0">
-                          <Check className="w-3.5 h-3.5 text-purple-400" /> Na Fila
+                        <span className="text-[10px] font-black text-purple-300 bg-purple-950 px-3 py-1.5 rounded-lg border border-purple-800 flex items-center gap-1 shrink-0">
+                          <Check className="w-3.5 h-3.5" /> Adicionado
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleStageAdd(p)}
-                          className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-lg shadow transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-lg shadow-md transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Adicionar</span>
+                          <span>Vincular</span>
                         </button>
                       )}
                     </div>
                   );
                 })
               ) : (
-                <p className="text-xs text-slate-400 text-center py-10">
-                  Nenhum convidado encontrado com esse nome ou telefone.
-                </p>
+                <div className="py-8 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700/50">
+                  <p className="text-sm text-slate-400 font-medium">Nenhum convidado disponível encontrado.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Se a pessoa já está em outra família, ela não aparecerá aqui.</p>
+                </div>
               )}
             </div>
           </div>
+
         </div>
 
         {/* FOOTER MODAL */}
-        <div className="px-4 py-3 sm:px-6 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
-          <div className="text-[11px] text-slate-400 min-w-0 pr-2">
+        <div className="px-5 py-4 border-t border-slate-800 bg-slate-950 flex flex-col sm:flex-row items-center justify-between shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-10 gap-3 sm:gap-0">
+          <div className="text-[12px] w-full sm:w-auto text-center sm:text-left">
             {isDirty ? (
-              <span className="text-amber-400 font-bold flex items-center gap-1 truncate">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Alterações pendentes de gravação</span>
+              <span className="text-amber-400 font-bold flex items-center justify-center sm:justify-start gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Existem alterações não salvas</span>
               </span>
             ) : (
-              <span className="text-emerald-400 font-bold flex items-center gap-1 truncate">
-                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate">Vínculos salvos no banco</span>
+              <span className="text-emerald-400 font-bold flex items-center justify-center sm:justify-start gap-1.5">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>Todos os vínculos estão salvos</span>
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold rounded-xl transition-all cursor-pointer border border-slate-700"
             >
-              Fechar
+              Voltar
             </button>
 
             <button
               type="button"
               disabled={saving || (!isDirty && stagedRelationships.length === 0)}
               onClick={handleSaveAll}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="flex-1 sm:flex-none px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>{saving ? 'Gravando...' : 'Gravar Todos'}</span>
+              <span>{saving ? 'Gravando...' : 'Gravar Alterações'}</span>
             </button>
           </div>
         </div>
