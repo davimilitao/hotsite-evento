@@ -15,7 +15,6 @@ import {
   Clock,
   MessageCircle,
   Plus,
-  Upload,
   Search,
   Trash2,
   ExternalLink,
@@ -40,7 +39,6 @@ import {
   Crown,
   Briefcase,
   ShieldCheck,
-  Download,
   UserPlus,
   ArrowUpDown,
   ArrowUp,
@@ -884,33 +882,6 @@ export function GuestList({
         </div>
       </div>
 
-      {/* SELETOR DE ABAS PRINCIPAIS: LISTA DE CONVIDADOS vs GESTÃO DE CONVITES */}
-      <div className="bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl flex items-center border border-slate-200 dark:border-slate-800">
-        <button
-          onClick={() => setActiveTab('persons')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black transition-all cursor-pointer ${
-            activeTab === 'persons'
-              ? 'bg-amber-500 text-slate-950 shadow-md'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Lista de Convidados ({persons.length} Pessoas Físicas)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('invites')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black transition-all cursor-pointer ${
-            activeTab === 'invites'
-              ? 'bg-purple-600 text-white shadow-md'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          <Send className="w-4 h-4" />
-          <span>Convites & Disparos WhatsApp ({invites.length} Convites Ativos)</span>
-        </button>
-      </div>
-
       {/* CARD 1: PAINEL SUPERIOR DE AÇÕES E CRIAÇÃO (CTAs) */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
@@ -968,13 +939,6 @@ export function GuestList({
               >
                 <UserPlus className="w-4 h-4 text-emerald-100" /> <span>Cadastrar Convidado</span>
               </button>
-
-              <button
-                onClick={() => setIsBulkOpen(true)}
-                className="min-h-[42px] px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
-              >
-                <Upload className="w-4 h-4 text-purple-100" /> <span>Importar em Massa</span>
-              </button>
             </>
           ) : (
             <>
@@ -993,16 +957,6 @@ export function GuestList({
               </button>
             </>
           )}
-
-          <a
-            href="/og-save-the-date.jpg"
-            download="save-the-date-fernanda-seppi.jpg"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="min-h-[42px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-600 shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
-          >
-            <Download className="w-4 h-4 text-purple-500" /> <span>Save The Date</span>
-          </a>
         </div>
       </div>
 

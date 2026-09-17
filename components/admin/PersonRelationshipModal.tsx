@@ -402,14 +402,14 @@ export function PersonRelationshipModal({
           </div>
 
           {/* COLUNA 2 (DIREITA): SELEÇÃO DE NOVAS PESSOAS (7 de 12 colunas) */}
-          <div className="lg:col-span-7 p-6 bg-slate-900 flex flex-col space-y-5 overflow-y-auto">
+          <div className="lg:col-span-7 p-4 sm:p-6 bg-slate-900 flex flex-col space-y-4 overflow-y-auto min-h-0">
             <div className="border-b border-slate-800 pb-3">
               <h3 className="font-extrabold text-sm text-purple-400 flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
                 COLUNA 2: Relacionar Nova Pessoa (Empilhar)
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Escolha o grau de parentesco e clique em &quot;Adicionar&quot;. Depois, clique em &quot;Gravar Todos&quot;.
+                Escolha o grau de parentesco e busque quem deseja adicionar. Depois clique em &quot;Gravar Todos&quot;.
               </p>
             </div>
 
@@ -418,7 +418,7 @@ export function PersonRelationshipModal({
               <label className="block text-xs font-black uppercase tracking-wider text-slate-300">
                 1. Selecione o Grau de Relacionamento:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                 {RELATIONSHIP_OPTIONS.map((opt) => {
                   const isSelected = selectedRelType === opt.type;
                   return (
@@ -426,16 +426,16 @@ export function PersonRelationshipModal({
                       key={opt.type}
                       type="button"
                       onClick={() => setSelectedRelType(opt.type)}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
                         isSelected
-                          ? 'bg-purple-600 text-white border-purple-400 shadow-lg shadow-purple-950/50'
-                          : 'bg-slate-800/80 border-slate-700 text-slate-200 hover:border-purple-500/60'
+                          ? 'bg-purple-600 text-white border-purple-400 shadow-md ring-2 ring-purple-400/30'
+                          : 'bg-slate-800/80 border-slate-700 text-slate-200 hover:border-purple-500/60 hover:bg-slate-800'
                       }`}
                     >
-                      <div className={isSelected ? 'text-white' : ''}>{opt.icon}</div>
-                      <div>
-                        <span className="font-extrabold text-xs block leading-tight">{opt.label}</span>
-                        <span className={`text-[10px] block opacity-80 ${isSelected ? 'text-purple-100' : 'text-slate-400'}`}>
+                      <div className={`shrink-0 ${isSelected ? 'text-white' : ''}`}>{opt.icon}</div>
+                      <div className="min-w-0">
+                        <span className="font-extrabold text-xs block truncate">{opt.label}</span>
+                        <span className={`text-[10px] block truncate opacity-75 ${isSelected ? 'text-purple-100' : 'text-slate-400'}`}>
                           {opt.description}
                         </span>
                       </div>
@@ -447,23 +447,26 @@ export function PersonRelationshipModal({
 
             {/* PASSO 2: BUSCA E ADIÇÃO EMPILHADA */}
             <div className="space-y-3 flex-1 flex flex-col min-h-0">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-300">
-                2. Buscar e Adicionar Pessoa à Fila:
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                <span>2. Buscar e Adicionar Pessoa à Fila:</span>
+                <span className="text-[10px] font-bold text-slate-400 normal-case">
+                  ({eligiblePersons.length} {eligiblePersons.length === 1 ? 'disponível' : 'disponíveis'})
+                </span>
               </label>
 
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Digite o nome ou telefone (ex: Paula, Barreto, 1199)..."
+                  placeholder="Digite o nome ou telefone (ex: Davi, Paula, 1199)..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-white placeholder-slate-500"
                 />
               </div>
 
-              {/* LISTA DE CONVIDADOS DISPONÍVEIS */}
-              <div className="space-y-2 flex-1 overflow-y-auto pr-1">
+              {/* LISTA DE CONVIDADOS DISPONÍVEIS COM SCROLLBOX DEDICADO */}
+              <div className="min-h-[180px] max-h-[280px] sm:max-h-[340px] overflow-y-auto space-y-2 pr-1 border border-slate-800/80 p-2 rounded-2xl bg-slate-950/40">
                 {eligiblePersons.length > 0 ? (
                   eligiblePersons.map((p) => {
                     const isAlreadyStaged = stagedPersonIds.has(p.id);
