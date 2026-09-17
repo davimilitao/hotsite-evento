@@ -1129,7 +1129,7 @@ export function GuestList({
                                 >
                                   <MessageCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                   <span>{formatPhoneDisplay(person.phone || '')}</span>
-                                  <Edit className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <Edit className="w-3 h-3 text-slate-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                                 </div>
                               );
                             }
@@ -1452,7 +1452,7 @@ export function GuestList({
                               </div>
                               <button
                                 onClick={() => setEditingCell({ inviteId: person.id, field: 'name', value: person.name })}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
+                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
                               >
                                 <Edit className="w-3 h-3" />
                               </button>
@@ -1489,7 +1489,7 @@ export function GuestList({
                               </span>
                               <button
                                 onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || '' })}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
+                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
                               >
                                 <Edit className="w-3 h-3" />
                               </button>
