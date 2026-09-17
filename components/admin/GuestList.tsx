@@ -972,9 +972,11 @@ export function GuestList({
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={(e) => {
               triggerHaptic('light');
-              setTimeout(() => {
-                e.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 150);
+              if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                setTimeout(() => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+              }
             }}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 min-h-[42px]"
           />
