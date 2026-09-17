@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Person, RelationshipType, Relationship } from '@/types';
+import { Person, Relationship } from '@/types';
 import {
   savePersonFamilyAndRelationships,
-  getAllPersons,
 } from '@/lib/db';
 import {
   Search,
   X,
   Users,
-  Heart,
-  Baby,
   Users2,
   Link2,
   Trash2,
@@ -32,50 +29,6 @@ interface PersonRelationshipModalProps {
   onRefresh: () => void;
 }
 
-const RELATIONSHIP_OPTIONS: Array<{
-  type: RelationshipType;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-}> = [
-  {
-    type: 'spouse',
-    label: 'Cônjuge (Marido / Esposa)',
-    description: 'Esposa, marido, noivo(a) ou parceiro(a)',
-    icon: <Heart className="w-4 h-4 text-rose-400" />,
-  },
-  {
-    type: 'child',
-    label: 'Filho / Filha',
-    description: 'Dependente direto da pessoa',
-    icon: <Baby className="w-4 h-4 text-amber-400" />,
-  },
-  {
-    type: 'parent',
-    label: 'Pai / Mãe',
-    description: 'Mãe ou pai da pessoa',
-    icon: <Users className="w-4 h-4 text-purple-400" />,
-  },
-  {
-    type: 'sibling',
-    label: 'Irmão / Irmã',
-    description: 'Irmão ou irmã de mesmo grupo familiar',
-    icon: <Users2 className="w-4 h-4 text-blue-400" />,
-  },
-  {
-    type: 'relative',
-    label: 'Pessoa da Família / Parente',
-    description: 'Tio, sobrinho, primo ou parente próximo',
-    icon: <Link2 className="w-4 h-4 text-emerald-400" />,
-  },
-  {
-    type: 'friend',
-    label: 'Amigo / Amiga (Grupo)',
-    description: 'Amigo acompanhante no mesmo grupo',
-    icon: <UserPlus className="w-4 h-4 text-indigo-400" />,
-  },
-];
-
 export function PersonRelationshipModal({
   person,
   allPersons,
@@ -86,7 +39,6 @@ export function PersonRelationshipModal({
   const [currentPerson, setCurrentPerson] = useState<Person | null>(person);
   const [livePersonsList, setLivePersonsList] = useState<Person[]>(allPersons);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRelType, setSelectedRelType] = useState<RelationshipType>('spouse');
 
   // Estado empilhado (Staged) em memória
   const [stagedFamilyName, setStagedFamilyName] = useState<string>('');
@@ -121,13 +73,13 @@ export function PersonRelationshipModal({
         (p.phone && p.phone.includes(searchTerm.trim())))
   );
 
-  // Adicionar um relacionamento na fila empilhada em memória
+  // Adicionar um relacionamento na fila empilhada em memória como vínculo familiar
   const handleStageAdd = (targetPerson: Person) => {
     if (stagedPersonIds.has(targetPerson.id)) return;
 
     setStagedRelationships((prev) => [
       ...prev,
-      { target_person_id: targetPerson.id, relationship_type: selectedRelType },
+      { target_person_id: targetPerson.id, relationship_type: 'relative' },
     ]);
   };
 
@@ -294,7 +246,6 @@ export function PersonRelationshipModal({
                   {stagedRelationships.map((rel) => {
                     const target = livePersonsList.find((p) => p.id === rel.target_person_id);
                     if (!target) return null;
-                    const opt = RELATIONSHIP_OPTIONS.find((o) => o.type === rel.relationship_type);
                     const isNewInStage = !originalRels.some((r) => r.target_person_id === rel.target_person_id);
 
                     return (
@@ -308,7 +259,7 @@ export function PersonRelationshipModal({
                       >
                         <div className="flex items-center gap-3">
                           <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-700">
-                            {opt?.icon || <Users className="w-4 h-4 text-purple-400" />}
+                            <Users className="w-4 h-4 text-purple-400" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -323,7 +274,7 @@ export function PersonRelationshipModal({
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="text-[10px] font-extrabold text-purple-400 bg-purple-950/80 px-2 py-0.5 rounded-md border border-purple-800/60">
-                                {opt?.label || rel.relationship_type}
+                                Responsável por convidar
                               </span>
                               {target.child_category && target.child_category !== 'inteira' && (
                                 <span className="text-[9px] font-bold text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded-md border border-amber-800">
@@ -350,10 +301,10 @@ export function PersonRelationshipModal({
                 <div className="p-4 bg-slate-800/40 border border-slate-800 rounded-2xl text-center space-y-2">
                   <Users className="w-8 h-8 text-slate-600 mx-auto" />
                   <p className="text-xs text-slate-400 italic">
-                    Nenhum parente empilhado ainda.
+                    Nenhum integrante vinculado ainda.
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    Selecione uma pessoa na coluna ao lado e clique em &quot;Adicionar&quot;.
+                    Busque um convidado na coluna ao lado e clique em &quot;Adicionar&quot;.
                   </p>
                 </div>
               )}
@@ -401,61 +352,29 @@ export function PersonRelationshipModal({
             </div>
           </div>
 
-          {/* COLUNA 2 (DIREITA): SELEÇÃO DE NOVAS PESSOAS (7 de 12 colunas) */}
-          <div className="lg:col-span-7 p-4 sm:p-6 bg-slate-900 flex flex-col space-y-4 overflow-y-auto min-h-0">
+          {/* COLUNA 2 (DIREITA): BUSCA E VINCULAÇÃO DIRETA (7 de 12 colunas) */}
+          <div className="lg:col-span-7 p-4 sm:p-6 bg-slate-900 flex flex-col space-y-4 min-h-0">
             <div className="border-b border-slate-800 pb-3">
               <h3 className="font-extrabold text-sm text-purple-400 flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
-                COLUNA 2: Relacionar Nova Pessoa (Empilhar)
+                COLUNA 2: Vincular Convidado ao Grupo
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Escolha o grau de parentesco e busque quem deseja adicionar. Depois clique em &quot;Gravar Todos&quot;.
+                Busque pelo nome ou telefone do convidado e clique em &quot;Adicionar&quot; para incluir no mesmo grupo familiar.
               </p>
             </div>
 
-            {/* PASSO 1: SELEÇÃO DO GRAU DE PARENTESCO */}
-            <div className="space-y-2">
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-300">
-                1. Selecione o Grau de Relacionamento:
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {RELATIONSHIP_OPTIONS.map((opt) => {
-                  const isSelected = selectedRelType === opt.type;
-                  return (
-                    <button
-                      key={opt.type}
-                      type="button"
-                      onClick={() => setSelectedRelType(opt.type)}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
-                        isSelected
-                          ? 'bg-purple-600 text-white border-purple-400 shadow-md ring-2 ring-purple-400/30'
-                          : 'bg-slate-800/80 border-slate-700 text-slate-200 hover:border-purple-500/60 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className={`shrink-0 ${isSelected ? 'text-white' : ''}`}>{opt.icon}</div>
-                      <div className="min-w-0">
-                        <span className="font-extrabold text-xs block truncate">{opt.label}</span>
-                        <span className={`text-[10px] block truncate opacity-75 ${isSelected ? 'text-purple-100' : 'text-slate-400'}`}>
-                          {opt.description}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* PASSO 2: BUSCA E ADIÇÃO EMPILHADA */}
+            {/* BUSCA E ADIÇÃO DIRETA */}
             <div className="space-y-3 flex-1 flex flex-col min-h-0">
               <label className="block text-xs font-black uppercase tracking-wider text-slate-300 flex items-center justify-between">
-                <span>2. Buscar e Adicionar Pessoa à Fila:</span>
+                <span>Buscar Convidado para Vincular:</span>
                 <span className="text-[10px] font-bold text-slate-400 normal-case">
                   ({eligiblePersons.length} {eligiblePersons.length === 1 ? 'disponível' : 'disponíveis'})
                 </span>
               </label>
 
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Digite o nome ou telefone (ex: Davi, Paula, 1199)..."
@@ -465,8 +384,8 @@ export function PersonRelationshipModal({
                 />
               </div>
 
-              {/* LISTA DE CONVIDADOS DISPONÍVEIS COM SCROLLBOX DEDICADO */}
-              <div className="min-h-[180px] max-h-[280px] sm:max-h-[340px] overflow-y-auto space-y-2 pr-1 border border-slate-800/80 p-2 rounded-2xl bg-slate-950/40">
+              {/* LISTA DE CONVIDADOS DISPONÍVEIS COM SCROLLBOX EXPANDIDO */}
+              <div className="flex-1 min-h-[260px] max-h-[460px] overflow-y-auto space-y-2 pr-1 border border-slate-800/80 p-3 rounded-2xl bg-slate-950/40">
                 {eligiblePersons.length > 0 ? (
                   eligiblePersons.map((p) => {
                     const isAlreadyStaged = stagedPersonIds.has(p.id);
@@ -515,7 +434,7 @@ export function PersonRelationshipModal({
                     );
                   })
                 ) : (
-                  <p className="text-xs text-slate-400 text-center py-8 bg-slate-950/40 rounded-2xl border border-slate-800">
+                  <p className="text-xs text-slate-400 text-center py-12 bg-slate-950/40 rounded-2xl border border-slate-800">
                     Nenhum convidado encontrado com esse nome ou telefone.
                   </p>
                 )}
@@ -562,3 +481,4 @@ export function PersonRelationshipModal({
     </div>
   );
 }
+
