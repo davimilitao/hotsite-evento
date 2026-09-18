@@ -177,8 +177,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Abas Principais (Mobile Floating Pill / Desktop Top Bar) */}
-          <div className="fixed bottom-4 left-4 right-4 z-50 bg-slate-900 border border-slate-700/80 p-2 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] flex justify-around items-center sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:z-0 sm:bg-transparent sm:border-none sm:p-0 sm:rounded-none sm:shadow-none sm:justify-start sm:space-x-1.5 sm:overflow-x-auto sm:scrollbar-none sm:pt-0.5 sm:pb-0.5">
+          {/* Abas Principais (Mobile Floating Pill White / Desktop Top Bar) */}
+          <div className="fixed bottom-4 left-4 right-4 z-50 bg-white border border-slate-200 p-2 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex justify-around items-center sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:z-0 sm:bg-transparent sm:border-none sm:p-0 sm:rounded-none sm:shadow-none sm:justify-start sm:space-x-1.5 sm:overflow-x-auto sm:scrollbar-none sm:pt-0.5 sm:pb-0.5">
             
             {/* LISTA DE CONVIDADOS */}
             <button
@@ -186,7 +186,7 @@ export default function AdminPage() {
               className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'guests'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'bg-transparent sm:bg-slate-950/80 text-slate-500 sm:text-slate-400 hover:text-slate-700 sm:hover:text-slate-200 sm:hover:bg-slate-800'
               }`}
             >
               <Users className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -199,7 +199,7 @@ export default function AdminPage() {
               className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'invites'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'bg-transparent sm:bg-slate-950/80 text-slate-500 sm:text-slate-400 hover:text-slate-700 sm:hover:text-slate-200 sm:hover:bg-slate-800'
               }`}
             >
               <Send className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -212,7 +212,7 @@ export default function AdminPage() {
               className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'tables'
                   ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-900/40'
-                  : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'bg-transparent sm:bg-slate-950/80 text-slate-500 sm:text-slate-400 hover:text-slate-700 sm:hover:text-slate-200 sm:hover:bg-slate-800'
               }`}
             >
               <Armchair className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -226,10 +226,10 @@ export default function AdminPage() {
                 className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'surprise'
                     ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40'
-                    : 'bg-transparent sm:bg-slate-950/80 text-pink-400/80 hover:text-pink-200 hover:bg-slate-800'
+                    : 'bg-transparent sm:bg-slate-950/80 text-pink-500 sm:text-pink-400/80 hover:text-pink-600 sm:hover:text-pink-200 sm:hover:bg-slate-800'
                 }`}
               >
-                <Gift className={`w-5 h-5 sm:w-4 sm:h-4 ${activeTab === 'surprise' ? 'text-white' : 'text-pink-400'}`} />
+                <Gift className={`w-5 h-5 sm:w-4 sm:h-4 ${activeTab === 'surprise' ? 'text-white' : 'text-pink-500 sm:text-pink-400'}`} />
                 <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Surpresa</span>
               </button>
             ) : (
@@ -245,7 +245,7 @@ export default function AdminPage() {
                 className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'settings'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
-                    : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    : 'bg-transparent sm:bg-slate-950/80 text-slate-500 sm:text-slate-400 hover:text-slate-700 sm:hover:text-slate-200 sm:hover:bg-slate-800'
                 }`}
               >
                 <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
