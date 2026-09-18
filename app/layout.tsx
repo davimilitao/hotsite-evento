@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#6b4684",
+  themeColor: "#a855f7",
   width: "device-width",
   initialScale: 1,
 };
@@ -61,7 +61,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <div className="animate-app-reveal flex-1 flex flex-col">
+            {children}
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Sistema Oficial de Convites, RSVP e Gestão de Festa de 40 Anos da Fernanda Seppi',
     start_url: '/admin',
     display: 'standalone',
-    background_color: '#faf6f0',
-    theme_color: '#6b4684',
+    background_color: '#a855f7',
+    theme_color: '#a855f7',
     orientation: 'portrait',
     icons: [
       {
