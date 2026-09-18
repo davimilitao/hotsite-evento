@@ -1546,7 +1546,7 @@ export function GuestList({
                           {invite ? (
                             <button
                               onClick={() => handleWhatsAppDispatch(invite, person)}
-                              className={`p-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center ${
+                              className={`px-2 py-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-wider ${
                                 isSent
                                   ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-300'
                                   : 'bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-950 dark:hover:bg-purple-900 dark:text-purple-300'
@@ -1559,7 +1559,9 @@ export function GuestList({
                                   : 'Enviar convite no WhatsApp'
                               }
                             >
-                              <MessageCircle className="w-4 h-4" />
+                              <MessageCircle className="w-4 h-4 shrink-0" />
+                              <span className="hidden sm:inline">{isSent ? 'Reenviar' : 'Disparar'}</span>
+                              <span className="inline sm:hidden">{isSent ? 'Wpp' : 'Wpp'}</span>
                             </button>
                           ) : (
                             <button

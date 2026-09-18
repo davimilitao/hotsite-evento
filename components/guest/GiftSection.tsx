@@ -38,7 +38,7 @@ export function GiftSection({ config }: GiftSectionProps) {
           <ul className="space-y-3 py-2">
             <li className="flex items-start gap-2">
               <span className="text-pink-500 shrink-0 mt-0.5">•</span>
-              <span><strong>Miniaturas de maquiagens e perfumes</strong> (sabe como sou apegada a essas coisinhas, né? Aquelas que parecem chaveiros estão super em alta!)</span>
+              <span><strong>Miniaturas de perfumes</strong> (sabe como sou apegada a essas coisinhas, né?)</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-pink-500 shrink-0 mt-0.5">•</span>

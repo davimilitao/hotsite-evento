@@ -17,7 +17,7 @@ import { AdminUserHeader } from '@/components/admin/AdminUserHeader';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'guests' | 'invites' | 'tables' | 'surprise' | 'settings'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invites' | 'tables' | 'surprise' | 'settings'>('invites');
   const [currentRole, setCurrentRole] = useState<UserRole>('admin');
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -108,10 +108,10 @@ export default function AdminPage() {
   // Se a aniversariante estiver na aba surpresa ou um não-admin na aba de configurações, força redirecionamento para convidados
   useEffect(() => {
     if (currentRole === 'birthday_person' && activeTab === 'surprise') {
-      setActiveTab('guests');
+      setActiveTab('invites');
     }
     if (currentRole !== 'admin' && activeTab === 'settings') {
-      setActiveTab('guests');
+      setActiveTab('invites');
     }
   }, [currentRole, activeTab]);
 
