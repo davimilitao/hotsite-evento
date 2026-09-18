@@ -1358,6 +1358,20 @@ export function GuestList({
                       )}
                     </div>
                   </th>
+                  <th className="py-3 px-2 text-center">Convite</th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Status</span>
+                      {sortField === 'status' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                      )}
+                    </div>
+                  </th>
                   <th className="py-3 px-2.5">Telefone</th>
                   <th
                     onClick={() => handleSort('invite_type')}
@@ -1379,20 +1393,6 @@ export function GuestList({
                     <div className="flex items-center gap-1">
                       <span>Mesa</span>
                       {sortField === 'table' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
-                      ) : (
-                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
-                      )}
-                    </div>
-                  </th>
-                  <th className="py-3 px-2 text-center">Convite</th>
-                  <th
-                    onClick={() => handleSort('status')}
-                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Status</span>
-                      {sortField === 'status' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
                       ) : (
                         <ArrowUpDown className="w-3 h-3 text-slate-300" />
@@ -1480,68 +1480,7 @@ export function GuestList({
                           )}
                         </td>
 
-                        <td className="py-2.5 px-2.5 min-w-[130px]">
-                          {isEditingPhone ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                autoFocus
-                                value={editingCell.value}
-                                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSavePersonInlineCell(person);
-                                  if (e.key === 'Escape') setEditingCell(null);
-                                }}
-                                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
-                              />
-                              <button
-                                onClick={() => handleSavePersonInlineCell(person)}
-                                className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                                title="Salvar Telefone"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="group flex items-center justify-between gap-1">
-                              <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px]">
-                                {person.phone ? formatPhoneDisplay(person.phone) : <span className="text-slate-400 italic font-sans text-[10px]">Sem número</span>}
-                              </span>
-                              <button
-                                onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || '' })}
-                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
-                              >
-                                <Edit className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-2.5">
-                          {invite ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
-                              {invite.invite_type === 'individual' ? 'Individual' : `Família (${1 + (invite.companion_person_ids?.length || 0)})`}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 italic">Individual</span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-2.5 min-w-[140px]">
-                          <select
-                            value={currentTableId}
-                            onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
-                            className="w-full p-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                          >
-                            <option value="">-- Sem Mesa --</option>
-                            {tables.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name} ({persons.filter((p) => p.table_id === t.id).length}/{t.capacity})
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
+                        {/* COLUNA: CONVITE */}
                         <td className="py-2.5 px-2 text-center">
                           {invite ? (
                             <button
@@ -1573,6 +1512,7 @@ export function GuestList({
                           )}
                         </td>
 
+                        {/* COLUNA: STATUS */}
                         <td className="py-2.5 px-2.5">
                           {invite ? (
                             <div className="flex flex-col gap-1 items-start">
@@ -1637,6 +1577,71 @@ export function GuestList({
                           ) : (
                             <span className="text-[10px] text-slate-400 italic">Sem Convite</span>
                           )}
+                        </td>
+
+                        {/* COLUNA: TELEFONE */}
+                        <td className="py-2.5 px-2.5 min-w-[130px]">
+                          {isEditingPhone ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingCell.value}
+                                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSavePersonInlineCell(person);
+                                  if (e.key === 'Escape') setEditingCell(null);
+                                }}
+                                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-purple-500 rounded-lg text-xs font-bold focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleSavePersonInlineCell(person)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                                title="Salvar Telefone"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="group flex items-center justify-between gap-1">
+                              <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                                {person.phone ? formatPhoneDisplay(person.phone) : <span className="text-slate-400 italic font-sans text-[10px]">Sem número</span>}
+                              </span>
+                              <button
+                                onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || '' })}
+                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* COLUNA: TIPO DE CONVITE */}
+                        <td className="py-2.5 px-2.5">
+                          {invite ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                              {invite.invite_type === 'individual' ? 'Individual' : `Família (${1 + (invite.companion_person_ids?.length || 0)})`}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Individual</span>
+                          )}
+                        </td>
+
+                        {/* COLUNA: MESA */}
+                        <td className="py-2.5 px-2.5 min-w-[140px]">
+                          <select
+                            value={currentTableId}
+                            onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
+                            className="w-full p-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                          >
+                            <option value="">-- Sem Mesa --</option>
+                            {tables.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} ({persons.filter((p) => p.table_id === t.id).length}/{t.capacity})
+                              </option>
+                            ))}
+                          </select>
                         </td>
 
                         <td className="py-2.5 px-3 text-right">
