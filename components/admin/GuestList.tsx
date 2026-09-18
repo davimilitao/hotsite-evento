@@ -109,6 +109,7 @@ export function GuestList({
   // Estados de Edição Inline & Menu Dropdown na DataTable
   const [editingCell, setEditingCell] = useState<{ inviteId: string; field: 'name' | 'phone'; value: string } | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   // Estados do Wizard Step-by-Step
   const [wizardStep, setWizardStep] = useState<number>(1);
@@ -947,7 +948,7 @@ export function GuestList({
                 return (
                   <button
                     onClick={() => setIsNormalizerOpen(true)}
-                    className={`flex-1 sm:flex-none justify-center min-h-[42px] px-2 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+                    className={`flex-1 sm:flex-none justify-center min-h-[44px] px-2 sm:px-3.5 py-2 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 ${
                       incompleteCount > 0
                         ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
                         : 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30'
@@ -973,7 +974,7 @@ export function GuestList({
                   setEditModalPerson(null);
                   setIsPersonEditOpen(true);
                 }}
-                className="flex-1 sm:flex-none justify-center min-h-[42px] px-2 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] sm:text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="flex-1 sm:flex-none justify-center min-h-[44px] px-2 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] sm:text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
                 <UserPlus className="hidden sm:block w-4 h-4 text-emerald-100" /> <span className="whitespace-nowrap">Cadastrar</span>
               </button>
@@ -982,14 +983,14 @@ export function GuestList({
             <>
               <button
                 onClick={handleOpenAdd}
-                className="flex-1 sm:flex-none justify-center min-h-[42px] px-2 sm:px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-[11px] sm:text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="flex-1 sm:flex-none justify-center min-h-[44px] px-2 sm:px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-[11px] sm:text-xs font-extrabold shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
                 <Plus className="hidden sm:block w-4 h-4" /> <span className="whitespace-nowrap">Novo Convite</span>
               </button>
 
               <button
                 onClick={handleOpenSpecialModal}
-                className="flex-1 sm:flex-none justify-center min-h-[42px] px-2 sm:px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="flex-1 sm:flex-none justify-center min-h-[44px] px-2 sm:px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
                 <Star className="hidden sm:block w-4 h-4 text-amber-900" /> <span className="whitespace-nowrap">Especial</span>
               </button>
@@ -1018,14 +1019,14 @@ export function GuestList({
                   }, 150);
                 }
               }}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 min-h-[42px]"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 min-h-[44px]"
             />
           </div>
 
           {/* Botão de Filtro (Mobile) */}
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className={`md:hidden shrink-0 flex items-center justify-center min-w-[42px] min-h-[42px] rounded-xl border transition-all relative ${
+            className={`md:hidden shrink-0 flex items-center justify-center min-w-[42px] min-h-[44px] rounded-xl border transition-all relative ${
               showMobileFilters || statusFilter !== 'all'
                 ? 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/40 dark:border-purple-500/50 dark:text-purple-300'
                 : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400'
@@ -1280,12 +1281,12 @@ export function GuestList({
                               });
                               onRefresh();
                             }}
-                            className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border cursor-pointer focus:outline-none transition-all ${
+                            className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border shadow-sm cursor-pointer focus:outline-none transition-all ${
                               childCat === 'isento'
-                                ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'
+                                ? 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300'
                                 : childCat === 'meia'
-                                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
-                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-400'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-400'
                             }`}
                           >
                             <option value="isento">Isento</option>
@@ -1639,12 +1640,27 @@ export function GuestList({
                                   {rsvpStatus === 'pending' && 'Aguardando'}
                                 </span>
 
-                                {/* Indicador de Leitura (Visto) */}
-                                <div 
-                                  title={invite.opened_count && invite.opened_count > 0 ? `Visto ${invite.opened_count}x. Última: ${invite.opened_at ? formatDateShort(invite.opened_at) : 'N/A'}` : 'Ainda não visualizado pelo convidado'}
-                                  className="cursor-help flex items-center justify-center p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-                                >
-                                  <Eye className={`w-4 h-4 ${invite.opened_count && invite.opened_count > 0 ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`} />
+                                {/* Indicador de Leitura (Visto) - Custom Popover */}
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenTooltipId(openTooltipId === person.id ? null : person.id)}
+                                    onBlur={() => setTimeout(() => setOpenTooltipId(null), 200)}
+                                    className="flex items-center justify-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                  >
+                                    <Eye className={`w-4 h-4 ${invite.opened_count && invite.opened_count > 0 ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`} />
+                                  </button>
+                                  
+                                  {openTooltipId === person.id && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] z-[60] bg-slate-800 text-slate-100 text-[10px] font-medium py-2 px-3 rounded-xl shadow-xl border border-slate-700 pointer-events-none">
+                                      {invite.opened_count && invite.opened_count > 0 ? (
+                                        <>Visto <strong className="text-purple-400">{invite.opened_count}x</strong><br/>Última: {invite.opened_at ? formatDateShort(invite.opened_at) : 'N/A'}</>
+                                      ) : (
+                                        'Ainda não visualizado pelo convidado'
+                                      )}
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-800"></div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
@@ -2909,7 +2925,7 @@ export function GuestList({
 
       {/* BARRA DE AÇÃO EM LOTE (BULK ACTIONS) */}
       {selectedInviteIds.size > 0 && activeTab === 'invites' && (
-        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-lg bg-slate-900 dark:bg-slate-800 text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 z-[50] animate-in slide-in-from-bottom-5 fade-in duration-200">
+        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-lg bg-slate-800 dark:bg-slate-800 border-2 border-purple-500/30 text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 z-[50] animate-in slide-in-from-bottom-5 fade-in duration-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-600/30 rounded-full flex items-center justify-center">
               <CheckSquare className="w-5 h-5 text-purple-400" />
