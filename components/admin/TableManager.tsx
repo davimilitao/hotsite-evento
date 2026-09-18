@@ -297,56 +297,57 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
                 const pos = getTablePosition(table, idx);
 
                 return (
-                  <div
-                    key={table.id}
-                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
-                  >
-                    <button
-                      onClick={() => handleSelectFloorplanTable(table)}
-                      className={`relative group/btn flex items-center justify-center transition-all cursor-pointer ${
-                        isSelected
-                          ? 'w-7 h-7 sm:w-9 sm:h-9'
-                          : 'w-5 h-5 sm:w-7 sm:h-7 hover:scale-125'
-                      }`}
-                      title={`${table.name} (${tablePersons.length}/${table.capacity} lugares ocupados)`}
+                    <div
+                      key={table.id}
+                      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                     >
-                      {isSelected && (
-                        <>
-                          <span className="absolute -inset-2 rounded-full bg-purple-500/40 animate-ping" />
-                          <span className="absolute -inset-1 rounded-full border-2 border-purple-400 animate-pulse" />
-                        </>
-                      )}
-
-                      {/* Botão Hotspot Indicativo (Sem texto numérico impresso sobreposto) */}
-                      <span
-                        className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md ${
+                      <button
+                        onClick={() => handleSelectFloorplanTable(table)}
+                        className={`relative group/btn flex items-center justify-center transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-purple-600 text-white border-purple-200 ring-4 ring-purple-500/60 scale-110'
-                            : isFull
-                            ? 'bg-emerald-500 text-white border-emerald-300 ring-2 ring-emerald-500/40'
-                            : isHalf
-                            ? 'bg-amber-400 text-slate-950 border-amber-200 ring-2 ring-amber-400/40'
-                            : 'bg-slate-950/80 text-amber-300 border-amber-500/70 hover:bg-amber-400 hover:text-slate-950'
+                            ? 'w-[48px] h-[48px] scale-110'
+                            : 'w-[44px] h-[44px] hover:scale-110'
                         }`}
+                        title={`${table.name} (${tablePersons.length}/${table.capacity} lugares ocupados)`}
                       >
-                        {isSelected ? (
-                          <Sparkles className="w-3.5 h-3.5 text-white animate-spin" style={{ animationDuration: '6s' }} />
-                        ) : isFull ? (
-                          <span className="w-2.5 h-2.5 rounded-full bg-white font-extrabold" />
-                        ) : isHalf ? (
-                          <span className="w-2 h-2 rounded-full bg-slate-950 font-extrabold" />
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        {isSelected && (
+                          <>
+                            <span className="absolute -inset-2 rounded-full bg-purple-500/40 animate-ping" />
+                            <span className="absolute -inset-1 rounded-full border-2 border-purple-400 animate-pulse" />
+                          </>
                         )}
-                      </span>
 
-                      {/* Tooltip com Nome da Mesa no Hover/Touch */}
-                      <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/btn:block bg-slate-950/95 text-amber-300 text-[10px] font-extrabold px-2 py-1 rounded-lg border border-amber-500/40 whitespace-nowrap z-20 pointer-events-none shadow-xl">
-                        {table.name} ({tablePersons.length}/{table.capacity})
-                      </span>
-                    </button>
-                  </div>
+                        {/* Botão Hotspot Indicativo */}
+                        <span
+                          className={`w-full h-full rounded-full flex items-center justify-center border-2 transition-all shadow-lg backdrop-blur-md ${
+                            isSelected
+                              ? 'bg-purple-600 text-white border-purple-300 ring-4 ring-purple-500/60'
+                              : isFull
+                              ? 'bg-emerald-500 text-white border-emerald-300 ring-2 ring-emerald-500/40'
+                              : isHalf
+                              ? 'bg-amber-400 text-slate-950 border-amber-200 ring-2 ring-amber-400/40'
+                              : 'bg-slate-900 text-amber-300 border-amber-500/70 hover:bg-amber-400 hover:text-slate-950'
+                          }`}
+                          style={{ opacity: isSelected ? 0.6 : 0.35 }}
+                        >
+                          {isSelected ? (
+                            <Sparkles className="w-4 h-4 text-white animate-spin" style={{ animationDuration: '6s' }} />
+                          ) : isFull ? (
+                            <span className="w-2.5 h-2.5 rounded-full bg-white font-extrabold" />
+                          ) : isHalf ? (
+                            <span className="w-2 h-2 rounded-full bg-slate-950 font-extrabold" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-amber-400" />
+                          )}
+                        </span>
+
+                        {/* Tooltip com Nome da Mesa no Hover/Touch */}
+                        <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover/btn:block bg-slate-950/95 text-amber-300 text-[10px] font-extrabold px-2 py-1 rounded-lg border border-amber-500/40 whitespace-nowrap z-20 pointer-events-none shadow-xl">
+                          {table.name} ({tablePersons.length}/{table.capacity})
+                        </span>
+                      </button>
+                    </div>
                 );
               })}
             </div>
