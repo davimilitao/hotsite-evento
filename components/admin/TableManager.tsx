@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Table, Invite, Person } from '@/types';
+import { Table, Invite, Person, EventConfig } from '@/types';
 import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition } from '@/lib/db';
 import { triggerHaptic } from '@/lib/utils';
 import {
@@ -9,9 +9,6 @@ import {
   Trash2,
   Edit,
   Users,
-  Armchair,
-  UserPlus,
-  X,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -19,16 +16,20 @@ import {
   LayoutGrid,
   Sparkles,
   ChevronUp,
+  Armchair,
+  UserPlus,
+  X,
 } from 'lucide-react';
 
 interface TableManagerProps {
   tables: Table[];
   invites: Invite[];
   persons: Person[];
+  config: EventConfig;
   onRefresh: () => void;
 }
 
-export function TableManager({ tables, invites, persons, onRefresh }: TableManagerProps) {
+export function TableManager({ tables, invites, persons, config, onRefresh }: TableManagerProps) {
   const [viewMode, setViewMode] = useState<'cards' | 'floorplan'>('cards');
   const [activeFloorplanTable, setActiveFloorplanTable] = useState<Table | null>(tables[0] || null);
 
@@ -43,6 +44,10 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Cálculos de capacidade com base na configuração do buffet
+  const buffetCapacity = config.buffet_capacity || 100;
+  const totalChairsCreated = tables.reduce((acc, t) => acc + (t.capacity || 0), 0);
+  const remainingChairs = buffetCapacity - totalChairsCreated;
   const handleSelectFloorplanTable = (table: Table) => {
     setActiveFloorplanTable(table);
     triggerHaptic('light');
@@ -65,7 +70,9 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
   const handleOpenAdd = () => {
     setEditingTable(null);
     setTableName(`Mesa ${tables.length + 1}`);
-    setCapacity(8);
+    // O sistema é inteligente: sugere por padrão o restante de vagas disponíveis, ou 8 se não houver vagas ou for negativo.
+    // Mas se sobram apenas 2 vagas, ele sugere uma mesa de 2.
+    setCapacity(remainingChairs > 0 ? remainingChairs : 8);
     setShape('round');
     setDescription('');
     setIsAddOpen(true);
@@ -180,7 +187,7 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
       </div>
 
       {/* Contadores 1:1 de Assentos */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Lista Máster Total</span>
@@ -192,9 +199,9 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
 
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Assentos Ocupados (1:1)</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Pessoas Sentadas</span>
             <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{seatedPersons.length}</span>
-            <span className="text-xs text-slate-400 ml-1">/ 100 buffet</span>
+            <span className="text-xs text-slate-400 ml-1">/ {persons.length} convidados</span>
           </div>
           <CheckCircle2 className="w-8 h-8 text-emerald-500 opacity-80" />
         </div>
@@ -206,6 +213,41 @@ export function TableManager({ tables, invites, persons, onRefresh }: TableManag
             <span className="text-xs text-slate-400 ml-1">aguardando mesa</span>
           </div>
           <AlertCircle className="w-8 h-8 text-amber-500 opacity-80" />
+        </div>
+
+        {/* Card de Controle Físico do Salão */}
+        <div className={`p-4 rounded-2xl border flex items-center justify-between shadow-sm transition-colors ${
+          remainingChairs === 0 
+            ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'
+            : remainingChairs > 0
+            ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
+            : 'bg-rose-50/50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800'
+        }`}>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Cadeiras Criadas vs Buffet</span>
+            <div className="flex items-baseline gap-1">
+              <span className={`text-2xl font-black ${
+                remainingChairs === 0 ? 'text-emerald-600 dark:text-emerald-400' 
+                : remainingChairs > 0 ? 'text-blue-600 dark:text-blue-400' 
+                : 'text-rose-600 dark:text-rose-400'
+              }`}>
+                {totalChairsCreated}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">/ {buffetCapacity} contratadas</span>
+            </div>
+            {remainingChairs > 0 && (
+              <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400">+{remainingChairs} vagas livres para alocar</span>
+            )}
+            {remainingChairs < 0 && (
+              <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400">Excedeu {-remainingChairs} cadeiras!</span>
+            )}
+            {remainingChairs === 0 && (
+              <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">Capacidade exata atingida!</span>
+            )}
+          </div>
+          <Armchair className={`w-8 h-8 opacity-80 ${
+            remainingChairs === 0 ? 'text-emerald-500' : remainingChairs > 0 ? 'text-blue-500' : 'text-rose-500'
+          }`} />
         </div>
       </div>
 

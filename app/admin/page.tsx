@@ -273,7 +273,7 @@ export default function AdminPage() {
                 onRefresh={loadAll}
               />
             )}
-            {activeTab === 'tables' && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} />}
+            {activeTab === 'tables' && config && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} config={config} />}
             {activeTab === 'surprise' && currentRole !== 'birthday_person' && config && (
               <SurpriseDashboard
                 invites={invites}
