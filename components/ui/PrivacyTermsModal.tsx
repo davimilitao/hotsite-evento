@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, ShieldCheck, Lock, Smartphone, CheckCircle, Mail, HelpCircle } from 'lucide-react';
+import { X, ShieldCheck, Lock, CheckCircle, HelpCircle, Scale, Server, Clock } from 'lucide-react';
 
 interface PrivacyTermsModalProps {
   isOpen: boolean;
@@ -52,52 +52,71 @@ export function PrivacyTermsModal({ isOpen, onClose, birthdayPersonName = 'Ferna
             </p>
           </div>
 
-          {/* Seção 1: Coleta e Uso de Dados */}
+          {/* Seção 1: Base Legal e Finalidade */}
           <div className="space-y-2">
             <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-purple-500" />
-              1. Finalidade Exclusiva do Uso de Dados
+              <Scale className="w-4 h-4 text-purple-500" />
+              1. Bases Legais e Finalidade Específica
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Os dados coletados (como nome completo, número de WhatsApp, quantidade de acompanhantes e restrições alimentares) são cadastrados e geridos diretamente pela anfitriã para:
+              O tratamento dos seus dados (Nome, WhatsApp e Restrições Alimentares) é realizado sob a base legal do <strong>Consentimento</strong> (Art. 7º, I, LGPD) e <strong>Legítimo Interesse</strong> (Art. 7º, IX, LGPD) da Organização do Evento (Controladora). A plataforma atua apenas como Operadora de Dados, utilizando estas informações unicamente para:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-xs text-slate-600 dark:text-slate-400">
-              <li>Confirmação de presença (RSVP) e contagem oficial para o buffet.</li>
-              <li>Alocação de mesas e assentos no salão de festas.</li>
-              <li>Envio de lembretes e informações operacionais sobre o evento via WhatsApp.</li>
+              <li>Executar o RSVP (Confirmação de presença) e mapeamento de assentos.</li>
+              <li>Disparo transacional de convites e credenciais de acesso ao evento via WhatsApp.</li>
             </ul>
           </div>
 
-          {/* Seção 2: Zero SPAM e Zero Propaganda */}
+          {/* Seção 2: Subprocessadores */}
           <div className="space-y-2">
             <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-500" />
-              2. Política de Zero SPAM e Zero Propaganda
+              <Server className="w-4 h-4 text-emerald-500" />
+              2. Operadores e Subprocessadores de Dados
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Não realizamos disparos de propaganda, spams ou mensagens comerciais de qualquer natureza. O seu número de telefone é utilizado unicamente pela organização do evento para comunicações diretas da festa.
+              A plataforma não vende ou compartilha seus dados para publicidade. O compartilhamento ocorre de forma criptografada exclusivamente com infraestruturas técnicas parceiras essenciais para o funcionamento do SaaS:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+              <li><strong>Google Cloud / Firebase:</strong> Para armazenamento seguro do banco de dados.</li>
+              <li><strong>Vercel Cloud:</strong> Para hospedagem e processamento da aplicação web.</li>
+              <li><strong>APIs de Mensageria (Meta/WhatsApp):</strong> Para entrega dos convites digitais.</li>
+            </ul>
+          </div>
+
+          {/* Seção 3: Ciclo de Vida e Retenção */}
+          <div className="space-y-2">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              3. Ciclo de Vida, Retenção e Descarte Seguro
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Os dados possuem ciclo de vida restrito e obedecem aos seguintes prazos:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+              <li><strong>Descarte Pós-Evento:</strong> Dados de convidados e RSVPs são anonimizados ou deletados compulsoriamente após 90 dias do término do evento, ou imediatamente a pedido do Organizador.</li>
+              <li><strong>Logs de Sistema:</strong> Registros técnicos de conexão (IP e hora de acesso) são retidos por 6 meses, em estrito cumprimento ao Art. 15 do Marco Civil da Internet (Lei nº 12.965/14), sendo deletados após este prazo.</li>
+            </ul>
+          </div>
+
+          {/* Seção 4: Segurança e Isenções */}
+          <div className="space-y-2">
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-blue-500" />
+              4. Zero SPAM e Isenção Financeira
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Não realizamos disparos comerciais. Nossa plataforma <strong>não armazena nem transaciona</strong> dados de cartão de crédito ou senhas bancárias. Sugestões de presentes no site são redirecionadas para plataformas externas.
             </p>
           </div>
 
-          {/* Seção 3: Isenção de Dados Financeiros */}
-          <div className="space-y-2">
-            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-500" />
-              3. Ausência de Coleta de Dados Financeiros
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Nossa plataforma <strong>não armazena, não solicita e não transaciona</strong> dados de cartão de crédito, senhas bancárias ou dados de pagamento. As sugestões de presentes no site são meramente informativas.
-            </p>
-          </div>
-
-          {/* Seção 4: Direitos do Titular (Art. 18 LGPD) */}
+          {/* Seção 5: Direitos do Titular (Art. 18 LGPD) */}
           <div className="space-y-2">
             <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-sky-500" />
-              4. Seus Direitos (Art. 18 da Lei nº 13.709/2018)
+              5. Seus Direitos (Art. 18 da Lei nº 13.709/2018)
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Conforme a LGPD, você possui o direito de confirmar a existência de tratamento dos seus dados, acessar seus dados cadastrados ou solicitar a exclusão de seu nome e telefone da lista do evento a qualquer momento com a anfitriã ou através do canal de suporte da plataforma.
+              Conforme a LGPD, você possui o direito de confirmar a existência de tratamento dos seus dados, acessar as informações cadastradas, solicitar a correção ou exigir a exclusão imediata do seu nome e telefone da base de dados contatando a anfitriã ou nosso suporte.
             </p>
           </div>
         </div>
@@ -115,3 +134,4 @@ export function PrivacyTermsModal({ isOpen, onClose, birthdayPersonName = 'Ferna
     </div>
   );
 }
+
