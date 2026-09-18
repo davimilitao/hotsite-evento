@@ -155,7 +155,10 @@ export default function AdminPage() {
       )}
 
       {/* Header Unificado Responsivo do Admin */}
-      <header className="bg-slate-900/95 border-b border-slate-800 relative sm:sticky sm:top-0 z-40 shadow-xl backdrop-blur-md">
+      <header className="bg-slate-900/95 border-b border-slate-800 relative sm:sticky sm:top-0 z-40 shadow-xl">
+        {/* Background com Blur Isolado (Não quebra o CSS Fixed dos filhos) */}
+        <div className="absolute inset-0 backdrop-blur-md -z-10" />
+        
         <div className="max-w-6xl mx-auto px-2.5 sm:px-4 pt-2.5 sm:pt-3 pb-2 space-y-2 sm:space-y-3">
           {/* Header do Usuário Logado & Ações Unificadas de Gestão */}
           <AdminUserHeader
