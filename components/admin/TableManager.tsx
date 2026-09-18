@@ -636,17 +636,21 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
                     </div>
                   </div>
 
-                  {/* CTA DESLIZAR DE VOLTA PARA A PLANTA BAIXA */}
+                  {/* CTA VER MESA NO SALÃO (PLANTA BAIXA) */}
                   <div className="pt-3 flex justify-center border-t border-slate-200 dark:border-slate-700/80">
                     <button
                       onClick={() => {
                         triggerHaptic('light');
-                        mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setActiveFloorplanTable(table);
+                        setViewMode('floorplan');
+                        setTimeout(() => {
+                          mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
                       }}
                       className="px-5 py-2.5 bg-slate-900 dark:bg-slate-950 text-white hover:bg-slate-800 rounded-xl text-xs font-extrabold shadow-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer border border-slate-700"
                     >
-                      <ChevronUp className="w-4 h-4 text-amber-400 animate-bounce" />
-                      <span>Voltar para a Planta Baixa / Ver Salão</span>
+                      <Map className="w-4 h-4 text-amber-400" />
+                      <span>Ver mesa no salão</span>
                     </button>
                   </div>
                 </div>
