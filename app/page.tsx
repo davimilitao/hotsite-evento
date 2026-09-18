@@ -97,14 +97,14 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.1] font-serif">
-            A Plataforma Completa de Gestão de Convidados que{' '}
+            O Padrão Ouro em RSVP e Gestão de Convidados{' '}
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
-              Valoriza o Seu Evento
+              por WhatsApp
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed font-normal">
-            Aumente a taxa de confirmação com disparo direto no WhatsApp, rastreamento de leitura em tempo real 👁️, gestão de mesas 1:1, e-mails automáticos de notificação e vitrine do buffet integrada.
+            Diga adeus às planilhas confusas. Aumente a presença do seu evento com convites interativos, mapeamento visual de mesas 1:1 e RSVP blindado com rastreamento de leitura em tempo real.
           </p>
 
           {/* CTAs Principais da Hero */}
@@ -288,10 +288,10 @@ export default function LandingPage() {
 
             <div className="space-y-1.5">
               <h4 className="font-extrabold text-white flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Art. 18 LGPD
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> LGPD e Exclusão Segura
               </h4>
               <p className="text-slate-400 leading-relaxed">
-                Transparência total e direito de solicitação de exclusão de dados a qualquer momento.
+                Transparência total com ciclo de vida rigoroso: os dados dos convidados são excluídos ou anonimizados em 90 dias após o evento.
               </p>
             </div>
           </div>
@@ -336,3 +336,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+
