@@ -778,14 +778,14 @@ export function GuestList({
   return (
     <div className="space-y-6">
       {/* Dashboard de Métricas Solicitado (Expansível) */}
-      <div className="flex justify-end">
+      <div className="flex justify-start sm:justify-end">
         <button
           onClick={() => setShowMetrics(!showMetrics)}
-          className="text-xs font-bold text-slate-500 hover:text-purple-600 transition-colors flex items-center gap-1 cursor-pointer"
+          className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 rounded-full text-xs font-bold transition-all hover:bg-purple-100 dark:hover:bg-purple-900/40 shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
         >
           {showMetrics ? (
             <>
-              <ChevronUp className="w-4 h-4" /> Ocultar Indicadores
+              <ChevronUp className="w-4 h-4" /> Ocultar Indicadores de Resumo
             </>
           ) : (
             <>

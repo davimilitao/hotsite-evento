@@ -143,7 +143,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 sm:pb-16">
       {/* Banner de Aviso de Configuração do Firebase */}
       {!isFirebaseConfigured && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-300 px-4 py-2 text-xs text-center flex items-center justify-center gap-2">
@@ -174,79 +174,83 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Abas Principais Responsivas em Pílulas com Scroll Suave */}
-          <div className="flex space-x-1.5 overflow-x-auto scrollbar-none pt-0.5 pb-0.5">
+          {/* Abas Principais (Mobile Floating Pill / Desktop Top Bar) */}
+          <div className="fixed bottom-4 left-4 right-4 z-50 bg-slate-900 border border-slate-700/80 p-2 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] flex justify-around items-center sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:z-0 sm:bg-transparent sm:border-none sm:p-0 sm:rounded-none sm:shadow-none sm:justify-start sm:space-x-1.5 sm:overflow-x-auto sm:scrollbar-none sm:pt-0.5 sm:pb-0.5">
+            
+            {/* LISTA DE CONVIDADOS */}
             <button
               onClick={() => setActiveTab('guests')}
-              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+              className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'guests'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Lista de Convidados</span>
+              <Users className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Lista</span>
             </button>
 
+            {/* CONVITES */}
             <button
               onClick={() => setActiveTab('invites')}
-              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+              className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'invites'
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Convites & Confirmações</span>
+              <Send className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Convites</span>
             </button>
 
+            {/* MESAS */}
             <button
               onClick={() => setActiveTab('tables')}
-              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+              className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'tables'
                   ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-900/40'
-                  : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <Armchair className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Gestão de Mesas</span>
+              <Armchair className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Mesas</span>
             </button>
 
-            {/* ABA HOMENAGEM SURPRESA */}
+            {/* SURPRESA */}
             {currentRole !== 'birthday_person' ? (
               <button
                 onClick={() => setActiveTab('surprise')}
-                className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+                className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'surprise'
                     ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40'
-                    : 'bg-slate-950/80 text-pink-400/80 hover:text-pink-200 hover:bg-slate-800'
+                    : 'bg-transparent sm:bg-slate-950/80 text-pink-400/80 hover:text-pink-200 hover:bg-slate-800'
                 }`}
               >
-                <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400" />
-                <span>Homenagem Surpresa</span>
+                <Gift className={`w-5 h-5 sm:w-4 sm:h-4 ${activeTab === 'surprise' ? 'text-white' : 'text-pink-400'}`} />
+                <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Surpresa</span>
               </button>
             ) : (
-              <div className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
-                <Lock className="w-3.5 h-3.5" /> <span className="italic">Homenagem (Restrito)</span>
+              <div className="hidden sm:flex min-h-[42px] px-3.5 py-2 text-xs text-slate-600 items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
+                <Lock className="w-3.5 h-3.5" /> <span className="italic">Restrito</span>
               </div>
             )}
 
-            {/* ABA CONFIGURAÇÕES (EXCLUSIVA ADMIN GERAL) */}
+            {/* CONFIGS */}
             {currentRole === 'admin' ? (
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
+                className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'settings'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40'
-                    : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    : 'bg-transparent sm:bg-slate-950/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                 }`}
               >
-                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>Configurações</span>
+                <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
+                <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Config</span>
               </button>
             ) : (
-              <div className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs text-slate-600 flex items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
-                <Lock className="w-3.5 h-3.5" /> <span className="italic">Configurações (Restrito)</span>
+              <div className="hidden sm:flex min-h-[42px] px-3.5 py-2 text-xs text-slate-600 items-center gap-1.5 cursor-not-allowed opacity-50 bg-slate-950/40 rounded-xl">
+                <Lock className="w-3.5 h-3.5" /> <span className="italic">Restrito</span>
               </div>
             )}
           </div>
