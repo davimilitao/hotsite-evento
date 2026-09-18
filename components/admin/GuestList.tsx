@@ -53,6 +53,9 @@ import {
   Tag,
   Filter,
   BarChart3,
+  Ghost,
+  FolderSearch,
+  CheckSquare,
 } from 'lucide-react';
 
 interface GuestListProps {
@@ -79,6 +82,7 @@ export function GuestList({
   const setActiveTab = externalSetActiveTab || setInternalActiveTab;
   const [searchTerm, setSearchTerm] = useState('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [selectedInviteIds, setSelectedInviteIds] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined' | 'unopened_48h' | 'unresponded_24h'
   >('all');
@@ -1095,8 +1099,26 @@ export function GuestList({
                   if (sortedPersons.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400 font-medium">
-                          Nenhum convidado encontrado na busca ou filtro selecionado.
+                        <td colSpan={5} className="py-16 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-2">
+                              <FolderSearch className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                            </div>
+                            <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-300">Nenhum convidado encontrado</h3>
+                            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                              {searchTerm || statusFilter !== 'all' 
+                                ? 'Não achamos ninguém com os filtros ou buscas atuais.'
+                                : 'Sua lista está vazia. Adicione convidados para começar!'}
+                            </p>
+                            {(searchTerm || statusFilter !== 'all') && (
+                              <button
+                                onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
+                                className="mt-2 px-4 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 text-[11px] font-bold rounded-lg transition-colors"
+                              >
+                                Limpar Filtros e Busca
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1373,6 +1395,20 @@ export function GuestList({
             <table className="w-full text-left border-collapse min-w-[850px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                  <th className="py-3 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={sortedPersons.length > 0 && selectedInviteIds.size === sortedPersons.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedInviteIds(new Set(sortedPersons.map((p) => p.id)));
+                        } else {
+                          setSelectedInviteIds(new Set());
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 cursor-pointer dark:bg-slate-800"
+                    />
+                  </th>
                   <th
                     onClick={() => handleSort('name')}
                     className="py-3 px-3 cursor-pointer hover:text-purple-600 transition-colors select-none"
@@ -1433,8 +1469,26 @@ export function GuestList({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
                 {sortedPersons.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
-                      Nenhum convidado encontrado na busca ou filtro selecionado.
+                    <td colSpan={7} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-2">
+                          <Ghost className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                        </div>
+                        <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-300">Nada por aqui...</h3>
+                        <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                          {searchTerm || statusFilter !== 'all' 
+                            ? 'Nenhum convite corresponde à sua busca atual.'
+                            : 'Você ainda não possui convidados criados.'}
+                        </p>
+                        {(searchTerm || statusFilter !== 'all') && (
+                          <button
+                            onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
+                            className="mt-2 px-4 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 text-[11px] font-bold rounded-lg transition-colors"
+                          >
+                            Limpar Filtros e Busca
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -1459,6 +1513,19 @@ export function GuestList({
 
                     return (
                       <tr key={person.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="py-2.5 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedInviteIds.has(person.id)}
+                            onChange={(e) => {
+                              const newSet = new Set(selectedInviteIds);
+                              if (e.target.checked) newSet.add(person.id);
+                              else newSet.delete(person.id);
+                              setSelectedInviteIds(newSet);
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 cursor-pointer dark:bg-slate-800"
+                          />
+                        </td>
                         <td className="py-2.5 px-3 min-w-[150px]">
                           {isEditingName ? (
                             <div className="flex items-center gap-1">
@@ -2823,6 +2890,55 @@ export function GuestList({
         config={config}
         onRefresh={onRefresh}
       />
+
+      {/* BARRA DE AÇÃO EM LOTE (BULK ACTIONS) */}
+      {selectedInviteIds.size > 0 && activeTab === 'invites' && (
+        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-lg bg-slate-900 dark:bg-slate-800 text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 z-[50] animate-in slide-in-from-bottom-5 fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-600/30 rounded-full flex items-center justify-center">
+              <CheckSquare className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold">{selectedInviteIds.size} selecionados</p>
+              <p className="text-[10px] text-slate-400">Prontos para ação em massa</p>
+            </div>
+          </div>
+          <div className="flex w-full md:w-auto items-center gap-2">
+            <button
+              onClick={() => setSelectedInviteIds(new Set())}
+              className="flex-1 md:flex-none px-4 py-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                alert(`O recurso de Disparo em Lote para ${selectedInviteIds.size} pessoas abrirá as janelas do WhatsApp em sequência. (Em desenvolvimento)`);
+                // Aqui seria implementado um modal de fila de disparo ou envio de mensagem.
+              }}
+              className="flex-1 md:flex-none px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Disparar Todos
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* BOTÃO FLUTUANTE DE AÇÃO RÁPIDA (FAB) */}
+      <button
+        onClick={() => {
+          if (activeTab === 'persons') {
+            setEditModalPerson(null);
+            setIsPersonEditOpen(true);
+          } else {
+            handleOpenAdd();
+          }
+        }}
+        title={activeTab === 'persons' ? 'Cadastrar Convidado' : 'Novo Convite'}
+        className="fixed bottom-24 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-purple-600 hover:bg-purple-500 text-white rounded-full shadow-[0_8px_24px_rgba(147,51,234,0.35)] dark:shadow-[0_8px_24px_rgba(147,51,234,0.15)] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-[45] cursor-pointer"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }
