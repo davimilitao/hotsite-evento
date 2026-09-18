@@ -117,14 +117,14 @@ export function getTablePosition(table: Table, index: number): { x: number; y: n
   const idLower = (table.id || '').toLowerCase();
 
   // Coordenadas das 11 Mesas Físicas na Arte do Salão
-  const POS_MESA_1  = { x: 69.5, y: 17.0 }; // Topo Direita
+  const POS_MESA_1  = { x: 70.2, y: 17.0 }; // Topo Direita
   const POS_MESA_2  = { x: 55.5, y: 17.0 }; // Topo Centro-Direita
   const POS_MESA_3  = { x: 41.5, y: 17.0 }; // Topo Centro
   const POS_MESA_4  = { x: 27.5, y: 17.0 }; // Topo Centro-Esquerda
   const POS_MESA_5  = { x: 13.5, y: 17.0 }; // Topo Esquerda
   const POS_MESA_6  = { x: 41.5, y: 65.0 }; // Centro Direita
   const POS_MESA_7  = { x: 26.5, y: 65.0 }; // Centro Esquerda
-  const POS_MESA_8  = { x: 62.5, y: 83.0 }; // Base Direita
+  const POS_MESA_8  = { x: 63.5, y: 83.0 }; // Base Direita
   const POS_MESA_9  = { x: 46.5, y: 83.0 }; // Base Centro-Direita
   const POS_MESA_10 = { x: 30.5, y: 83.0 }; // Base Centro-Esquerda
   const POS_MESA_11 = { x: 14.5, y: 83.0 }; // Base Esquerda
@@ -196,14 +196,14 @@ export function getTablePosition(table: Table, index: number): { x: number; y: n
 }
 
 export const INITIAL_TABLES: Table[] = [
-  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, shape: 'round', description: 'Topo Direita (Próxima à Mesa do Bolo)', position: { x: 69.5, y: 17.0 } },
+  { id: 'mesa-01', name: 'Mesa 01 - Família Seppi', capacity: 8, shape: 'round', description: 'Topo Direita (Próxima à Mesa do Bolo)', position: { x: 70.2, y: 17.0 } },
   { id: 'mesa-02', name: 'Mesa 02 - Amigos de Infância', capacity: 8, shape: 'round', description: 'Topo Centro-Direita', position: { x: 55.5, y: 17.0 } },
   { id: 'mesa-03', name: 'Mesa 03 - Colegas de Trabalho', capacity: 8, shape: 'round', description: 'Topo Centro', position: { x: 41.5, y: 17.0 } },
   { id: 'mesa-04', name: 'Mesa 04 - Família Expandida', capacity: 8, shape: 'round', description: 'Topo Centro-Esquerda', position: { x: 27.5, y: 17.0 } },
   { id: 'mesa-05', name: 'Mesa 05 - Hóspedes & Viagem', capacity: 8, shape: 'round', description: 'Topo Esquerda', position: { x: 13.5, y: 17.0 } },
   { id: 'mesa-06', name: 'Mesa 06 - Primos & Família', capacity: 8, shape: 'round', description: 'Centro-Direita', position: { x: 41.5, y: 65.0 } },
   { id: 'mesa-07', name: 'Mesa 07 - Convidado Especial', capacity: 8, shape: 'round', description: 'Centro-Esquerda', position: { x: 26.5, y: 65.0 } },
-  { id: 'mesa-08', name: 'Mesa 08 - Amigos Próximos', capacity: 8, shape: 'round', description: 'Base Direita (Próxima à Mesa do Café)', position: { x: 62.5, y: 83.0 } },
+  { id: 'mesa-08', name: 'Mesa 08 - Amigos Próximos', capacity: 8, shape: 'round', description: 'Base Direita (Próxima à Mesa do Café)', position: { x: 63.5, y: 83.0 } },
   { id: 'mesa-09', name: 'Mesa 09 - Família Amigos', capacity: 8, shape: 'round', description: 'Base Centro-Direita', position: { x: 46.5, y: 83.0 } },
   { id: 'mesa-10', name: 'Mesa 10 - Amigos & Acompanhantes', capacity: 8, shape: 'round', description: 'Base Centro-Esquerda', position: { x: 30.5, y: 83.0 } },
   { id: 'mesa-11', name: 'Mesa 11 - Setor Recepção', capacity: 8, shape: 'round', description: 'Base Esquerda', position: { x: 14.5, y: 83.0 } },
