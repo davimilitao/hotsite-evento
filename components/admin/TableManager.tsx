@@ -19,6 +19,9 @@ import {
   Armchair,
   UserPlus,
   X,
+  BarChart3,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 interface TableManagerProps {
@@ -31,6 +34,8 @@ interface TableManagerProps {
 
 export function TableManager({ tables, invites, persons, config, onRefresh }: TableManagerProps) {
   const [viewMode, setViewMode] = useState<'cards' | 'floorplan'>('cards');
+  const [showMetrics, setShowMetrics] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [activeFloorplanTable, setActiveFloorplanTable] = useState<Table | null>(tables[0] || null);
 
   const mapRef = useRef<HTMLDivElement>(null);
@@ -146,36 +151,13 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0">
-          {/* Visual Switcher */}
-          <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl flex items-center border border-slate-200 dark:border-slate-700">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                viewMode === 'cards'
-                  ? 'bg-amber-500 text-slate-950 shadow-md'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              <span>Cards & Cadeiras</span>
-            </button>
-            <button
-              onClick={() => {
-                setViewMode('floorplan');
-                if (tables.length > 0 && !activeFloorplanTable) {
-                  setActiveFloorplanTable(tables[0]);
-                }
-              }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                viewMode === 'floorplan'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Map className="w-4 h-4" />
-              <span>Planta Baixa do Salão</span>
-            </button>
-          </div>
+          {/* Toggle de Métricas */}
+          <button
+            onClick={() => setShowMetrics(!showMetrics)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
+          >
+            <BarChart3 className="w-4 h-4" /> {showMetrics ? 'Ocultar Indicadores' : 'Exibir Indicadores'}
+          </button>
 
           <button
             onClick={handleOpenAdd}
@@ -187,7 +169,8 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
       </div>
 
       {/* Contadores 1:1 de Assentos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {showMetrics && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-2">
         <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Lista Máster Total</span>
@@ -250,18 +233,40 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
           }`} />
         </div>
       </div>
-
-      {/* Alerta de Convidados Sem Mesa */}
-      {unassignedPersons.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/60 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 text-amber-800 dark:text-amber-200 text-xs font-bold">
-            <Users className="w-5 h-5 text-amber-500 shrink-0" />
-            <span>
-              Existem <strong>{unassignedPersons.length} pessoa(s)</strong> sem mesa atribuída. Somente pessoas com assento definido podem ser convidadas via WhatsApp!
-            </span>
-          </div>
-        </div>
       )}
+
+      {/* Toggle View Cards vs Planta Baixa (Centralizado) */}
+      <div className="flex justify-center my-6">
+        <div className="bg-slate-100 dark:bg-slate-900 p-1.5 rounded-full flex items-center border border-slate-200 dark:border-slate-700 shadow-sm max-w-fit">
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-black transition-all ${
+              viewMode === 'cards'
+                ? 'bg-white dark:bg-slate-800 shadow-sm text-slate-900 dark:text-white'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <LayoutGrid className="w-5 h-5" /> Cards & Cadeiras
+          </button>
+          <button
+            onClick={() => {
+              setViewMode('floorplan');
+              if (tables.length > 0 && !activeFloorplanTable) {
+                setActiveFloorplanTable(tables[0]);
+              }
+            }}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-black transition-all ${
+              viewMode === 'floorplan'
+                ? 'bg-purple-600 shadow-sm text-white'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Map className="w-5 h-5" /> Planta Baixa do Salão
+          </button>
+        </div>
+      </div>
+
+      {/* MODO CARDS & ALOCAÇÃO 1:1 (CROQUI PADRÃO) */}
 
       {/* MODO PLANTA BAIXA INTERATIVA DO SALÃO */}
       {viewMode === 'floorplan' && (
@@ -280,15 +285,27 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
               </span>
             </div>
 
-            {/* Imagem do Salão com Overlays das Mesas */}
-            <div ref={mapRef} className="relative w-full rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950">
-              <img
-                src="/salao-planta-baixa.jpg?v=20260916"
-                alt="Planta Baixa Interativa do Salão"
-                className="w-full h-auto object-cover select-none"
-              />
+            {/* Wrapper de Tela Cheia */}
+            <div className={isFullscreen ? "fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-2 md:p-8 overflow-auto animate-in fade-in zoom-in-95" : "relative"}>
+              {/* Imagem do Salão com Overlays das Mesas */}
+              <div ref={mapRef} className={`relative w-full max-w-[1400px] mx-auto rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl bg-slate-950 transition-all ${isFullscreen ? 'shadow-purple-500/10' : ''}`}>
+                
+                {/* Botão de Tela Cheia */}
+                <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="absolute top-4 right-4 z-30 bg-slate-950/80 backdrop-blur-md text-white p-2.5 rounded-xl border border-slate-700 hover:bg-purple-600 hover:border-purple-400 transition-all shadow-lg group"
+                  title={isFullscreen ? "Sair da Tela Cheia" : "Ver em Tela Cheia"}
+                >
+                  {isFullscreen ? <Minimize2 className="w-5 h-5 group-hover:scale-90 transition-transform" /> : <Maximize2 className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+                </button>
 
-              {tables.map((table, idx) => {
+                <img
+                  src="/salao-planta-baixa.jpg?v=20260916"
+                  alt="Planta Baixa Interativa do Salão"
+                  className="w-full h-auto object-cover select-none"
+                />
+
+                {tables.map((table, idx) => {
                 const tablePersons = persons.filter((p) => p.table_id === table.id);
                 const isSelected = activeFloorplanTable?.id === table.id;
                 const isFull = tablePersons.length >= table.capacity;
@@ -350,6 +367,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
                     </div>
                 );
               })}
+            </div>
             </div>
 
             {/* Legenda do Administrador */}
