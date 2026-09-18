@@ -272,7 +272,7 @@ export function GuestList({
     });
 
     const text = encodeURIComponent(
-      `Olá, ${inv.head_name}! Super entendemos! Já deixamos o seu lugar reservado temporariamente até o dia ${requestedDateStr}. Aguardamos ansiosos pela sua confirmação final!`
+      `Olá, ${inv.head_name}! Tudo bem? Entendemos perfeitamente. O seu pedido de prazo foi anotado e já pré-reservamos o seu lugar no salão até o dia ${requestedDateStr}.\n\nAguardamos ansiosos pela sua confirmação final! 🥳`
     );
     const targetPhone = formatPhoneE164(inv.phone);
     if (targetPhone) {
@@ -291,7 +291,7 @@ export function GuestList({
     });
 
     const text = encodeURIComponent(
-      `Olá, ${inv.head_name}! Infelizmente precisamos fechar a lista com o buffet hoje e não conseguiremos aguardar até o dia ${requestedDateStr}. Agradecemos por considerar vir e comemoraremos juntos em breve!`
+      `Olá, ${inv.head_name}! Tudo bem? Poxa, infelizmente as vagas são contadas e precisamos fechar a lista de assentos com o buffet hoje. Por isso, não conseguiremos segurar a reserva até o dia ${requestedDateStr}.\n\nDe toda forma, agradecemos muito o carinho e comemoraremos juntos em uma próxima oportunidade! 💜`
     );
     const targetPhone = formatPhoneE164(inv.phone);
     if (targetPhone) {
@@ -2974,3 +2974,4 @@ export function GuestList({
     </div>
   );
 }
+
