@@ -9,72 +9,69 @@ interface GiftSectionProps {
 }
 
 export function GiftSection({ config }: GiftSectionProps) {
-  // Filtramos a vaquinha Pix caso exista na lista antiga para não exibir chave financeira
-  const filteredSuggestions = (config.gift_suggestions || []).filter(
-    (item) => item.category !== 'vaquinha' && !item.title.toLowerCase().includes('pix')
-  );
-
   return (
-    <section className="bg-white rounded-3xl p-6 shadow-xl border border-purple-100 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-purple-100 text-[#6d44e4] rounded-2xl">
+    <section className="bg-white rounded-3xl p-6 shadow-xl border border-purple-100 space-y-5">
+      <div className="flex items-center gap-3 border-b border-purple-50 pb-4">
+        <div className="p-3 bg-pink-100 text-pink-600 rounded-2xl shrink-0">
           <Gift className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-lg font-black text-[#1e152d]">Sugestões de Presentes & Mimos</h2>
-          <p className="text-xs text-slate-500">Sua presença é o nosso maior presente! Se quiser nos presentear:</p>
+          <h2 className="text-lg font-black text-[#1e152d]">Um Recadinho da Fê</h2>
+          <p className="text-[11px] font-bold text-pink-500 uppercase tracking-widest">Sobre Presentes & Mimos</p>
         </div>
       </div>
 
-      {/* Aviso de Transparência e Isenção de Dados Financeiros (LGPD) */}
-      <div className="bg-[#f7f4fc] p-4 rounded-2xl border border-purple-100/80 flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-        <div className="space-y-0.5 text-xs text-slate-600 font-medium">
-          <p className="font-extrabold text-[#1e152d]">Sem Cobranças ou Solicitação de Dados de Pagamento</p>
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            As sugestões abaixo servem apenas como inspiração de estilos e tamanhos. Este hotsite <strong>não solicita dados bancários, números de cartão de crédito ou pagamentos diretos</strong>.
+      <div className="bg-[#fcf8fa] rounded-2xl p-5 border border-pink-100/60 shadow-sm relative overflow-hidden">
+        {/* Background visual element */}
+        <div className="absolute top-0 right-0 p-4 opacity-5">
+          <HeartHandshake className="w-32 h-32 text-pink-500" />
+        </div>
+
+        <div className="relative z-10 space-y-4 text-[13px] leading-relaxed text-slate-700 font-medium">
+          <p>
+            Ah, que legal que você clicou aqui! 🥰
+          </p>
+          <p>
+            Falando bem sério: a sua presença e o seu abraço são os meus maiores e melhores presentes. Mas, como algumas pessoas me pediram um norte, deixo aqui algumas ideias se você quiser me fazer um mimo:
+          </p>
+          
+          <ul className="space-y-3 py-2">
+            <li className="flex items-start gap-2">
+              <span className="text-pink-500 shrink-0 mt-0.5">•</span>
+              <span><strong>Miniaturas de maquiagens e perfumes</strong> (sabe como sou apegada a essas coisinhas, né? Aquelas que parecem chaveiros estão super em alta!)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-pink-500 shrink-0 mt-0.5">•</span>
+              <span><strong>Body splashs</strong> (para me manter cheirosa sempre ✨).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-pink-500 shrink-0 mt-0.5">•</span>
+              <span><strong>Velas aromáticas, incensos e itens da linha zen</strong> (para criar aquele ambiente de paz e tranquilidade, muito bom pra recarregar as energias).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-pink-500 shrink-0 mt-0.5">•</span>
+              <span><strong>Tudo que tenha cachorro salsicha como tema!</strong> (é, eu amo as minhas meninas... mesmo que elas me tirem a paz de vez em quando. Na dúvida, me dá a vela zen junto para equilibrar! hahaha 🌭🐕).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-pink-500 shrink-0 mt-0.5">•</span>
+              <span><strong>Tênis (tamanho 37)</strong> ou <strong>Sandálias (tamanho 36)</strong>.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-pink-500 shrink-0 mt-0.5">•</span>
+              <span><strong>Vinhos e mais vinhos!</strong> (brincadeira... ou não 🍷), <strong>acessórios</strong> e <strong>sabonetes perfumados</strong>.</span>
+            </li>
+          </ul>
+
+          <p className="pt-2">
+            Bom, acho que já sugeri até demais! Mas o que importa mesmo é a sua presença para termos um dia maravilhoso juntos. Espero por você!
+          </p>
+
+          <p className="pt-4 font-black text-pink-600 text-sm italic">
+            Com carinho,<br/>
+            Fê 💖
           </p>
         </div>
       </div>
-
-      {/* Lista de Sugestões de Presentes Físicos e Experiências */}
-      {filteredSuggestions.length > 0 ? (
-        <div className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-purple-600 flex items-center gap-1.5">
-            <HeartHandshake className="w-4 h-4 text-[#6d44e4]" />
-            <span>Ideias & Tamanhos Preferidos</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filteredSuggestions.map((item) => (
-              <div
-                key={item.id}
-                className="bg-[#f9f7fd] p-4 rounded-2xl border border-purple-100 space-y-1.5 hover:border-purple-300 transition-colors shadow-sm"
-              >
-                <h4 className="font-extrabold text-sm text-[#1e152d] flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#6d44e4]" />
-                  {item.title}
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">{item.description}</p>
-                {item.link && (
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block text-[11px] font-bold text-[#6d44e4] hover:underline pt-1"
-                  >
-                    Ver Exemplo / Referência &rarr;
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="p-4 text-center text-xs text-slate-400 font-medium">
-          Nenhuma sugestão cadastrada. A sua presença na festa é o único presente necessário!
-        </div>
-      )}
     </section>
   );
 }
