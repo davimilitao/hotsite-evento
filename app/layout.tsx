@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://hotsite-evento-pink.vercel.app"),
   title: "Fernanda Seppi - 40 Anos 🌸✨",
   description: "Sistema Oficial de Convites, RSVP e Gestão de Festa de 40 Anos da Fernanda Seppi",
-  manifest: "/manifest.json",
+  
   openGraph: {
     title: "Fernanda Seppi - 40 Anos 🌸✨",
     description: "Confirmação de Presença Oficial para os 40 Anos da Fernanda Seppi",
