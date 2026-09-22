@@ -10,7 +10,7 @@ import {
   Sparkles,
   Image as ImageIcon,
   Type,
-  Layout,
+  Layout, Calendar,
   EyeOff,
   Upload,
   FileImage,
@@ -827,3 +827,5 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
     </form>
   );
 }
+
+

@@ -41,7 +41,7 @@ import {
   Crown,
   Briefcase,
   ShieldCheck,
-  UserPlus,
+  UserPlus, Calendar,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -85,8 +85,7 @@ export function GuestList({
   const setActiveTab = externalSetActiveTab || setInternalActiveTab;
   const [searchTerm, setSearchTerm] = useState('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [selectedInviteIds, setSelectedInviteIds] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<
+    const [statusFilter, setStatusFilter] = useState<
     'all' | 'uninvited' | 'confirmed' | 'pending_date' | 'expired' | 'declined' | 'unopened_48h' | 'unresponded_24h'
   >('all');
   const [isBulkOpen, setIsBulkOpen] = useState(false);
@@ -1399,20 +1398,7 @@ export function GuestList({
             <table className="w-full text-left border-collapse min-w-[850px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
-                  <th className="py-3 px-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={sortedPersons.length > 0 && selectedInviteIds.size === sortedPersons.length}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedInviteIds(new Set(sortedPersons.map((p) => p.id)));
-                        } else {
-                          setSelectedInviteIds(new Set());
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 cursor-pointer dark:bg-slate-800"
-                    />
-                  </th>
+                  <th className="py-3 px-3 w-10 text-center"></th>
                   <th
                     onClick={() => handleSort('name')}
                     className="py-3 px-3 cursor-pointer hover:text-purple-600 transition-colors select-none"
@@ -1517,19 +1503,7 @@ export function GuestList({
 
                     return (
                       <tr key={person.id} className="hover:bg-slate-100/60 dark:hover:bg-slate-700/50 transition-colors even:bg-slate-50/50 dark:even:bg-slate-800/20 group/row">
-                        <td className="py-2.5 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedInviteIds.has(person.id)}
-                            onChange={(e) => {
-                              const newSet = new Set(selectedInviteIds);
-                              if (e.target.checked) newSet.add(person.id);
-                              else newSet.delete(person.id);
-                              setSelectedInviteIds(newSet);
-                            }}
-                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 cursor-pointer dark:bg-slate-800"
-                          />
-                        </td>
+                        <td className="py-2.5 px-3 text-center"></td>
                         <td className="py-2.5 px-3 min-w-[150px]">
                           {isEditingName ? (
                             <div className="flex items-center gap-1">
@@ -2222,6 +2196,21 @@ export function GuestList({
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 dark:text-slate-300">
+                    <Calendar className="w-4 h-4 text-purple-500" /> Data Limite de Resposta (RSVP)
+                  </label>
+                  <input
+                    type="date"
+                    value={individualDeadline}
+                    onChange={(e) => setIndividualDeadline(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 shadow-sm transition-all"
+                  />
+                  <p className="text-[10px] text-slate-500 pl-1">
+                    Se vazio, usará o padrão: <strong className="text-purple-600 dark:text-purple-400">{config.deadline_rsvp ? new Date(config.deadline_rsvp).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Não definido'}</strong>
+                  </p>
                 </div>
 
                 {phone.replace(/\D/g, '').length < 8 && (
@@ -2923,38 +2912,7 @@ export function GuestList({
         onRefresh={onRefresh}
       />
 
-      {/* BARRA DE AÇÃO EM LOTE (BULK ACTIONS) */}
-      {selectedInviteIds.size > 0 && activeTab === 'invites' && (
-        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-auto max-w-lg bg-slate-800 dark:bg-slate-800 border-2 border-purple-500/30 text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 z-[50] animate-in slide-in-from-bottom-5 fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-600/30 rounded-full flex items-center justify-center">
-              <CheckSquare className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-sm font-extrabold">{selectedInviteIds.size} selecionados</p>
-              <p className="text-[10px] text-slate-400">Prontos para ação em massa</p>
-            </div>
-          </div>
-          <div className="flex w-full md:w-auto items-center gap-2">
-            <button
-              onClick={() => setSelectedInviteIds(new Set())}
-              className="flex-1 md:flex-none px-4 py-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => {
-                alert(`O recurso de Disparo em Lote para ${selectedInviteIds.size} pessoas abrirá as janelas do WhatsApp em sequência. (Em desenvolvimento)`);
-                // Aqui seria implementado um modal de fila de disparo ou envio de mensagem.
-              }}
-              className="flex-1 md:flex-none px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Disparar Todos
-            </button>
-          </div>
-        </div>
-      )}
+      {/* BARRA DE AÇÃO EM LOTE REMOVIDA */}
 
       {/* BOTÃO FLUTUANTE DE AÇÃO RÁPIDA (FAB) */}
       <button
@@ -2974,4 +2932,9 @@ export function GuestList({
     </div>
   );
 }
+
+
+
+
+
 
