@@ -8,6 +8,7 @@ import { BulkImporter } from './BulkImporter';
 import { PersonRelationshipModal } from './PersonRelationshipModal';
 import { PersonEditModal } from './PersonEditModal';
 import { DataNormalizerModal } from './DataNormalizerModal';
+import { GuestActionDrawer } from './GuestActionDrawer';
 import {
   Users,
   UserCheck,
@@ -109,6 +110,9 @@ export function GuestList({
   const [editingCell, setEditingCell] = useState<{ inviteId: string; field: 'name' | 'phone'; value: string } | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+
+  // Estado do Drawer / Bottom Sheet de Ações Rápidas do Convidado
+  const [selectedDrawerPerson, setSelectedDrawerPerson] = useState<Person | null>(null);
 
   // Estados do Wizard Step-by-Step
   const [wizardStep, setWizardStep] = useState<number>(1);
@@ -1575,7 +1579,7 @@ export function GuestList({
                       <tr key={person.id} className="hover:bg-slate-100/60 dark:hover:bg-slate-700/50 transition-colors even:bg-slate-50/50 dark:even:bg-slate-800/20 group/row">
                         <td className="py-2.5 px-3 text-center"></td>
                         
-                        {/* COLUNA 1: CONVIDADO (NOME LIMPO) */}
+                        {/* COLUNA 1: CONVIDADO (CLICÁVEL PARA ABRIR RAIO-X / GAVETA) */}
                         <td className="py-2.5 px-3 min-w-[150px]">
                           {isEditingName ? (
                             <div className="flex items-center gap-1">
@@ -1600,8 +1604,13 @@ export function GuestList({
                             </div>
                           ) : (
                             <div className="group flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-extrabold text-slate-800 dark:text-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedDrawerPerson(person)}
+                                className="text-left font-extrabold text-slate-800 dark:text-slate-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors flex items-center gap-1.5 cursor-pointer py-0.5 group/btn"
+                                title="Toque para ver o resumo completo e ações deste convidado"
+                              >
+                                <span className="group-hover/btn:underline decoration-purple-400 decoration-2 underline-offset-2">
                                   {person.name}
                                 </span>
                                 {person.child_category && person.child_category !== 'inteira' && (
@@ -1609,10 +1618,13 @@ export function GuestList({
                                     {person.child_category === 'isento' ? 'Isento' : 'Meia Criança'}
                                   </span>
                                 )}
-                              </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-purple-500 opacity-60 sm:opacity-0 sm:group-hover/btn:opacity-100 transition-opacity shrink-0" />
+                              </button>
+
                               <button
                                 onClick={() => setEditingCell({ inviteId: person.id, field: 'name', value: person.name })}
-                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-600 transition-opacity cursor-pointer"
+                                className="opacity-0 md:group-hover:opacity-100 p-1 text-slate-300 hover:text-purple-600 transition-opacity cursor-pointer"
+                                title="Renomear"
                               >
                                 <Edit className="w-3 h-3" />
                               </button>
@@ -3028,6 +3040,36 @@ export function GuestList({
       >
         <Plus className="w-6 h-6" />
       </button>
+
+      {/* DRAWER / BOTTOM SHEET RESPONSIVO DE AÇÕES DO CONVIDADO */}
+      <GuestActionDrawer
+        isOpen={Boolean(selectedDrawerPerson)}
+        person={selectedDrawerPerson}
+        invite={
+          selectedDrawerPerson
+            ? invites.find(
+                (i) =>
+                  i.id === selectedDrawerPerson.invite_id ||
+                  i.head_person_id === selectedDrawerPerson.id ||
+                  i.companion_person_ids?.includes(selectedDrawerPerson.id)
+              ) || null
+            : null
+        }
+        allPersons={persons}
+        tables={tables}
+        config={config}
+        onClose={() => setSelectedDrawerPerson(null)}
+        onDispatchWhatsApp={(inv, p) => handleWhatsAppDispatch(inv, p)}
+        onAcceptRequestedDate={(inv) => handleAcceptRequestedDate(inv)}
+        onRejectRequestedDate={(inv) => handleRejectRequestedDate(inv)}
+        onEditInvite={(inv) => handleOpenEdit(inv)}
+        onTableChange={(p, tableId) => handleTableChangeForPerson(p, tableId)}
+        onSavePhone={async (p, newPhone) => {
+          await savePerson({ ...p, phone: newPhone });
+          onRefresh();
+        }}
+        onSplitCompanion={(p, inv) => handleSplitAndDispatchCompanion(p, inv)}
+      />
     </div>
   );
 }
