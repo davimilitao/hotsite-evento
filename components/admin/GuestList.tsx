@@ -140,7 +140,7 @@ export function GuestList({
   const [quickLoading, setQuickLoading] = useState(false);
 
   // Estados de Ordenação por Coluna
-  const [sortField, setSortField] = useState<'name' | 'invite_type' | 'table' | 'status' | 'family'>('name');
+  const [sortField, setSortField] = useState<'name' | 'invite_type' | 'table' | 'status' | 'family' | 'responsible'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Estado de Edição Inline de Telefone na Lista de Convidados
@@ -309,7 +309,7 @@ export function GuestList({
     }
   };
 
-  const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status' | 'family') => {
+  const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status' | 'family' | 'responsible') => {
     if (sortField === field) {
       setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
@@ -325,6 +325,13 @@ export function GuestList({
     if (sortField === 'name') {
       valA = a.name.toLowerCase();
       valB = b.name.toLowerCase();
+    } else if (sortField === 'responsible') {
+      const invA = invites.find((i) => i.id === a.invite_id || i.head_person_id === a.id || i.companion_person_ids?.includes(a.id));
+      const invB = invites.find((i) => i.id === b.invite_id || i.head_person_id === b.id || i.companion_person_ids?.includes(b.id));
+      const headA = invA?.head_person_id ? persons.find((p) => p.id === invA.head_person_id)?.name || invA.head_name : (invA?.head_name || 'z_sem_convite');
+      const headB = invB?.head_person_id ? persons.find((p) => p.id === invB.head_person_id)?.name || invB.head_name : (invB?.head_name || 'z_sem_convite');
+      valA = headA.toLowerCase();
+      valB = headB.toLowerCase();
     } else if (sortField === 'family') {
       valA = (a.family_name || 'z_sem_familia').toLowerCase();
       valB = (b.family_name || 'z_sem_familia').toLowerCase();
@@ -581,29 +588,57 @@ export function GuestList({
   };
 
   const handleWhatsAppDispatch = async (invite: Invite, targetPerson?: Person) => {
-    if (targetPerson) {
-      const isHead =
-        invite.head_person_id === targetPerson.id ||
-        (!invite.head_person_id && invite.head_name.trim().toLowerCase() === targetPerson.name.trim().toLowerCase());
-      const isCompanion = !isHead && (invite.companion_person_ids?.includes(targetPerson.id) || false);
+    const isTargetCompanion = Boolean(
+      targetPerson &&
+      invite.head_person_id !== targetPerson.id &&
+      (!invite.head_person_id ? invite.head_name.trim().toLowerCase() !== targetPerson.name.trim().toLowerCase() : true) &&
+      (invite.companion_person_ids?.includes(targetPerson.id) || false)
+    );
 
-      if (isCompanion) {
-        await handleSplitAndDispatchCompanion(targetPerson, invite);
+    // Se for acompanhante, verifica se tem telefone próprio cadastrado
+    const personPhone = targetPerson?.phone ? targetPerson.phone.replace(/\D/g, '') : '';
+    const headPhone = invite.phone ? invite.phone.replace(/\D/g, '') : '';
+
+    if (isTargetCompanion && (!personPhone || personPhone.length < 8)) {
+      const respName = invite.head_name || 'o titular';
+      const sendViaResp = confirm(
+        `"${targetPerson?.name}" não possui número de celular cadastrado.\n\nDeseja disparar no WhatsApp do responsável da família (${respName} - ${formatPhoneDisplay(invite.phone)})?`
+      );
+      if (!sendViaResp) {
+        if (targetPerson) {
+          setEditingCell({ inviteId: targetPerson.id, field: 'phone', value: '' });
+        }
         return;
       }
     }
 
-    const cleanDigits = invite.phone ? invite.phone.replace(/\D/g, '') : '';
+    const finalPhone = (isTargetCompanion && personPhone && personPhone.length >= 8) ? targetPerson!.phone : invite.phone;
+    const cleanDigits = finalPhone ? finalPhone.replace(/\D/g, '') : '';
+
     if (!cleanDigits || cleanDigits.length < 8) {
       alert(
-        `O telefone de "${invite.head_name}" está em branco ou incompleto. Informe o número com DDD para realizar o disparo.`
+        `O telefone de "${isTargetCompanion ? targetPerson?.name : invite.head_name}" está em branco ou incompleto. Informe o número com DDD para realizar o disparo.`
       );
       handleOpenEdit(invite);
       return;
     }
 
+    let waUrl = '';
+    const siteUrl = typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.host}`
+      : 'https://seusite.com.br';
+    const inviteUrl = `${siteUrl}/convite/${invite.id}`;
+    const deadlineIso = invite.individual_deadline || config.deadline_rsvp;
+    const formattedDeadline = deadlineIso ? formatDateShort(deadlineIso) : '25/10/2026';
+
+    if (isTargetCompanion && targetPerson && personPhone && personPhone.length >= 8) {
+      const companionMsg = `Olá ${targetPerson.name}! Você e sua família são nossos convidados especiais para celebrar os 40 Anos da Fernanda Seppi! 🌸✨\n\nO(a) *${invite.head_name}* é o responsável por confirmar a presença da família pelo link até o dia *${formattedDeadline}*, mas você já pode acessar todos os detalhes da festa e ver sua mesa reservada:\n👉 ${inviteUrl}\n\nEsperamos vocês! ❤️`;
+      waUrl = `https://wa.me/${formatPhoneE164(targetPerson.phone || '')}?text=${encodeURIComponent(companionMsg)}`;
+    } else {
+      waUrl = buildWhatsAppLink(invite.head_name, finalPhone || '', invite.id, undefined, deadlineIso);
+    }
+
     // Bypass iOS Popup blocker - abre de forma síncrona
-    const waUrl = buildWhatsAppLink(invite.head_name, invite.phone, invite.id, undefined, invite.individual_deadline || config.deadline_rsvp);
     window.open(waUrl, '_blank');
 
     // Salva no banco assincronamente em background
@@ -1436,7 +1471,7 @@ export function GuestList({
                     className="py-3 px-3 cursor-pointer hover:text-purple-600 transition-colors select-none"
                   >
                     <div className="flex items-center gap-1">
-                      <span>Nome</span>
+                      <span>Convidado</span>
                       {sortField === 'name' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
                       ) : (
@@ -1444,13 +1479,25 @@ export function GuestList({
                       )}
                     </div>
                   </th>
-                  <th className="py-3 px-2 text-center">Convite</th>
+                  <th
+                    onClick={() => handleSort('responsible')}
+                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Confirmação por</span>
+                      {sortField === 'responsible' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
+                      )}
+                    </div>
+                  </th>
                   <th
                     onClick={() => handleSort('status')}
                     className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
                   >
                     <div className="flex items-center gap-1">
-                      <span>Confirmação</span>
+                      <span>Status RSVP</span>
                       {sortField === 'status' ? (
                         sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
                       ) : (
@@ -1458,20 +1505,8 @@ export function GuestList({
                       )}
                     </div>
                   </th>
+                  <th className="py-3 px-2 text-center">WhatsApp</th>
                   <th className="py-3 px-2.5">Telefone</th>
-                  <th
-                    onClick={() => handleSort('invite_type')}
-                    className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Tipo</span>
-                      {sortField === 'invite_type' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-purple-600" /> : <ArrowDown className="w-3.5 h-3.5 text-purple-600" />
-                      ) : (
-                        <ArrowUpDown className="w-3 h-3 text-slate-300" />
-                      )}
-                    </div>
-                  </th>
                   <th
                     onClick={() => handleSort('table')}
                     className="py-3 px-2.5 cursor-pointer hover:text-purple-600 transition-colors select-none"
@@ -1520,7 +1555,7 @@ export function GuestList({
                     );
                     const headPerson = invite?.head_person_id ? persons.find((p) => p.id === invite.head_person_id) : null;
                     const isHead = invite ? (invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase())) : false;
-                    const isCompanion = !isHead && invite?.companion_person_ids?.includes(person.id);
+                    const isCompanion = !isHead && (invite?.companion_person_ids?.includes(person.id) || false);
 
                     const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : { expired: false, label: 'Pendente', color: 'bg-slate-100 text-slate-700 border-slate-300' };
                     const isSent = invite?.sent_status === 'sent';
@@ -1533,9 +1568,14 @@ export function GuestList({
                     const rsvpStatus = guestObj?.status || invite?.status || 'pending';
                     const openUpwards = index >= sortedPersons.length - 3 && sortedPersons.length > 2;
 
+                    const personHasPhone = Boolean(person.phone && person.phone.replace(/\D/g, '').length >= 8);
+                    const headHasPhone = Boolean(invite?.phone && invite.phone.replace(/\D/g, '').length >= 8);
+
                     return (
                       <tr key={person.id} className="hover:bg-slate-100/60 dark:hover:bg-slate-700/50 transition-colors even:bg-slate-50/50 dark:even:bg-slate-800/20 group/row">
                         <td className="py-2.5 px-3 text-center"></td>
+                        
+                        {/* COLUNA 1: CONVIDADO (NOME LIMPO) */}
                         <td className="py-2.5 px-3 min-w-[150px]">
                           {isEditingName ? (
                             <div className="flex items-center gap-1">
@@ -1564,14 +1604,9 @@ export function GuestList({
                                 <span className="font-extrabold text-slate-800 dark:text-slate-100">
                                   {person.name}
                                 </span>
-                                {invite && isHead && invite.invite_type === 'family' && (
-                                  <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                                    Titular
-                                  </span>
-                                )}
-                                {invite && isCompanion && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-900 text-slate-500">
-                                    Família
+                                {person.child_category && person.child_category !== 'inteira' && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300">
+                                    {person.child_category === 'isento' ? 'Isento' : 'Meia Criança'}
                                   </span>
                                 )}
                               </div>
@@ -1585,41 +1620,28 @@ export function GuestList({
                           )}
                         </td>
 
-                        {/* COLUNA: CONVITE */}
-                        <td className="py-2.5 px-2 text-center align-middle">
+                        {/* COLUNA 2: CONFIRMAÇÃO POR (RESPONSÁVEL CLARO) */}
+                        <td className="py-2.5 px-2.5 align-middle">
                           {invite ? (
-                            <button
-                              onClick={() => handleWhatsAppDispatch(invite, person)}
-                              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-wider ${
-                                isSent
-                                  ? 'bg-transparent border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/50'
-                                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
-                              }`}
-                              title={
-                                isCompanion
-                                  ? 'Enviar convite direto no WhatsApp deste integrante'
-                                  : isSent
-                                  ? 'Convite já enviado no WhatsApp (Clique para reenviar)'
-                                  : 'Enviar convite no WhatsApp'
-                              }
-                            >
-                              <Send className="w-3.5 h-3.5 shrink-0" />
-                              <span className="hidden sm:inline">{isSent ? 'Reenviar' : 'Convidar'}</span>
-                              <span className="inline sm:hidden">{isSent ? 'Reenviar' : 'Convidar'}</span>
-                            </button>
+                            isHead ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shadow-xs">
+                                <CheckCircle2 className="w-3 h-3 text-purple-600 dark:text-purple-400" /> Ele(a) mesmo
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 max-w-[170px] truncate"
+                                title={`Responsável por confirmar este convite: ${headPerson?.name || invite?.head_name}`}
+                              >
+                                <Link2 className="w-3 h-3 text-purple-500 shrink-0" />
+                                <span className="truncate">{headPerson?.name || invite?.head_name}</span>
+                              </span>
+                            )
                           ) : (
-                            <button
-                              onClick={() => handleOpenAddForPerson(person)}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black cursor-pointer shadow-sm transition-all inline-flex items-center justify-center gap-1.5"
-                            >
-                              <MessageCirclePlus className="w-3.5 h-3.5 shrink-0" />
-                              <span className="hidden sm:inline">Convidar</span>
-                              <span className="inline sm:hidden">Convidar</span>
-                            </button>
+                            <span className="text-[10px] text-slate-400 italic">Sem convite</span>
                           )}
                         </td>
 
-                        {/* COLUNA: STATUS (Confirmação) */}
+                        {/* COLUNA 3: STATUS RSVP (CONFIRMAÇÃO) */}
                         <td className="py-2.5 px-2.5 align-middle">
                           {invite ? (
                             <div className="flex flex-col justify-center gap-1 items-start h-full min-h-[38px]">
@@ -1677,7 +1699,7 @@ export function GuestList({
                               )}
                               {invite.status === 'pending_date' && invite.requested_date_reason && (
                                 <span className="text-[9px] text-slate-500 max-w-[140px] truncate leading-none" title={invite.requested_date_reason}>
-                                  "{invite.requested_date_reason}"
+                                  &quot;{invite.requested_date_reason}&quot;
                                 </span>
                               )}
                               {invite.status === 'pending_date' && (
@@ -1701,7 +1723,7 @@ export function GuestList({
 
                               {invite.status === 'declined' && invite.declined_message && (
                                 <span className="text-[9px] text-rose-500 italic max-w-[140px] truncate leading-none mt-0.5" title={invite.declined_message}>
-                                  "{invite.declined_message}"
+                                  &quot;{invite.declined_message}&quot;
                                 </span>
                               )}
                             </div>
@@ -1712,7 +1734,50 @@ export function GuestList({
                           )}
                         </td>
 
-                        {/* COLUNA: TELEFONE */}
+                        {/* COLUNA 4: WHATSAPP (AÇÃO DE DISPARO RÁPIDO) */}
+                        <td className="py-2.5 px-2 text-center align-middle">
+                          {invite ? (
+                            personHasPhone || isHead ? (
+                              <button
+                                onClick={() => handleWhatsAppDispatch(invite, person)}
+                                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-wider ${
+                                  isSent
+                                    ? 'bg-transparent border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/50'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                                }`}
+                                title={
+                                  isCompanion
+                                    ? `Enviar link da família direto no WhatsApp de ${person.name}`
+                                    : isSent
+                                    ? 'Convite já enviado no WhatsApp (Clique para reenviar)'
+                                    : 'Enviar convite no WhatsApp'
+                                }
+                              >
+                                <Send className="w-3.5 h-3.5 shrink-0" />
+                                <span>{isSent ? 'Reenviar' : 'Convidar'}</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleWhatsAppDispatch(invite, headPerson || undefined)}
+                                className="px-2.5 py-1 text-slate-500 hover:text-purple-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition-colors border border-dashed border-slate-300 dark:border-slate-700"
+                                title={`Sem celular próprio. Clique para disparar no WhatsApp do responsável (${headPerson?.name || invite.head_name})`}
+                              >
+                                <MessageCircle className="w-3 h-3 text-slate-400" />
+                                <span>Via {headPerson?.name?.split(' ')[0] || invite.head_name?.split(' ')[0]}</span>
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => handleOpenAddForPerson(person)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black cursor-pointer shadow-sm transition-all inline-flex items-center justify-center gap-1.5"
+                            >
+                              <MessageCirclePlus className="w-3.5 h-3.5 shrink-0" />
+                              <span>Convidar</span>
+                            </button>
+                          )}
+                        </td>
+
+                        {/* COLUNA 5: TELEFONE */}
                         <td className="py-2.5 px-2.5 min-w-[130px]">
                           {isEditingPhone ? (
                             <div className="flex items-center gap-1">
@@ -1738,7 +1803,15 @@ export function GuestList({
                           ) : (
                             <div className="group flex items-center justify-between gap-1">
                               <span className="text-slate-600 dark:text-slate-300 font-mono text-[11px]">
-                                {person.phone ? formatPhoneDisplay(person.phone) : <span className="text-slate-400 italic font-sans text-[10px]">Sem número</span>}
+                                {person.phone ? (
+                                  formatPhoneDisplay(person.phone)
+                                ) : isCompanion && headHasPhone ? (
+                                  <span className="text-slate-400 italic font-sans text-[10px]" title={`Usa o telefone do responsável: ${headPerson?.phone ? formatPhoneDisplay(headPerson.phone) : 'Sem número'}`}>
+                                    (Usa responsável)
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 italic font-sans text-[10px]">Sem número</span>
+                                )}
                               </span>
                               <button
                                 onClick={() => setEditingCell({ inviteId: person.id, field: 'phone', value: person.phone || '' })}
@@ -1750,18 +1823,7 @@ export function GuestList({
                           )}
                         </td>
 
-                        {/* COLUNA: TIPO DE CONVITE */}
-                        <td className="py-2.5 px-2.5">
-                          {invite ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
-                              {invite.invite_type === 'individual' ? 'Individual' : `Família (${1 + (invite.companion_person_ids?.length || 0)})`}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 italic">Individual</span>
-                          )}
-                        </td>
-
-                        {/* COLUNA: MESA */}
+                        {/* COLUNA 6: MESA */}
                         <td className="py-2.5 px-2.5 min-w-[140px]">
                           <select
                             value={currentTableId}
@@ -1991,9 +2053,9 @@ export function GuestList({
                       <div className="flex items-center gap-2">
                         <UserCheck className="w-5 h-5 text-purple-400 shrink-0" />
                         <div>
-                          <p className="text-[10px] text-purple-400 uppercase font-black tracking-wider">Convidado Titular / Responsável</p>
+                          <p className="text-[10px] text-purple-400 uppercase font-black tracking-wider">Responsável por Confirmar</p>
                           <p className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                            <span>{headP?.name || 'Titular'}</span>
+                            <span>{headP?.name || 'Responsável'}</span>
                             {headTable ? (
                               <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">
                                 {headTable.name}
@@ -2010,7 +2072,7 @@ export function GuestList({
                         }}
                         className="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer"
                       >
-                        Trocar titular
+                        Trocar responsável
                       </button>
                     </div>
                   );
@@ -2062,7 +2124,7 @@ export function GuestList({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {inviteType === 'individual'
                     ? 'Selecione o convidado na lista:'
-                    : 'Quem irá confirmar a presença dos outros convidados? (Responsável/Mandante):'}
+                    : 'Quem será o Responsável por Confirmar? (Recebe o convite principal e responde pelo grupo):'}
                 </label>
 
                 {/* Campo de Busca por Caractere Digitado */}
@@ -2258,9 +2320,14 @@ export function GuestList({
             {wizardStep === 4 && inviteType === 'family' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Selecione quantos convites a família terá:
-                  </label>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Total de convidados neste convite (incluindo o responsável):
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      O responsável + acompanhantes que virão juntos
+                    </p>
+                  </div>
                   <input
                     type="number"
                     min={2}
@@ -2282,7 +2349,7 @@ export function GuestList({
                 {/* Slots Individuais para Acompanhantes */}
                 <div className="space-y-3">
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Selecione os outros {familySlotsCount - 1} convidado(s) para os slots da família:
+                    Selecione as outras {familySlotsCount - 1} pessoa(s) que virão junto:
                   </label>
 
                   <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
