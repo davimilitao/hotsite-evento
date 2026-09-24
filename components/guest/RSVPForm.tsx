@@ -367,7 +367,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                       placeholder="Nome Completo"
                       value={guest.name}
                       onChange={(e) => handleGuestChange(index, 'name', e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white border border-purple-200/80 rounded-xl text-sm font-bold text-[#1e152d] focus:ring-2 focus:ring-[#6d44e4] focus:outline-none shadow-sm"
+                      className="w-full px-4 py-3 min-h-[44px] bg-white border border-purple-200 focus:border-[#6d44e4] rounded-xl text-sm font-bold text-[#1e152d] focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-colors shadow-sm"
                     />
                   </div>
 
@@ -431,7 +431,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                           max={maxDeadlineDate}
                           value={guest.requested_date ? guest.requested_date.slice(0, 10) : ''}
                           onChange={(e) => handleGuestChange(index, 'requested_date', e.target.value)}
-                          className="w-full p-2 bg-white border border-purple-300 rounded-lg text-xs font-bold text-[#1e152d]"
+                          className="w-full px-4 py-3 min-h-[44px] bg-white border border-purple-200 focus:border-[#6d44e4] rounded-xl text-sm font-bold text-[#1e152d] focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-colors"
                         />
                         {activeDeadline && (
                           <span className="text-[10px] text-slate-500 block mt-0.5">
@@ -449,7 +449,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                           placeholder="Ex: Aguardando escala de trabalho no hospital"
                           value={requestedDateReason}
                           onChange={(e) => setRequestedDateReason(e.target.value)}
-                          className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs text-[#1e152d] focus:ring-1 focus:ring-[#6d44e4] focus:outline-none"
+                          className="w-full px-4 py-3 min-h-[44px] bg-white border border-purple-200 focus:border-[#6d44e4] rounded-xl text-sm font-medium text-[#1e152d] focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-colors"
                         />
                       </div>
                     </div>
@@ -461,10 +461,10 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                       <Utensils className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                       <input
                         type="text"
-                        placeholder="Restrição alimentar ou alergia (opcional, ex: Sem Glúten)"
+                        placeholder="Restrição alimentar (Opcional. Ex: Sem Glúten)"
                         value={guest.dietary || ''}
                         onChange={(e) => handleGuestChange(index, 'dietary', e.target.value)}
-                        className="w-full px-3 py-1.5 bg-white border border-purple-100 rounded-lg text-xs text-slate-700 focus:ring-1 focus:ring-[#6d44e4] focus:outline-none"
+                        className="w-full px-4 py-3 min-h-[44px] bg-white border border-purple-200 focus:border-[#6d44e4] rounded-xl text-sm font-medium text-slate-800 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-colors"
                       />
                     </div>
                   )}
@@ -476,14 +476,14 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             {guests.every((g) => g.status === 'declined') && (
               <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-2 animate-fade-in">
                 <label className="block text-xs font-extrabold text-rose-800">
-                  Uma pena que não poderá vir! Quer deixar um recado carinhoso para a Fernanda?
+                  Sinto muito, não poderei ir. (Opcional) Deixe um recado para a aniversariante:
                 </label>
                 <textarea
                   rows={2}
                   placeholder="Escreva sua mensagem de carinho e felicitações..."
                   value={declinedMessage}
                   onChange={(e) => setDeclinedMessage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-rose-200 rounded-xl text-xs font-medium text-[#1e152d] focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full px-4 py-3 min-h-[44px] bg-white border border-rose-200 focus:border-rose-400 rounded-xl text-sm font-medium text-[#1e152d] focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-colors"
                 />
               </div>
             )}
@@ -498,7 +498,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                 placeholder="Escreva uma mensagem carinhosa para Fernanda Seppi..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-purple-200/80 rounded-xl text-sm font-medium text-[#1e152d] focus:ring-2 focus:ring-[#6d44e4] focus:outline-none shadow-sm"
+                className="w-full px-4 py-3 min-h-[44px] bg-white border border-purple-200 focus:border-[#6d44e4] rounded-xl text-sm font-medium text-[#1e152d] focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-colors shadow-sm"
               />
             </div>
           </div>
@@ -538,3 +538,5 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
     </section>
   );
 }
+
+
