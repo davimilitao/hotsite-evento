@@ -280,15 +280,9 @@ export function GuestList({
     onRefresh();
   };
 
-  const handleRejectRequestedDate = async (inv: Invite) => {
+  const handleRejectRequestedDate = (inv: Invite) => {
     const requestedDateStr = inv.requested_date ? formatDateShort(inv.requested_date) : 'a data solicitada';
-    await saveInvite({
-      ...inv,
-      status: 'declined',
-      requested_date_status: 'rejected',
-      confirmed_count: 0,
-    });
-
+    
     const text = encodeURIComponent(
       `Olá, ${inv.head_name}! Tudo bem? Poxa, infelizmente as vagas são contadas e precisamos fechar a lista de assentos com o buffet hoje. Por isso, não conseguiremos segurar a reserva até o dia ${requestedDateStr}.\n\nDe toda forma, agradecemos muito o carinho e comemoraremos juntos em uma próxima oportunidade! 💜`
     );
@@ -296,7 +290,13 @@ export function GuestList({
     if (targetPhone) {
       window.open(`https://wa.me/${targetPhone}?text=${text}`, '_blank');
     }
-    onRefresh();
+
+    saveInvite({
+      ...inv,
+      status: 'declined',
+      requested_date_status: 'rejected',
+      confirmed_count: 0,
+    }).then(() => onRefresh()).catch(console.error);
   };
 
   const handleReopenConfirmedInvite = async (inv: Invite) => {
@@ -482,6 +482,11 @@ export function GuestList({
       return;
     }
 
+    let waWindow: Window | null = null;
+    if (dispatchWhatsApp) {
+      waWindow = window.open('about:blank', '_blank');
+    }
+
     setLoadingForm(true);
 
     const headPerson = persons.find((p) => p.id === headPersonId);
@@ -509,10 +514,17 @@ export function GuestList({
         await markInviteAsSent(saved.id);
         onRefresh();
         const waUrl = buildWhatsAppLink(saved.head_name, saved.phone, saved.id, undefined, saved.individual_deadline || config.deadline_rsvp);
-        window.open(waUrl, '_blank');
+        if (waWindow) {
+          waWindow.location.href = waUrl;
+        } else {
+          window.open(waUrl, '_blank');
+        }
+      } else {
+        if (waWindow) waWindow.close();
       }
     } catch (err) {
       console.error('Erro ao salvar convite:', err);
+      if (waWindow) waWindow.close();
     } finally {
       setLoadingForm(false);
     }
@@ -546,6 +558,7 @@ export function GuestList({
       return;
     }
 
+    let waWindow = window.open('about:blank', '_blank');
     setLoadingForm(true);
     try {
       const newInvite = await splitCompanionToIndividualInvite(person.id, parentInvite.id);
@@ -553,10 +566,15 @@ export function GuestList({
       onRefresh();
 
       const waUrl = buildWhatsAppLink(newInvite.head_name, newInvite.phone, newInvite.id, undefined, newInvite.individual_deadline || config.deadline_rsvp);
-      window.open(waUrl, '_blank');
+      if (waWindow) {
+        waWindow.location.href = waUrl;
+      } else {
+        window.open(waUrl, '_blank');
+      }
     } catch (err) {
       console.error('Erro ao desmembrar e enviar convite individual:', err);
       alert('Ocorreu um erro ao gerar o convite individual.');
+      if (waWindow) waWindow.close();
     } finally {
       setLoadingForm(false);
     }
@@ -744,6 +762,11 @@ export function GuestList({
       return;
     }
 
+    let waWindow: Window | null = null;
+    if (dispatchWhatsApp) {
+      waWindow = window.open('about:blank', '_blank');
+    }
+
     setLoadingForm(true);
 
     try {
@@ -776,10 +799,17 @@ export function GuestList({
         const finalMsg = specialCustomMessage.replace('{link}', inviteUrl).replace('[link]', inviteUrl);
         const cleanPhone = formatPhoneE164(saved.phone);
         const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(finalMsg)}`;
-        window.open(waUrl, '_blank');
+        if (waWindow) {
+          waWindow.location.href = waUrl;
+        } else {
+          window.open(waUrl, '_blank');
+        }
+      } else {
+        if (waWindow) waWindow.close();
       }
     } catch (err) {
       console.error('Erro ao salvar convite especial:', err);
+      if (waWindow) waWindow.close();
     } finally {
       setLoadingForm(false);
     }
@@ -2932,6 +2962,8 @@ export function GuestList({
     </div>
   );
 }
+
+
 
 
 
