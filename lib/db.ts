@@ -1245,7 +1245,7 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'invites', fullInvite.id), fullInvite);
+      await setDoc(doc(db, 'invites', fullInvite.id), cleanUndefinedForFirestore(fullInvite));
     } catch (err) {
       console.error('Erro ao salvar convite no Firestore:', err);
     }
@@ -1634,6 +1634,7 @@ export async function deleteSurpriseCampaign(campaignId: string): Promise<void> 
   const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
   setLS(LS_KEYS_EXT.CAMPAIGNS, newCampaigns);
 }
+
 
 
 
