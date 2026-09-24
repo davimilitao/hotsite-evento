@@ -35,6 +35,25 @@ export default function AdminPage() {
     }
   }, [user]);
 
+  // Protege contra saída acidental por gesto de voltar no mobile (Swipe Back)
+  useEffect(() => {
+    if (!user) return;
+
+    window.history.replaceState({ inAdmin: true }, '');
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (!e.state?.inAdmin && !e.state?.guestDrawerOpen) {
+        const leave = confirm('Deseja realmente sair do Painel de Gestão e voltar para a página inicial?');
+        if (!leave) {
+          window.history.pushState({ inAdmin: true }, '');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user]);
+
   // Exibe o Onboarding automaticamente quando a aniversariante logar pela primeira vez
   useEffect(() => {
     if (user?.role === 'birthday_person' || currentRole === 'birthday_person') {
