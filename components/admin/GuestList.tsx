@@ -602,10 +602,12 @@ export function GuestList({
       return;
     }
 
-    await markInviteAsSent(invite.id);
-    onRefresh();
+    // Bypass iOS Popup blocker - abre de forma síncrona
     const waUrl = buildWhatsAppLink(invite.head_name, invite.phone, invite.id, undefined, invite.individual_deadline || config.deadline_rsvp);
     window.open(waUrl, '_blank');
+
+    // Salva no banco assincronamente em background
+    markInviteAsSent(invite.id).then(() => onRefresh()).catch(console.error);
   };
 
   const handleDelete = async (id: string) => {
@@ -2962,6 +2964,7 @@ export function GuestList({
     </div>
   );
 }
+
 
 
 
