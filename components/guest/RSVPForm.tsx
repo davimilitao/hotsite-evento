@@ -286,7 +286,15 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
                 <div className="shrink-0">
                   {(g.status || 'confirmed') === 'confirmed' ? (
                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Presença Confirmada
+                      {g.confirmed_by === 'birthday_person' || invite.confirmed_by === 'birthday_person' ? (
+                        <>
+                          <Crown className="w-3 h-3 text-amber-500 shrink-0" /> Confirmado pelo Anfitrião
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Presença Confirmada
+                        </>
+                      )}
                     </span>
                   ) : g.status === 'pending_date' ? (
                     <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-full font-bold text-[11px] flex items-center gap-1">
@@ -307,9 +315,15 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             <div className="text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-emerald-200/80 shadow-sm flex items-start gap-2.5 mt-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <span className="font-extrabold text-[#1e152d] block">Presença Registrada com Sucesso!</span>
+                <span className="font-extrabold text-[#1e152d] block">
+                  {invite.confirmed_by === 'birthday_person'
+                    ? 'Presença Confirmada com Carinho pela Aniversariante! 🌸'
+                    : 'Presença Registrada com Sucesso!'}
+                </span>
                 <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                  Sua resposta está salva e contamos com você no evento! Caso ocorra algum imprevisto grave que impeça seu comparecimento, por favor entre em contato direto com a aniversariante ou cerimonial.
+                  {invite.confirmed_by === 'birthday_person'
+                    ? 'Sua presença já foi anotada diretamente pela aniversariante. Mal podemos esperar para comemorar juntos! Confira sua mesa reservada e os detalhes da festa abaixo.'
+                    : 'Sua resposta está salva e contamos com você no evento! Caso ocorra algum imprevisto grave que impeça seu comparecimento, por favor entre em contato direto com a aniversariante ou cerimonial.'}
                 </p>
               </div>
             </div>

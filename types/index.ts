@@ -10,6 +10,7 @@ export interface Guest {
   dietary?: string;
   status?: InviteStatus;
   requested_date?: string;
+  confirmed_by?: 'birthday_person' | 'guest' | 'admin';
 }
 
 export type InviteStatus = 'pending' | 'confirmed' | 'declined' | 'pending_date' | 'expired';
@@ -133,6 +134,7 @@ export interface Invite {
   requested_date_status?: 'pending' | 'accepted' | 'rejected'; // Decisão da aniversariante/admin sobre o prazo
   declined_message?: string | null;   // Recado carinhoso enviado ao recusar o convite
   split_from_invite_id?: string | null; // ID do convite pai caso tenha sido desmembrado individualmente
+  confirmed_by?: 'birthday_person' | 'guest' | 'admin'; // Quem realizou a confirmação de presença
   
   // Homenagem Surpresa
   surprise_sent?: boolean;            // Status geral de recebimento

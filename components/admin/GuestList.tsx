@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite, Table, EventConfig, InviteTier, Person, SpecialRole, ChildCategory } from '@/types';
+import { Invite, Guest, InviteStatus, Table, EventConfig, InviteTier, Person, SpecialRole, ChildCategory } from '@/types';
 import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory, linkPersonPhoneResponsible, splitCompanionToIndividualInvite } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164, triggerHaptic } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
@@ -311,6 +311,163 @@ export function GuestList({
       });
       onRefresh();
     }
+  };
+
+  const handleManualConfirm = async (person: Person, invite: Invite, dietary?: string) => {
+    const isHead = invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase());
+
+    let currentGuests: Guest[] = invite.guests && invite.guests.length > 0 ? [...invite.guests] : [];
+
+    if (currentGuests.length === 0) {
+      currentGuests.push({
+        id: invite.head_person_id || 'head',
+        name: invite.head_name,
+        type: 'adult',
+        status: isHead ? 'confirmed' : 'pending',
+        confirmed_by: isHead ? 'birthday_person' : undefined,
+        dietary: isHead && dietary ? dietary : undefined,
+      });
+
+      if (invite.companion_person_ids) {
+        for (const cId of invite.companion_person_ids) {
+          const compP = persons.find((p) => p.id === cId);
+          if (compP) {
+            const isTarget = compP.id === person.id;
+            currentGuests.push({
+              id: compP.id,
+              name: compP.name,
+              type: compP.child_category && compP.child_category !== 'inteira' ? 'child' : 'adult',
+              status: isTarget ? 'confirmed' : 'pending',
+              confirmed_by: isTarget ? 'birthday_person' : undefined,
+              dietary: isTarget && dietary ? dietary : undefined,
+            });
+          }
+        }
+      }
+    } else {
+      currentGuests = currentGuests.map((g) => {
+        const isMatch = (g.id && g.id === person.id) || g.name.trim().toLowerCase() === person.name.trim().toLowerCase();
+        if (isMatch) {
+          return {
+            ...g,
+            status: 'confirmed' as InviteStatus,
+            confirmed_by: 'birthday_person' as const,
+            dietary: dietary !== undefined && dietary.trim() ? dietary.trim() : g.dietary,
+          };
+        }
+        return g;
+      });
+    }
+
+    if (isHead && invite.companion_person_ids && invite.companion_person_ids.length > 0) {
+      const confirmAll = confirm(
+        `Deseja confirmar a presença de TODOS os ${1 + invite.companion_person_ids.length} integrantes da família de ${person.name}?`
+      );
+      if (confirmAll) {
+        currentGuests = currentGuests.map((g) => ({
+          ...g,
+          status: 'confirmed' as InviteStatus,
+          confirmed_by: 'birthday_person' as const,
+        }));
+      }
+    }
+
+    const confirmedCount = currentGuests.filter((g) => g.status === 'confirmed').length;
+
+    await saveInvite({
+      ...invite,
+      status: 'confirmed',
+      confirmed_by: 'birthday_person',
+      confirmed_count: confirmedCount,
+      guests: currentGuests,
+      responded_at: new Date().toISOString(),
+    });
+
+    onRefresh();
+  };
+
+  const handleManualDecline = async (person: Person, invite: Invite) => {
+    if (!confirm(`Deseja registrar que ${person.name} NÃO poderá comparecer à festa? Isso liberará a vaga do buffet e assento da mesa imediatamente.`)) {
+      return;
+    }
+
+    const isHead = invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase());
+    
+    let currentGuests: Guest[] = invite.guests && invite.guests.length > 0 ? [...invite.guests] : [];
+    if (currentGuests.length === 0) {
+      currentGuests.push({
+        id: invite.head_person_id || 'head',
+        name: invite.head_name,
+        type: 'adult',
+        status: isHead ? 'declined' : 'pending',
+      });
+      if (invite.companion_person_ids) {
+        for (const cId of invite.companion_person_ids) {
+          const compP = persons.find((p) => p.id === cId);
+          if (compP) {
+            currentGuests.push({
+              id: compP.id,
+              name: compP.name,
+              type: compP.child_category && compP.child_category !== 'inteira' ? 'child' : 'adult',
+              status: compP.id === person.id ? 'declined' : 'pending',
+            });
+          }
+        }
+      }
+    } else {
+      currentGuests = currentGuests.map((g) => {
+        const isMatch = (g.id && g.id === person.id) || g.name.trim().toLowerCase() === person.name.trim().toLowerCase();
+        if (isMatch) {
+          return {
+            ...g,
+            status: 'declined' as InviteStatus,
+          };
+        }
+        return g;
+      });
+    }
+
+    const confirmedCount = currentGuests.filter((g) => g.status === 'confirmed').length;
+    const allDeclined = currentGuests.length > 0 && currentGuests.every((g) => g.status === 'declined');
+
+    await saveInvite({
+      ...invite,
+      status: allDeclined ? 'declined' : (confirmedCount > 0 ? 'confirmed' : 'pending'),
+      confirmed_count: confirmedCount,
+      guests: currentGuests,
+    });
+
+    onRefresh();
+  };
+
+  const handleManualReopen = async (person: Person, invite: Invite) => {
+    if (!confirm(`Deseja reabrir e liberar a confirmação de ${person.name} para o estado pendente?`)) {
+      return;
+    }
+
+    let currentGuests: Guest[] = invite.guests && invite.guests.length > 0 ? [...invite.guests] : [];
+    currentGuests = currentGuests.map((g) => {
+      const isMatch = (g.id && g.id === person.id) || g.name.trim().toLowerCase() === person.name.trim().toLowerCase();
+      if (isMatch) {
+        return {
+          ...g,
+          status: 'pending' as InviteStatus,
+          confirmed_by: undefined,
+        };
+      }
+      return g;
+    });
+
+    const confirmedCount = currentGuests.filter((g) => g.status === 'confirmed').length;
+
+    await saveInvite({
+      ...invite,
+      status: confirmedCount > 0 ? 'confirmed' : 'pending',
+      confirmed_count: confirmedCount,
+      guests: currentGuests,
+    });
+
+    onRefresh();
   };
 
   const handleSort = (field: 'name' | 'invite_type' | 'table' | 'status' | 'family' | 'responsible') => {
@@ -1661,7 +1818,9 @@ export function GuestList({
                                 <span
                                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border shadow-sm ${
                                     rsvpStatus === 'confirmed'
-                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
+                                      ? (guestObj?.confirmed_by === 'birthday_person' || invite.confirmed_by === 'birthday_person')
+                                        ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:border-amber-700 dark:text-amber-300'
+                                        : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
                                       : rsvpStatus === 'declined'
                                       ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300'
                                       : rsvpStatus === 'pending_date'
@@ -1669,12 +1828,20 @@ export function GuestList({
                                       : 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300'
                                   }`}
                                 >
-                                  {rsvpStatus === 'confirmed' && <CheckCircle2 className="w-3 h-3" />}
+                                  {rsvpStatus === 'confirmed' && (
+                                    (guestObj?.confirmed_by === 'birthday_person' || invite.confirmed_by === 'birthday_person')
+                                      ? <Crown className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                      : <CheckCircle2 className="w-3 h-3" />
+                                  )}
                                   {rsvpStatus === 'declined' && <XCircle className="w-3 h-3" />}
                                   {rsvpStatus === 'pending_date' && <Clock className="w-3 h-3" />}
                                   {rsvpStatus === 'pending' && <Clock className="w-3 h-3" />}
 
-                                  {rsvpStatus === 'confirmed' && 'Confirmado'}
+                                  {rsvpStatus === 'confirmed' && (
+                                    (guestObj?.confirmed_by === 'birthday_person' || invite.confirmed_by === 'birthday_person')
+                                      ? 'Confirmado p/ Anfitrião 👑'
+                                      : 'Confirmado'
+                                  )}
                                   {rsvpStatus === 'declined' && 'Ausente'}
                                   {rsvpStatus === 'pending_date' && 'Pediu Prazo'}
                                   {rsvpStatus === 'pending' && 'Aguardando'}
@@ -1920,11 +2087,37 @@ export function GuestList({
                                   </a>
                                 )}
 
-                                {invite && (invite.status === 'confirmed' || rsvpStatus === 'confirmed') && (
+                                {invite && rsvpStatus !== 'confirmed' && (
                                   <button
                                     onClick={() => {
                                       setOpenDropdownId(null);
-                                      handleReopenConfirmedInvite(invite);
+                                      handleManualConfirm(person, invite);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Crown className="w-4 h-4 text-amber-500" />
+                                    <span>Confirmar Presença (Anfitrião)</span>
+                                  </button>
+                                )}
+
+                                {invite && rsvpStatus !== 'declined' && (
+                                  <button
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleManualDecline(person, invite);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <UserX className="w-4 h-4 text-rose-500" />
+                                    <span>Registrar Ausência</span>
+                                  </button>
+                                )}
+
+                                {invite && (rsvpStatus === 'confirmed' || rsvpStatus === 'declined') && (
+                                  <button
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleManualReopen(person, invite);
                                     }}
                                     className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium flex items-center gap-2 cursor-pointer"
                                   >
@@ -3069,6 +3262,9 @@ export function GuestList({
           onRefresh();
         }}
         onSplitCompanion={(p, inv) => handleSplitAndDispatchCompanion(p, inv)}
+        onManualConfirm={(p, inv, dietary) => handleManualConfirm(p, inv, dietary)}
+        onManualDecline={(p, inv) => handleManualDecline(p, inv)}
+        onManualReopen={(p, inv) => handleManualReopen(p, inv)}
       />
     </div>
   );

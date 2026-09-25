@@ -25,6 +25,7 @@ import {
   Calendar,
   Split,
   ChevronDown,
+  Crown,
 } from 'lucide-react';
 
 interface GuestActionDrawerProps {
@@ -42,6 +43,9 @@ interface GuestActionDrawerProps {
   onTableChange?: (person: Person, tableId: string) => void;
   onSavePhone?: (person: Person, newPhone: string) => Promise<void>;
   onSplitCompanion?: (person: Person, invite: Invite) => void;
+  onManualConfirm?: (person: Person, invite: Invite, dietary?: string) => Promise<void> | void;
+  onManualDecline?: (person: Person, invite: Invite) => Promise<void> | void;
+  onManualReopen?: (person: Person, invite: Invite) => Promise<void> | void;
 }
 
 export function GuestActionDrawer({
@@ -59,21 +63,32 @@ export function GuestActionDrawer({
   onTableChange,
   onSavePhone,
   onSplitCompanion,
+  onManualConfirm,
+  onManualDecline,
+  onManualReopen,
 }: GuestActionDrawerProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [tempPhone, setTempPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
+  const [manualDietary, setManualDietary] = useState('');
+  const [showDietaryInput, setShowDietaryInput] = useState(false);
+  const [isConfirmingManual, setIsConfirmingManual] = useState(false);
 
   // Controle de histórico para capturar o gesto "Swipe to go back" do mobile
   const isPushedToHistoryRef = useRef(false);
+
+  const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person?.name.trim().toLowerCase());
 
   useEffect(() => {
     if (person) {
       setTempPhone(person.phone || '');
       setIsEditingPhone(false);
+      setManualDietary(guestObj?.dietary || '');
+      setShowDietaryInput(Boolean(guestObj?.dietary));
+      setIsConfirmingManual(false);
     }
-  }, [person]);
+  }, [person, guestObj?.dietary]);
 
   // Intercepta gesto de deslizar para voltar no Safari/Android (Swipe Back)
   useEffect(() => {
@@ -134,8 +149,10 @@ export function GuestActionDrawer({
     ? allPersons.filter((p) => invite.companion_person_ids?.includes(p.id) && p.id !== person.id)
     : [];
 
-  const guestObj = invite?.guests?.find((g) => g.name.trim().toLowerCase() === person.name.trim().toLowerCase());
   const rsvpStatus = guestObj?.status || invite?.status || 'pending';
+  const isConfirmedByHost =
+    guestObj?.confirmed_by === 'birthday_person' ||
+    (invite?.confirmed_by === 'birthday_person' && rsvpStatus === 'confirmed');
   const isSent = invite?.sent_status === 'sent';
   const deadlineInfo = invite ? getDeadlineInfo(invite, config.deadline_rsvp) : null;
   const currentTable = tables.find((t) => t.id === person.table_id);
@@ -204,7 +221,9 @@ export function GuestActionDrawer({
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shadow-xs ${
                     rsvpStatus === 'confirmed'
-                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      ? isConfirmedByHost
+                        ? 'bg-amber-100 text-amber-900 border-amber-300'
+                        : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                       : rsvpStatus === 'declined'
                       ? 'bg-rose-100 text-rose-900 border-rose-300'
                       : rsvpStatus === 'pending_date'
@@ -212,12 +231,13 @@ export function GuestActionDrawer({
                       : 'bg-amber-100 text-amber-900 border-amber-300'
                   }`}
                 >
-                  {rsvpStatus === 'confirmed' && <CheckCircle2 className="w-3 h-3 text-emerald-700" />}
+                  {rsvpStatus === 'confirmed' && isConfirmedByHost && <Crown className="w-3 h-3 text-amber-600" />}
+                  {rsvpStatus === 'confirmed' && !isConfirmedByHost && <CheckCircle2 className="w-3 h-3 text-emerald-700" />}
                   {rsvpStatus === 'declined' && <XCircle className="w-3 h-3 text-rose-700" />}
                   {rsvpStatus === 'pending_date' && <Clock className="w-3 h-3 text-purple-700" />}
                   {rsvpStatus === 'pending' && <Clock className="w-3 h-3 text-amber-700" />}
 
-                  {rsvpStatus === 'confirmed' && 'Confirmado'}
+                  {rsvpStatus === 'confirmed' && (isConfirmedByHost ? 'Confirmado p/ Aniversariante 👑' : 'Confirmado')}
                   {rsvpStatus === 'declined' && 'Ausente'}
                   {rsvpStatus === 'pending_date' && 'Pediu Prazo'}
                   {rsvpStatus === 'pending' && 'Aguardando'}
@@ -333,6 +353,108 @@ export function GuestActionDrawer({
               </p>
             )}
           </div>
+
+          {/* BLOCO: PRESENÇA & CONFIRMAÇÃO DIRETA (ANIVERSARIANTE / HOST) */}
+          {invite && (onManualConfirm || onManualDecline || onManualReopen) && (
+            <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" /> Presença & Confirmação Direta
+                </span>
+                {isConfirmedByHost && (
+                  <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-amber-600" /> Feito pelo Anfitrião
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {rsvpStatus !== 'confirmed' ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled={isConfirmingManual}
+                      onClick={async () => {
+                        if (!onManualConfirm) return;
+                        setIsConfirmingManual(true);
+                        try {
+                          await onManualConfirm(person, invite, manualDietary);
+                        } finally {
+                          setIsConfirmingManual(false);
+                        }
+                      }}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-98 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Crown className="w-4 h-4 text-amber-300" />
+                      <span>{isConfirmingManual ? 'Confirmando...' : 'Confirmar Presença (pelo Aniversariante)'}</span>
+                    </button>
+
+                    {!showDietaryInput ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowDietaryInput(true)}
+                        className="text-[11px] font-bold text-purple-700 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        + Adicionar restrição alimentar (opcional)
+                      </button>
+                    ) : (
+                      <div className="pt-1 space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 block">Restrição alimentar (opcional):</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Vegetariano, intolerância a glúten..."
+                          value={manualDietary}
+                          onChange={(e) => setManualDietary(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-emerald-900 font-extrabold text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>
+                        {isConfirmedByHost
+                          ? 'Presença confirmada diretamente pelo Anfitrião!'
+                          : 'Presença confirmada pelo convidado!'}
+                      </span>
+                    </div>
+                    {guestObj?.dietary && (
+                      <p className="text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-emerald-100">
+                        Restrição alimentar: <strong className="text-slate-900">{guestObj.dietary}</strong>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Ações secundárias: Registrar Ausência / Reabrir */}
+                <div className="flex items-center gap-2 pt-1">
+                  {rsvpStatus !== 'declined' && onManualDecline && (
+                    <button
+                      type="button"
+                      onClick={() => onManualDecline(person, invite)}
+                      className="flex-1 py-2 px-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 border border-slate-200 hover:border-rose-200 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Registrar Ausência</span>
+                    </button>
+                  )}
+
+                  {(rsvpStatus === 'confirmed' || rsvpStatus === 'declined') && onManualReopen && (
+                    <button
+                      type="button"
+                      onClick={() => onManualReopen(person, invite)}
+                      className="flex-1 py-2 px-2.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-700 border border-slate-200 hover:border-amber-200 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Reabrir / Desfazer</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* BLOCO 2: TELEFONE & CONTATO */}
           <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs space-y-2.5">

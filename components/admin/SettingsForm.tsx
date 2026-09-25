@@ -183,6 +183,76 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
         </div>
       </div>
 
+      {/* SEÇÃO DE DATAS OFICIAIS, PRAZO GERAL (RSVP) & BUFFET */}
+      <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30">
+            <Calendar className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              Datas Oficiais do Evento, Prazo de RSVP & Capacidade
+            </h3>
+            <p className="text-xs text-slate-400">
+              Configure a Data Limite Padrão que será aplicada aos convites e enviada na mensagem do WhatsApp.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+          {/* Data do Evento */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Data e Hora do Evento
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.date_time ? formData.date_time.slice(0, 16) : ''}
+              onChange={(e) => setFormData({ ...formData, date_time: new Date(e.target.value).toISOString() })}
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500">Exibido na contagem regressiva e no convite.</p>
+          </div>
+
+          {/* Data Limite Padrão de RSVP */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-purple-500/40 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-black text-purple-300">
+                Data Limite Padrão (RSVP) *
+              </label>
+              <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-black">
+                MENSAGEM WHATSAPP
+              </span>
+            </div>
+            <input
+              type="date"
+              value={formData.deadline_rsvp ? formData.deadline_rsvp.slice(0, 10) : ''}
+              onChange={(e) => setFormData({ ...formData, deadline_rsvp: new Date(e.target.value + 'T23:59:59').toISOString() })}
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-purple-500/60 rounded-xl text-xs font-black text-amber-300 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-400">
+              Esta é a data oficial enviada no WhatsApp para os convidados que não tiverem prazo individual.
+            </p>
+          </div>
+
+          {/* Capacidade Contratada com o Buffet */}
+          <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <label className="block text-xs font-bold text-slate-200">
+              Capacidade Contratada (Buffet)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={500}
+              value={formData.buffet_capacity || 100}
+              onChange={(e) => setFormData({ ...formData, buffet_capacity: parseInt(e.target.value, 10) || 100 })}
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            />
+            <p className="text-[10px] text-slate-500">Limite de adultos/pagantes contratados com o buffet.</p>
+          </div>
+        </div>
+      </div>
+
       {/* SEÇÃO DE SEGURANÇA E GERENCIAMENTO DE PINS DE ACESSO (4 DÍGITOS) */}
       <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
         <div className="flex items-center gap-3">

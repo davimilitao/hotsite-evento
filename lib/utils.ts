@@ -60,7 +60,7 @@ export function buildWhatsAppLink(
   const inviteUrl = `${siteUrl}/convite/${token}`;
   const formattedDeadline = deadlineIso ? formatDateShort(deadlineIso) : '25/10/2026';
 
-  const defaultMessage = `Olá ${headName}! Você é nosso(a) convidado(a) especial para celebrar os 40 Anos da Fernanda Seppi! 🌸✨\n\nComo teremos uma comemoração inesquecível e precisamos fechar a lista oficial com o buffet, pedimos com carinho que confirme sua presença até o dia *${formattedDeadline}*!\n\nAcesse seu convite e veja sua mesa reservada pelo link:\n👉 ${inviteUrl}\n\nContamos com a sua confirmação! ❤️`;
+  const defaultMessage = `Olá ${headName}! Você é nosso(a) convidado(a) especial para celebrar os 40 Anos da Fernanda Seppi! 🌸✨\n\nComo teremos uma comemoração inesquecível e estamos preparando tudo com muito carinho, pedimos que confirme sua presença até o dia *${formattedDeadline}*!\n\nAcesse seu convite para ver sua mesa reservada e todos os detalhes da festa:\n👉 ${inviteUrl}\n\nContamos com a sua presença! ❤️`;
   
   const message = customTemplate
     ? customTemplate
