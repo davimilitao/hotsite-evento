@@ -313,7 +313,44 @@ export function GuestList({
     }
   };
 
-  const handleManualConfirm = async (person: Person, invite: Invite, dietary?: string) => {
+  const handleManualConfirm = async (person: Person, invite?: Invite | null, dietary?: string) => {
+    if (!invite) {
+      // Cria o convite individual na hora para a pessoa sem telefone ou sem convite prévio
+      const newGuests: Guest[] = [{
+        id: person.id,
+        name: person.name,
+        type: person.child_category && person.child_category !== 'inteira' ? 'child' : 'adult',
+        status: 'confirmed',
+        confirmed_by: 'birthday_person',
+        dietary: dietary?.trim() || undefined,
+      }];
+
+      const created = await saveInvite({
+        head_person_id: person.id,
+        head_name: person.name,
+        phone: person.phone || '',
+        max_guests: 1,
+        status: 'confirmed',
+        confirmed_by: 'birthday_person',
+        confirmed_count: 1,
+        table_id: person.table_id || null,
+        guests: newGuests,
+        tier: 'main',
+        sent_status: 'not_sent',
+        checked_in: false,
+        responded_at: new Date().toISOString(),
+      });
+
+      await savePerson({
+        ...person,
+        invite_id: created.id,
+        role_in_invite: 'head',
+      });
+
+      onRefresh();
+      return;
+    }
+
     const isHead = invite.head_person_id === person.id || (!invite.head_person_id && invite.head_name.trim().toLowerCase() === person.name.trim().toLowerCase());
 
     let currentGuests: Guest[] = invite.guests && invite.guests.length > 0 ? [...invite.guests] : [];
@@ -386,8 +423,41 @@ export function GuestList({
     onRefresh();
   };
 
-  const handleManualDecline = async (person: Person, invite: Invite) => {
+  const handleManualDecline = async (person: Person, invite?: Invite | null) => {
     if (!confirm(`Deseja registrar que ${person.name} NÃO poderá comparecer à festa? Isso liberará a vaga do buffet e assento da mesa imediatamente.`)) {
+      return;
+    }
+
+    if (!invite) {
+      const newGuests: Guest[] = [{
+        id: person.id,
+        name: person.name,
+        type: person.child_category && person.child_category !== 'inteira' ? 'child' : 'adult',
+        status: 'declined',
+      }];
+
+      const created = await saveInvite({
+        head_person_id: person.id,
+        head_name: person.name,
+        phone: person.phone || '',
+        max_guests: 1,
+        status: 'declined',
+        confirmed_count: 0,
+        table_id: person.table_id || null,
+        guests: newGuests,
+        tier: 'main',
+        sent_status: 'not_sent',
+        checked_in: false,
+        responded_at: new Date().toISOString(),
+      });
+
+      await savePerson({
+        ...person,
+        invite_id: created.id,
+        role_in_invite: 'head',
+      });
+
+      onRefresh();
       return;
     }
 
@@ -440,7 +510,8 @@ export function GuestList({
     onRefresh();
   };
 
-  const handleManualReopen = async (person: Person, invite: Invite) => {
+  const handleManualReopen = async (person: Person, invite?: Invite | null) => {
+    if (!invite) return;
     if (!confirm(`Deseja reabrir e liberar a confirmação de ${person.name} para o estado pendente?`)) {
       return;
     }
@@ -2087,11 +2158,11 @@ export function GuestList({
                                   </a>
                                 )}
 
-                                {invite && rsvpStatus !== 'confirmed' && (
+                                {(!invite || rsvpStatus !== 'confirmed') && (
                                   <button
                                     onClick={() => {
                                       setOpenDropdownId(null);
-                                      handleManualConfirm(person, invite);
+                                      handleManualConfirm(person, invite || null);
                                     }}
                                     className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-2 cursor-pointer"
                                   >
@@ -2100,11 +2171,11 @@ export function GuestList({
                                   </button>
                                 )}
 
-                                {invite && rsvpStatus !== 'declined' && (
+                                {(!invite || rsvpStatus !== 'declined') && (
                                   <button
                                     onClick={() => {
                                       setOpenDropdownId(null);
-                                      handleManualDecline(person, invite);
+                                      handleManualDecline(person, invite || null);
                                     }}
                                     className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-medium flex items-center gap-2 cursor-pointer"
                                   >

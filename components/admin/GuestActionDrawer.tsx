@@ -43,9 +43,9 @@ interface GuestActionDrawerProps {
   onTableChange?: (person: Person, tableId: string) => void;
   onSavePhone?: (person: Person, newPhone: string) => Promise<void>;
   onSplitCompanion?: (person: Person, invite: Invite) => void;
-  onManualConfirm?: (person: Person, invite: Invite, dietary?: string) => Promise<void> | void;
-  onManualDecline?: (person: Person, invite: Invite) => Promise<void> | void;
-  onManualReopen?: (person: Person, invite: Invite) => Promise<void> | void;
+  onManualConfirm?: (person: Person, invite: Invite | null, dietary?: string) => Promise<void> | void;
+  onManualDecline?: (person: Person, invite: Invite | null) => Promise<void> | void;
+  onManualReopen?: (person: Person, invite: Invite | null) => Promise<void> | void;
 }
 
 export function GuestActionDrawer({
@@ -355,7 +355,7 @@ export function GuestActionDrawer({
           </div>
 
           {/* BLOCO: PRESENÇA & CONFIRMAÇÃO DIRETA (ANIVERSARIANTE / HOST) */}
-          {invite && (onManualConfirm || onManualDecline || onManualReopen) && (
+          {(onManualConfirm || onManualDecline || onManualReopen) && (
             <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
