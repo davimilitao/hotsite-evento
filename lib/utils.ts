@@ -178,12 +178,19 @@ export function formatDateExtenso(dateIso: string): string {
  */
 export function formatDateShort(dateIso?: string | null): string {
   if (!dateIso) return '';
+  // Extrai ano, mês e dia diretamente para evitar que o fuso horário (UTC-3 no Brasil) subtraia horas e retroceda 1 dia em datas gravadas com 00:00Z
+  const match = dateIso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}/${month}/${year}`;
+  }
   try {
     const date = new Date(dateIso);
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      timeZone: 'UTC',
     }).format(date);
   } catch {
     return dateIso;

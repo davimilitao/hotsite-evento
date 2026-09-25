@@ -743,7 +743,7 @@ export function GuestList({
         max_guests: maxGuests,
         table_id: headPerson?.table_id || null,
         tier,
-        individual_deadline: individualDeadline ? new Date(individualDeadline).toISOString() : null,
+        individual_deadline: individualDeadline ? (individualDeadline.includes('T') ? individualDeadline : `${individualDeadline}T23:59:59.000Z`) : null,
       });
 
       setIsAddOpen(false);
@@ -2579,7 +2579,7 @@ export function GuestList({
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 shadow-sm transition-all"
                   />
                   <p className="text-[10px] text-slate-500 pl-1">
-                    Se vazio, usará o padrão: <strong className="text-purple-600 dark:text-purple-400">{config.deadline_rsvp ? new Date(config.deadline_rsvp).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Não definido'}</strong>
+                    Se vazio, usará o padrão: <strong className="text-purple-600 dark:text-purple-400">{config.deadline_rsvp ? formatDateShort(config.deadline_rsvp) : 'Não definido'}</strong>
                   </p>
                 </div>
 

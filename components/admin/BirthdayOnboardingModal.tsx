@@ -40,7 +40,7 @@ export function BirthdayOnboardingModal({ isOpen, config, onClose, onSave }: Bir
         title: `${birthdayPerson.trim()} - ${ageCelebrating} Anos 🌸✨`,
         age_celebrating: Number(ageCelebrating),
         date_time: new Date(dateTime).toISOString(),
-        deadline_rsvp: new Date(deadlineRsvp).toISOString(),
+        deadline_rsvp: deadlineRsvp ? `${deadlineRsvp}T23:59:59.000Z` : '',
         location_name: locationName.trim(),
         address: address.trim(),
         maps_url: mapsUrl.trim(),

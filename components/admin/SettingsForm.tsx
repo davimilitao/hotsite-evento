@@ -227,7 +227,7 @@ export function SettingsForm({ config, onRefresh, onSeedDatabase, seeding }: Set
             <input
               type="date"
               value={formData.deadline_rsvp ? formData.deadline_rsvp.slice(0, 10) : ''}
-              onChange={(e) => setFormData({ ...formData, deadline_rsvp: new Date(e.target.value + 'T23:59:59').toISOString() })}
+              onChange={(e) => setFormData({ ...formData, deadline_rsvp: e.target.value ? `${e.target.value}T23:59:59.000Z` : '' })}
               className="w-full px-3.5 py-2.5 bg-slate-900 border border-purple-500/60 rounded-xl text-xs font-black text-amber-300 focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
             <p className="text-[10px] text-slate-400">
