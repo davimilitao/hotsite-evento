@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Invite, Person, Table, EventConfig, SurpriseCampaign, CampaignType } from '@/types';
-import { saveInvite, getAllSurpriseCampaigns, saveSurpriseCampaign, deleteSurpriseCampaign } from '@/lib/db';
+import { Invite, Person, Table, EventConfig, SurpriseCampaign, CampaignType, SurpriseSubmission } from '@/types';
+import { saveInvite, getAllSurpriseCampaigns, saveSurpriseCampaign, deleteSurpriseCampaign, getAllSurpriseSubmissions } from '@/lib/db';
 import { buildSurprisePhotoLink, buildSurpriseVideoLink, buildSurpriseTextLink, exportContactsToVCF, formatPhoneE164 } from '@/lib/utils';
 import {
   Gift,
@@ -61,6 +61,11 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
   const [formMessageTemplate, setFormMessageTemplate] = useState('');
   const [formVideoOrientation, setFormVideoOrientation] = useState<'horizontal' | 'vertical' | 'selfie'>('horizontal');
 
+  const [submissions, setSubmissions] = useState<SurpriseSubmission[]>([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(true);
+  const [activeView, setActiveView] = useState<'gallery' | 'campaigns'>('gallery');
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+
   // Carrega as campanhas cadastradas
   const loadCampaigns = async () => {
     setLoadingCampaigns(true);
@@ -74,9 +79,22 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
     }
   };
 
+  const loadSubmissions = async () => {
+    setLoadingSubmissions(true);
+    try {
+      const subs = await getAllSurpriseSubmissions();
+      setSubmissions(subs);
+    } catch (err) {
+      console.error('Erro ao carregar homenagens:', err);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
   useEffect(() => {
     loadCampaigns();
-  }, []);
+    loadSubmissions();
+  }, [invites]);
 
   // FILTRAGEM & CLASSIFICAÇÃO DOS CONVIDADOS EM 3 ESTADOS (Desbloqueados, Bloqueados/Spoiler, Ocultos)
   // Exclui completamente quem recusou o convite ('declined')
@@ -289,7 +307,155 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
         </div>
       </div>
 
-      {/* Grid de Cards das Campanhas Criadas */}
+      {/* SELETOR DE SUB-ABAS (GALERIA DO TELÃO VS DISPAROS WHATSAPP) */}
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveView('gallery')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+            activeView === 'gallery'
+              ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40 ring-2 ring-pink-400/40'
+              : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Camera className="w-4 h-4 text-pink-300" />
+          <span>Galeria do Telão ({submissions.filter((s) => !!s.photo_url).length} Fotos)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('campaigns')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+            activeView === 'campaigns'
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40 ring-2 ring-purple-400/40'
+              : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Send className="w-4 h-4 text-purple-300" />
+          <span>Campanhas & Disparos WhatsApp ({campaigns.length})</span>
+        </button>
+      </div>
+
+      {/* VISÃO 1: GALERIA DE FOTOS E MENSAGENS DO TELÃO */}
+      {activeView === 'gallery' && (
+        <div className="space-y-6">
+          {/* Card de Status do Telão */}
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-xs font-black text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" /> Armazenamento para Homenagem do Telão
+                </span>
+                <h3 className="text-lg font-black text-white">
+                  {submissions.filter((s) => !!s.photo_url).length} de 100 Fotos Recebidas
+                </h3>
+              </div>
+
+              <div className="text-right">
+                <span className="text-xs font-bold text-slate-400">
+                  Total de Depoimentos: <strong className="text-white">{submissions.filter((s) => !!s.message).length}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Barra de Progresso até 100 fotos */}
+            <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
+              <div
+                className="bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 h-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, (submissions.filter((s) => !!s.photo_url).length / 100) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Grid de Fotos e Depoimentos */}
+          {submissions.length === 0 ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+              <div className="w-16 h-16 bg-pink-500/10 text-pink-400 rounded-3xl flex items-center justify-center mx-auto border border-pink-500/20">
+                <Camera className="w-8 h-8" />
+              </div>
+              <h4 className="text-base font-black text-white">Nenhuma foto recebida ainda</h4>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                Assim que os convidados confirmarem presença no Hotsite, eles poderão enviar suas fotos marcantes e recados para a homenagem!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {submissions.map((sub) => (
+                <div
+                  key={sub.id}
+                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group hover:border-pink-500/50 transition-all shadow-md"
+                >
+                  {sub.photo_url ? (
+                    <div
+                      className="relative aspect-square bg-slate-950 overflow-hidden cursor-pointer"
+                      onClick={() => setPreviewPhoto(sub.photo_url || null)}
+                    >
+                      <img
+                        src={sub.photo_url}
+                        alt={`Foto de ${sub.guest_name}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <span className="px-3 py-1 bg-white text-slate-950 font-black text-[11px] rounded-xl shadow-md">
+                          Ampliar Foto
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-video bg-pink-950/20 border-b border-slate-800 flex items-center justify-center text-pink-400">
+                      <MessageSquareText className="w-8 h-8 opacity-60" />
+                    </div>
+                  )}
+
+                  <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h5 className="font-black text-xs text-white truncate">{sub.guest_name}</h5>
+                        {sub.submitted_at && (
+                          <span className="text-[10px] text-slate-500 shrink-0">
+                            {new Date(sub.submitted_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
+
+                      {sub.message && (
+                        <p className="text-[11px] text-slate-300 italic line-clamp-3 leading-relaxed">
+                          &quot;{sub.message}&quot;
+                        </p>
+                      )}
+                    </div>
+
+                    {sub.photo_url && (
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewPhoto(sub.photo_url || null)}
+                          className="text-[10px] font-bold text-pink-400 hover:text-pink-300 cursor-pointer"
+                        >
+                          Ver em alta resolução
+                        </button>
+                        <a
+                          href={sub.photo_url}
+                          download={`homenagem-${sub.guest_name.toLowerCase().replace(/\s+/g, '-')}.jpg`}
+                          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                          title="Baixar Foto"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VISÃO 2: CAMPANHAS & DISPAROS WHATSAPP */}
+      {activeView === 'campaigns' && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {campaigns.map((camp) => {
           const unlockedInvites = nonDeclinedInvites.filter((i) => getGuestEligibility(i).status === 'unlocked');
@@ -412,6 +578,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
           );
         })}
       </div>
+      )}
 
       {/* MODAL DE CRIAÇÃO E EDIÇÃO DE CAMPANHA (CRUD) */}
       {isFormOpen && (
@@ -703,6 +870,46 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
               <button
                 onClick={() => setActiveCampaignModal(null)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-extrabold cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE PRÉ-VISUALIZAÇÃO DE FOTO DO TELÃO */}
+      {previewPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewPhoto(null)}
+              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-slate-800/80 rounded-full cursor-pointer transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={previewPhoto}
+              alt="Homenagem Telão"
+              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-slate-700 bg-slate-950"
+            />
+            <div className="mt-3 flex items-center gap-3">
+              <a
+                href={previewPhoto}
+                download="foto-homenagem-telao.jpg"
+                className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Baixar em Alta Resolução
+              </a>
+              <button
+                onClick={() => setPreviewPhoto(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
               >
                 Fechar
               </button>

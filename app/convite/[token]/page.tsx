@@ -15,6 +15,7 @@ import { VenueBuffetShowcase } from '@/components/guest/VenueBuffetShowcase';
 import { HelpTab } from '@/components/guest/HelpTab';
 import { LGPDCookieBanner } from '@/components/ui/LGPDCookieBanner';
 import { PrivacyTermsModal } from '@/components/ui/PrivacyTermsModal';
+import { SurpriseTributeModal } from '@/components/guest/SurpriseTributeModal';
 import { Sparkles, AlertCircle, RefreshCw, Crown, Calendar, CheckCircle2, MessageCircle } from 'lucide-react';
 
 interface ConvitePageProps {
@@ -31,6 +32,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTabType>('rsvp');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showSurpriseModal, setShowSurpriseModal] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   const loadData = async () => {
@@ -251,6 +253,15 @@ export default function ConvitePage({ params }: ConvitePageProps) {
         assignedTable={assignedTable}
         onGoToLocation={() => setActiveTab('location')}
         whatsappGroupLink={config.whatsapp_group_link}
+        onOpenSurpriseModal={() => setShowSurpriseModal(true)}
+      />
+
+      {/* Modal Dedicado para Envio da Homenagem Surpresa (Telão) */}
+      <SurpriseTributeModal
+        isOpen={showSurpriseModal}
+        onClose={() => setShowSurpriseModal(false)}
+        invite={invite}
+        onSaved={(updated) => setInvite(updated)}
       />
 
       {/* Banner de Consentimento de Cookies LGPD */}

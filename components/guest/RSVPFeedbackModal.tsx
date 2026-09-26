@@ -3,7 +3,7 @@
 import React from 'react';
 import { Invite, Table } from '@/types';
 import { formatDateShort } from '@/lib/utils';
-import { CheckCircle2, XCircle, Armchair, Navigation, X, CalendarClock, MessageCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Armchair, Navigation, X, CalendarClock, MessageCircle, Camera, Sparkles, Heart } from 'lucide-react';
 
 interface RSVPFeedbackModalProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface RSVPFeedbackModalProps {
   assignedTable?: Table;
   onGoToLocation: () => void;
   whatsappGroupLink?: string;
+  onOpenSurpriseModal?: () => void;
 }
 
 export function RSVPFeedbackModal({
@@ -21,6 +22,7 @@ export function RSVPFeedbackModal({
   assignedTable,
   onGoToLocation,
   whatsappGroupLink,
+  onOpenSurpriseModal,
 }: RSVPFeedbackModalProps) {
   if (!isOpen) return null;
 
@@ -106,6 +108,34 @@ export function RSVPFeedbackModal({
                 </div>
               )}
             </div>
+
+            {/* CTA HOMENAGEM SURPRESA NO TELÃO */}
+            {onOpenSurpriseModal && !invite.special_role && !invite.head_name.toLowerCase().includes('fernanda') && (
+              <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-purple-500/10 border border-pink-500/30 p-3.5 rounded-2xl text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-gradient-to-tr from-pink-600 to-rose-600 text-white rounded-lg shadow-xs">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-black text-[#1e152d] dark:text-pink-300 flex items-center gap-1">
+                    🤫 Homenagem Surpresa no Telão!
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                  Estamos preparando uma homenagem inesquecível para a Fernanda na festa! Envie uma foto de vocês e uma mensagem especial.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenSurpriseModal();
+                  }}
+                  className="w-full py-2.5 px-3 bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                  <span>Enviar Foto & Recado Secreto</span>
+                </button>
+              </div>
+            )}
 
             {/* BOTÃO ESPECIAL PARA ENTRAR NO GRUPO VIP DO WHATSAPP */}
             {whatsappGroupLink && (

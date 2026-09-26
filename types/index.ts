@@ -142,6 +142,23 @@ export interface Invite {
   surprise_video_sent?: boolean;      // Se enviou vídeo
   surprise_text_sent?: boolean;       // Se enviou recado por escrito
   surprise_message?: string;          // Recado/Depoimento para o telão
+  surprise_photo_url?: string;        // Foto compactada em Base64 ou URL enviada pelo convidado
+  surprise_submitted_at?: string;     // Data/Hora do envio da homenagem
+}
+
+export interface SurpriseSubmission {
+  id: string;                         // ID do convite
+  invite_id: string;
+  guest_name: string;
+  photo_url?: string;
+  message?: string;
+  submitted_at: string;
+}
+
+export interface GiftItem {
+  id: string;
+  title: string;
+  description?: string;
 }
 
 export interface Table {
@@ -204,6 +221,12 @@ export interface EventConfig {
   pix_qrcode_url?: string;
   floorplan_image_url?: string;
   gift_suggestions: GiftSuggestion[];
+  gift_message_title?: string;
+  gift_message_subtitle?: string;
+  gift_message_intro?: string;
+  gift_message_outro?: string;
+  gift_message_signature?: string;
+  gift_items?: GiftItem[];
   custom_message_template?: string;
   surprise_photo_template?: string;
   surprise_video_template?: string;

@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory, SurpriseCampaign } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory, SurpriseCampaign, SurpriseSubmission, GiftItem } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
@@ -88,6 +88,19 @@ export const INITIAL_EVENT_CONFIG: EventConfig = {
       description: 'Vale Day Spa / Jantar Especial',
       category: 'experience',
     },
+  ],
+  gift_message_title: 'Um Recadinho da Fê',
+  gift_message_subtitle: 'Sobre Presentes & Mimos',
+  gift_message_intro: 'Ah, que legal que você clicou aqui! 🥰\n\nFalando bem sério: a sua presença e o seu abraço são os meus maiores e melhores presentes. Mas, como algumas pessoas me pediram um norte, deixo aqui algumas ideias se você quiser me fazer um mimo:',
+  gift_message_outro: 'Bom, acho que já sugeri até demais! Mas o que importa mesmo é a sua presença para termos um dia maravilhoso juntos. Espero por você!',
+  gift_message_signature: 'Com carinho,\nFê 💖',
+  gift_items: [
+    { id: 'item-1', title: 'Miniaturas de perfumes', description: '(sabe como sou apegada a essas coisinhas, né?)' },
+    { id: 'item-2', title: 'Body splashs', description: '(para me manter cheirosa sempre ✨).' },
+    { id: 'item-3', title: 'Velas aromáticas, incensos e itens da linha zen', description: '(para criar aquele ambiente de paz e tranquilidade, muito bom pra recarregar as energias).' },
+    { id: 'item-4', title: 'Tudo que tenha cachorro salsicha como tema!', description: '(é, eu amo as minhas meninas... mesmo que elas me tirem a paz de vez em quando. Na dúvida, me dá a vela zen junto para equilibrar! hahaha 🌭🐕).' },
+    { id: 'item-5', title: 'Tênis (tamanho 37) ou Sandálias (tamanho 36)', description: '' },
+    { id: 'item-6', title: 'Vinhos e mais vinhos!', description: '(brincadeira... ou não 🍷), acessórios e sabonetes perfumados.' },
   ],
 };
 
@@ -826,6 +839,12 @@ export async function getEventConfig(): Promise<EventConfig> {
         mergedConfig = {
           ...INITIAL_EVENT_CONFIG,
           ...data,
+          gift_items: data.gift_items && data.gift_items.length > 0 ? data.gift_items : INITIAL_EVENT_CONFIG.gift_items,
+          gift_message_title: data.gift_message_title || INITIAL_EVENT_CONFIG.gift_message_title,
+          gift_message_subtitle: data.gift_message_subtitle || INITIAL_EVENT_CONFIG.gift_message_subtitle,
+          gift_message_intro: data.gift_message_intro || INITIAL_EVENT_CONFIG.gift_message_intro,
+          gift_message_outro: data.gift_message_outro || INITIAL_EVENT_CONFIG.gift_message_outro,
+          gift_message_signature: data.gift_message_signature || INITIAL_EVENT_CONFIG.gift_message_signature,
           theme: {
             preset: data.theme?.preset || defaultTheme.preset,
             invite_mode: data.theme?.invite_mode || defaultTheme.invite_mode,
@@ -886,7 +905,7 @@ export async function toggleCheckin(id: string): Promise<Invite | null> {
 export async function saveEventConfig(config: EventConfig): Promise<void> {
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'event_config', 'settings'), config);
+      await setDoc(doc(db, 'event_config', 'settings'), cleanUndefinedForFirestore(config));
     } catch (err) {
       console.error('Erro ao salvar event_config no Firestore:', err);
     }
@@ -1634,6 +1653,93 @@ export async function deleteSurpriseCampaign(campaignId: string): Promise<void> 
   const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
   setLS(LS_KEYS_EXT.CAMPAIGNS, newCampaigns);
 }
+
+// ---- HOMENAGEM SURPRESA: SUBMISSÃO DE FOTOS & MENSAGENS PARA O TELÃO ----
+
+export async function saveSurpriseSubmission(
+  inviteId: string,
+  submission: {
+    photo_url?: string;
+    message?: string;
+    guest_name?: string;
+  }
+): Promise<SurpriseSubmission> {
+  const fullSubmission: SurpriseSubmission = {
+    id: inviteId,
+    invite_id: inviteId,
+    guest_name: submission.guest_name || 'Convidado',
+    photo_url: submission.photo_url || '',
+    message: submission.message || '',
+    submitted_at: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured) {
+    try {
+      await setDoc(doc(db, 'surprise_submissions', inviteId), fullSubmission);
+    } catch (err) {
+      console.warn('Erro ao salvar homenagem surpresa no Firestore:', err);
+    }
+  }
+
+  // Atualiza também o convite correspondente
+  const invites = await getAllInvites();
+  const invite = invites.find((i) => i.id === inviteId);
+  if (invite) {
+    const updatedInvite: Invite = {
+      ...invite,
+      surprise_sent: true,
+      surprise_photo_sent: !!submission.photo_url,
+      surprise_text_sent: !!submission.message,
+      surprise_photo_url: submission.photo_url || invite.surprise_photo_url || '',
+      surprise_message: submission.message || invite.surprise_message || '',
+      surprise_submitted_at: fullSubmission.submitted_at,
+    };
+    await saveInvite(updatedInvite);
+  }
+
+  // Salva no LocalStorage como cache rápido
+  const cachedSubmissions = getLS<Record<string, SurpriseSubmission>>('hotsite_surprise_submissions_v1', {});
+  cachedSubmissions[inviteId] = fullSubmission;
+  setLS('hotsite_surprise_submissions_v1', cachedSubmissions);
+
+  return fullSubmission;
+}
+
+export async function getAllSurpriseSubmissions(): Promise<SurpriseSubmission[]> {
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(collection(db, 'surprise_submissions'));
+      if (!snap.empty) {
+        return snap.docs.map((d) => d.data() as SurpriseSubmission);
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar homenagens do Firestore:', err);
+    }
+  }
+
+  // Fallback: extrai de convites que possuem fotos ou mensagens cadastradas
+  const invites = await getAllInvites();
+  const fromInvites: SurpriseSubmission[] = invites
+    .filter((inv) => inv.surprise_photo_url || inv.surprise_message || inv.surprise_sent)
+    .map((inv) => ({
+      id: inv.id,
+      invite_id: inv.id,
+      guest_name: inv.head_name,
+      photo_url: inv.surprise_photo_url || '',
+      message: inv.surprise_message || '',
+      submitted_at: inv.surprise_submitted_at || inv.updated_at || new Date().toISOString(),
+    }));
+
+  const cached = getLS<Record<string, SurpriseSubmission>>('hotsite_surprise_submissions_v1', {});
+  const fromLs = Object.values(cached);
+
+  const mergedMap = new Map<string, SurpriseSubmission>();
+  fromInvites.forEach((s) => mergedMap.set(s.id, s));
+  fromLs.forEach((s) => mergedMap.set(s.id, s));
+
+  return Array.from(mergedMap.values());
+}
+
 
 
 

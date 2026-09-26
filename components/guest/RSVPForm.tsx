@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Invite, Guest, EventConfig, Person } from '@/types';
 import { saveInvite, savePerson } from '@/lib/db';
 import { isInviteExpired, formatDateShort } from '@/lib/utils';
-import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown, Sparkles, Calendar } from 'lucide-react';
+import { Utensils, Send, AlertTriangle, HeartHandshake, CalendarClock, Clock, Edit2, CheckCircle2, XCircle, RefreshCw, Crown, Sparkles, Calendar, Camera } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { SurpriseTributeModal } from './SurpriseTributeModal';
 
 interface RSVPFormProps {
   invite: Invite;
@@ -22,11 +23,17 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
   const [requestedDateReason, setRequestedDateReason] = useState<string>(invite.requested_date_reason || '');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<boolean>(invite.status === 'pending');
+  const [isSurpriseModalOpen, setIsSurpriseModalOpen] = useState(false);
 
   const isExpired = isInviteExpired(invite, config.deadline_rsvp);
   const activeDeadline = invite.individual_deadline || config.deadline_rsvp;
   const maxDeadlineDate = activeDeadline ? activeDeadline.slice(0, 10) : '';
   const isAlreadyResponded = invite.status !== 'pending';
+
+  const isBirthdayPerson =
+    invite.special_role === 'birthday_person' ||
+    invite.head_name.trim().toLowerCase().includes('fernanda') ||
+    invite.id.toLowerCase().includes('fernanda');
 
   const headPerson = allPersons?.find((p) => p.id === invite.head_person_id || p.name.trim().toLowerCase() === invite.head_name.trim().toLowerCase());
   const familyName = headPerson?.family_name;
@@ -223,38 +230,65 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         )}
       </div>
 
-      {/* MENSAGEM ACOLHEDORA DE BOAS-VINDAS & PRAZO DESTACADO */}
-      <div className="space-y-3 pt-1 pb-1">
-        <h3 className="text-sm sm:text-base font-black text-[#1e152d]">
-          {displayGreeting}
-        </h3>
-        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-          Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Por favor, informe abaixo se você e sua família poderão comparecer.
-        </p>
-
-        {activeDeadline && (
-          <div className="bg-[#f4effd] border border-purple-200/80 p-4 rounded-2xl flex items-start gap-3 text-xs sm:text-sm text-[#1e152d] shadow-sm">
-            <div className="p-2.5 bg-[#6d44e4] text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
-              <CalendarClock className="w-5 h-5" />
+      {/* MENSAGEM DE BOAS-VINDAS: COLAPSADA SE JÁ RESPONDEU, EXPANDIDA SE FORMULÁRIO ABERTO */}
+      {!isEditing && isAlreadyResponded ? (
+        <div className="bg-purple-50/80 border border-purple-100 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 text-xs animate-fade-in shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-[#6d44e4] text-white rounded-xl shrink-0 shadow-xs">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
-            <div className="space-y-1">
-              <p className="font-extrabold text-[#6d44e4] flex items-center gap-2 flex-wrap">
-                <span>Data Límite de Confirmação:</span>
-                <span className="bg-[#6d44e4] text-white px-2.5 py-0.5 rounded-lg text-xs font-black">
-                  Até {formatDateShort(activeDeadline)}
-                </span>
-              </p>
-              <p className="text-slate-600 text-xs leading-relaxed font-medium">
-                Como teremos uma comemoração inesquecível preparada com muito amor no buffet, pedimos gentilmente que confirme sua presença até o dia <strong>{formatDateShort(activeDeadline)}</strong> para garantirmos a sua vaga na lista oficial!
+            <div className="min-w-0">
+              <h3 className="font-black text-xs sm:text-sm text-[#1e152d] truncate">
+                {displayGreeting}
+              </h3>
+              <p className="text-[11px] text-slate-500 truncate">
+                {invite.status === 'confirmed'
+                  ? 'Presença registrada na lista oficial da festa!'
+                  : invite.status === 'pending_date'
+                  ? `Prazo solicitado até ${formatDateShort(invite.requested_date || '')}`
+                  : 'Resposta de ausência registrada com carinho.'}
               </p>
             </div>
           </div>
-        )}
-      </div>
+          {activeDeadline && (
+            <span className="text-[10px] font-bold text-[#6d44e4] bg-purple-100/90 border border-purple-200/60 px-2.5 py-1 rounded-xl shrink-0">
+              Prazo: {formatDateShort(activeDeadline)}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3 pt-1 pb-1">
+          <h3 className="text-sm sm:text-base font-black text-[#1e152d]">
+            {displayGreeting}
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+            Que alegria ter você com a gente para celebrar os <strong>40 Anos de Fernanda Seppi</strong>! Por favor, informe abaixo se você e sua família poderão comparecer.
+          </p>
+
+          {activeDeadline && (
+            <div className="bg-[#f4effd] border border-purple-200/80 p-4 rounded-2xl flex items-start gap-3 text-xs sm:text-sm text-[#1e152d] shadow-sm">
+              <div className="p-2.5 bg-[#6d44e4] text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
+                <CalendarClock className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-extrabold text-[#6d44e4] flex items-center gap-2 flex-wrap">
+                  <span>Data Límite de Confirmação:</span>
+                  <span className="bg-[#6d44e4] text-white px-2.5 py-0.5 rounded-lg text-xs font-black">
+                    Até {formatDateShort(activeDeadline)}
+                  </span>
+                </p>
+                <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                  Como teremos uma comemoração inesquecível preparada com muito amor no buffet, pedimos gentilmente que confirme sua presença até o dia <strong>{formatDateShort(activeDeadline)}</strong> para garantirmos a sua vaga na lista oficial!
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MODO RESUMO: Exibição Fixa Flat em Linha */}
       {!isEditing && isAlreadyResponded ? (
-        <div className="bg-[#f9f7fd] p-4 sm:p-5 rounded-2xl border border-purple-200/60 space-y-3 animate-fade-in">
+        <div className="bg-[#f9f7fd] p-4 sm:p-5 rounded-2xl border border-purple-200/60 space-y-3.5 animate-fade-in">
           <div className="flex items-center justify-between border-b border-purple-100 pb-2.5">
             <span className="font-black text-xs sm:text-sm text-[#1e152d]">
               Resposta Registrada ({invite.confirmed_count} confirmados):
@@ -277,7 +311,7 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
 
           <div className="divide-y divide-purple-100/80 text-xs">
             {guests.map((g, idx) => (
-              <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
+              <div key={idx} className="py-2 flex items-center justify-between gap-2">
                 <span className="font-extrabold text-[#1e152d] flex items-center gap-1.5 min-w-0 truncate">
                   {idx === 0 ? <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" /> : <span className="text-purple-300 font-normal">•</span>}
                   <span className="truncate">{g.name}</span>
@@ -310,22 +344,95 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             ))}
           </div>
 
-          {/* Orientação para Confirmados */}
+          {/* Confirmação Curta, Direta e Eficiente */}
           {invite.status === 'confirmed' && (
-            <div className="text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-emerald-200/80 shadow-sm flex items-start gap-2.5 mt-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="space-y-0.5">
-                <span className="font-extrabold text-[#1e152d] block">
+            <div className="bg-emerald-50 border border-emerald-200/80 p-3 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-extrabold text-emerald-950 truncate">
                   {invite.confirmed_by === 'birthday_person'
-                    ? 'Presença Confirmada com Carinho pela Aniversariante! 🌸'
-                    : 'Presença Registrada com Sucesso!'}
+                    ? 'Confirmado com carinho pela aniversariante! 🌸'
+                    : 'Presença confirmada! Contamos com vocês!'}
                 </span>
-                <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                  {invite.confirmed_by === 'birthday_person'
-                    ? 'Sua presença já foi anotada diretamente pela aniversariante. Mal podemos esperar para comemorar juntos! Confira sua mesa reservada e os detalhes da festa abaixo.'
-                    : 'Sua resposta está salva e contamos com você no evento! Caso ocorra algum imprevisto grave que impeça seu comparecimento, por favor entre em contato direto com a aniversariante ou cerimonial.'}
-                </p>
               </div>
+              <span className="text-[10px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-200 px-2.5 py-0.5 rounded-full shrink-0">
+                {invite.confirmed_count} {invite.confirmed_count === 1 ? 'vaga' : 'vagas'}
+              </span>
+            </div>
+          )}
+
+          {/* ESPAÇO PERMANENTE: HOMENAGEM SURPRESA NO TELÃO (Oculto da aniversariante) */}
+          {invite.status === 'confirmed' && !isBirthdayPerson && (
+            <div className="pt-1">
+              {invite.surprise_sent || invite.surprise_photo_url || invite.surprise_message ? (
+                /* Card quando JÁ ENVIOU foto/recado */
+                <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 border border-pink-200 p-4 rounded-2xl space-y-3 shadow-xs">
+                  <div className="flex items-start gap-3">
+                    {invite.surprise_photo_url ? (
+                      <img
+                        src={invite.surprise_photo_url}
+                        alt="Foto para o Telão"
+                        className="w-14 h-14 rounded-xl object-cover border-2 border-pink-400 shadow-sm shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center shrink-0">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-[10px] font-black text-pink-700 bg-pink-100/90 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-pink-600" /> Homenagem Salva no Telão 💖
+                      </span>
+                      <h4 className="font-black text-xs text-[#1e152d]">
+                        Sua lembrança já está guardada para a festa!
+                      </h4>
+                      {invite.surprise_message && (
+                        <p className="text-[11px] text-slate-600 italic line-clamp-2">
+                          &quot;{invite.surprise_message}&quot;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSurpriseModalOpen(true)}
+                    className="w-full py-2 bg-white hover:bg-pink-100/50 border border-pink-200 text-pink-700 font-extrabold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>Ver ou Alterar Minha Foto e Mensagem</span>
+                  </button>
+                </div>
+              ) : (
+                /* Card Chamativo quando AINDA NÃO ENVIOU */
+                <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 text-white p-4 sm:p-5 rounded-2xl shadow-lg shadow-pink-600/25 space-y-3 relative overflow-hidden">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 bg-white/20 backdrop-blur-md rounded-xl shrink-0">
+                      <Camera className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="bg-white/25 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block">
+                        🤫 Segredo / Surpresa
+                      </span>
+                      <h4 className="font-black text-sm sm:text-base leading-snug">
+                        Homenagem Especial no Telão da Festa! 📸✨
+                      </h4>
+                      <p className="text-xs text-pink-100 leading-relaxed font-medium">
+                        Estamos montando uma grande surpresa para a Fernanda. Envie uma foto de vocês e um recadinho especial para passar no telão!
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSurpriseModalOpen(true)}
+                    className="w-full py-3 bg-white hover:bg-pink-50 text-pink-700 font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-pink-600" />
+                    <span>Enviar Foto & Mensagem Secreta</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -548,6 +655,16 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
             </button>
           </div>
         </form>
+      )}
+
+      {/* MODAL DE ENVIO DA HOMENAGEM SURPRESA (TELÃO) */}
+      {!isBirthdayPerson && (
+        <SurpriseTributeModal
+          isOpen={isSurpriseModalOpen}
+          onClose={() => setIsSurpriseModalOpen(false)}
+          invite={invite}
+          onSaved={(updated) => onUpdate(updated)}
+        />
       )}
     </section>
   );

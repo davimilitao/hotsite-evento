@@ -7,9 +7,10 @@ import { Invite, Table, EventConfig, UserRole, Person } from '@/types';
 import { GuestList } from '@/components/admin/GuestList';
 import { TableManager } from '@/components/admin/TableManager';
 import { SurpriseDashboard } from '@/components/admin/SurpriseDashboard';
+import { GiftManager } from '@/components/admin/GiftManager';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 import { BirthdayOnboardingModal } from '@/components/admin/BirthdayOnboardingModal';
-import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock, Send } from 'lucide-react';
+import { Users, Armchair, Settings, RefreshCw, Crown, Sparkles, Database, CheckCircle2, AlertTriangle, Gift, Lock, Send, Camera } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { LoginCard } from '@/components/auth/LoginCard';
@@ -17,7 +18,7 @@ import { AdminUserHeader } from '@/components/admin/AdminUserHeader';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'guests' | 'invites' | 'tables' | 'surprise' | 'settings'>('invites');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invites' | 'tables' | 'gifts' | 'surprise' | 'settings'>('invites');
   const [currentRole, setCurrentRole] = useState<UserRole>('admin');
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -238,17 +239,30 @@ export default function AdminPage() {
               <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Mesas</span>
             </button>
 
-            {/* SURPRESA */}
+            {/* PRESENTES (Liberado para a Aniversariante e Admin) */}
+            <button
+              onClick={() => setActiveTab('gifts')}
+              className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'gifts'
+                  ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40'
+                  : 'bg-transparent sm:bg-slate-950/80 text-pink-500 sm:text-pink-400 hover:text-pink-600 sm:hover:text-pink-200 sm:hover:bg-slate-800'
+              }`}
+            >
+              <Gift className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Presentes</span>
+            </button>
+
+            {/* SURPRESA (Restrito ao Admin/Assessor - OCULTO DA ANIVERSARIANTE) */}
             {currentRole !== 'birthday_person' ? (
               <button
                 onClick={() => setActiveTab('surprise')}
                 className={`flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl sm:flex-row sm:w-auto sm:h-auto sm:min-h-[42px] sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-extrabold transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'surprise'
-                    ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40'
-                    : 'bg-transparent sm:bg-slate-950/80 text-pink-500 sm:text-pink-400/80 hover:text-pink-600 sm:hover:text-pink-200 sm:hover:bg-slate-800'
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                    : 'bg-transparent sm:bg-slate-950/80 text-purple-400 hover:text-purple-300 sm:hover:text-purple-200 sm:hover:bg-slate-800'
                 }`}
               >
-                <Gift className={`w-5 h-5 sm:w-4 sm:h-4 ${activeTab === 'surprise' ? 'text-white' : 'text-pink-500 sm:text-pink-400'}`} />
+                <Camera className={`w-5 h-5 sm:w-4 sm:h-4 ${activeTab === 'surprise' ? 'text-white' : 'text-purple-400'}`} />
                 <span className="text-[9px] sm:text-xs leading-none sm:leading-normal">Surpresa</span>
               </button>
             ) : (
@@ -300,6 +314,12 @@ export default function AdminPage() {
               />
             )}
             {activeTab === 'tables' && config && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} config={config} />}
+            {activeTab === 'gifts' && config && (
+              <GiftManager
+                config={config}
+                onRefresh={loadAll}
+              />
+            )}
             {activeTab === 'surprise' && currentRole !== 'birthday_person' && config && (
               <SurpriseDashboard
                 invites={invites}
