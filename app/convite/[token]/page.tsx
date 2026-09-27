@@ -61,6 +61,10 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, [token]);
+
   const handleCloseFeedbackModalAndFocusSurprise = () => {
     setShowFeedbackModal(false);
     setTimeout(() => {
