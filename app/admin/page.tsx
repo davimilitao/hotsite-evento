@@ -143,7 +143,7 @@ export default function AdminPage() {
       <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
-          <p className="text-sm font-bold text-slate-400">Verificando autenticação Google...</p>
+          <p className="text-sm font-bold text-slate-400">Carregando painel de acesso...</p>
         </div>
       </main>
     );
@@ -320,6 +320,7 @@ export default function AdminPage() {
             {activeTab === 'tables' && config && <TableManager tables={tables} invites={invites} persons={persons} onRefresh={loadAll} config={config} />}
             {activeTab === 'gifts' && config && (
               <GiftManager
+                key={`gift-mgr-${config.updated_at || 'initial'}`}
                 config={config}
                 onRefresh={loadAll}
               />

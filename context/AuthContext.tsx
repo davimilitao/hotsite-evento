@@ -2,9 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppUser, UserRole } from '@/types';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { isFirebaseConfigured } from '@/lib/firebase';
 import { generateOTP, sendOTPEmail, OTP_EXPIRATION_MS } from '@/lib/otp';
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 
 const STORAGE_KEY = 'festa_auth_session_v1';
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000; // 24 Horas em ms
@@ -151,51 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const expiresAt = now + TWENTY_FOUR_HOURS_MS;
 
     try {
-      let candidateUser: AppUser;
-
-      if (isFirebaseConfigured) {
-        try {
-          const provider = new GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: 'select_account' });
-          const result = await signInWithPopup(auth, provider);
-          const fbUser = result.user;
-
-          candidateUser = {
-            id: fbUser.uid,
-            name: fbUser.displayName || 'Usuário Google',
-            email: fbUser.email || 'militao46@gmail.com',
-            role: selectedRole,
-            authenticatedRole: selectedRole,
-            avatar_url: fbUser.photoURL || undefined,
-            authenticatedAt: now,
-            expiresAt: expiresAt,
-          };
-        } catch (fbErr: any) {
-          console.warn('Firebase Google Auth popup falhou, usando acesso de fallback:', fbErr);
-          candidateUser = {
-            id: 'google-user-fallback-123',
-            name: 'Administrador (Google)',
-            email: 'militao46@gmail.com',
-            role: selectedRole,
-            authenticatedRole: selectedRole,
-            avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
-            authenticatedAt: now,
-            expiresAt: expiresAt,
-          };
-        }
-      } else {
-        // Modo Direto de Desenvolvimento
-        candidateUser = {
-          id: 'google-user-demo-123',
-          name: 'Administrador Evento',
-          email: 'militao46@gmail.com',
-          role: selectedRole,
-          authenticatedRole: selectedRole,
-          avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
-          authenticatedAt: now,
-          expiresAt: expiresAt,
-        };
-      }
+      const candidateUser: AppUser = {
+        id: 'google-user-fallback-123',
+        name: 'Administrador (Google)',
+        email: 'militao46@gmail.com',
+        role: selectedRole,
+        authenticatedRole: selectedRole,
+        avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
+        authenticatedAt: now,
+        expiresAt: expiresAt,
+      };
 
       completeLogin(candidateUser);
     } catch (err: any) {
@@ -348,16 +312,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPendingUser(null);
     setPendingOtp(null);
     setOtpExpiresAt(null);
-    if (isFirebaseConfigured) {
-      signOut(auth).catch(() => {});
-    }
   };
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
-    if (isFirebaseConfigured) {
-      signOut(auth).catch(() => {});
-    }
     setUser(null);
     setPendingUser(null);
     setPendingOtp(null);

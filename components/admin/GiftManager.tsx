@@ -45,6 +45,26 @@ export function GiftManager({ config, onRefresh }: GiftManagerProps) {
   const [pixKey, setPixKey] = useState(config.pix_key || '');
   const [pixName, setPixName] = useState(config.pix_name || '');
 
+  // Sincroniza o formulário sempre que o config for recarregado (ex: por outra pessoa ou na troca de aba)
+  React.useEffect(() => {
+    setTitle(config.gift_message_title || 'Um Recadinho da Fê');
+    setSubtitle(config.gift_message_subtitle || 'Sobre Presentes & Mimos');
+    setIntro(
+      config.gift_message_intro ||
+        'Ah, que legal que você clicou aqui! 🥰\n\nFalando bem sério: a sua presença e o seu abraço são os meus maiores e melhores presentes. Mas, como algumas pessoas me pediram um norte, deixo aqui algumas ideias se você quiser me fazer um mimo:'
+    );
+    setOutro(
+      config.gift_message_outro ||
+        'Bom, acho que já sugeri até demais! Mas o que importa mesmo é a sua presença para termos um dia maravilhoso juntos. Espero por você!'
+    );
+    setSignature(config.gift_message_signature || 'Com carinho,\nFê 💖');
+    setItems(
+      config.gift_items && config.gift_items.length > 0 ? config.gift_items : defaultItems
+    );
+    setPixKey(config.pix_key || '');
+    setPixName(config.pix_name || '');
+  }, [config]);
+
   // Novo item temporário
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');

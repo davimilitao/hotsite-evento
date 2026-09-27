@@ -244,4 +244,5 @@ export interface EventConfig {
   whatsapp_group_link?: string;   // Link de convite oficial para o Grupo VIP do WhatsApp (ex: https://chat.whatsapp.com/...)
   developer_credits?: string;
   theme?: EventTheme;
+  updated_at?: string;
 }

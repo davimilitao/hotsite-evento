@@ -1,6 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 
 // Tenta obter as variáveis com prefixo NEXT_PUBLIC_ (exigido pelo Next.js no navegador)
 const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
@@ -26,6 +25,5 @@ export const isFirebaseConfigured = Boolean(
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
-export const auth = getAuth(app);
 
 export default app;

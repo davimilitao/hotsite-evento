@@ -864,12 +864,12 @@ export async function getEventConfig(): Promise<EventConfig> {
         mergedConfig = {
           ...INITIAL_EVENT_CONFIG,
           ...data,
-          gift_items: data.gift_items && data.gift_items.length > 0 ? data.gift_items : INITIAL_EVENT_CONFIG.gift_items,
-          gift_message_title: data.gift_message_title || INITIAL_EVENT_CONFIG.gift_message_title,
-          gift_message_subtitle: data.gift_message_subtitle || INITIAL_EVENT_CONFIG.gift_message_subtitle,
-          gift_message_intro: data.gift_message_intro || INITIAL_EVENT_CONFIG.gift_message_intro,
-          gift_message_outro: data.gift_message_outro || INITIAL_EVENT_CONFIG.gift_message_outro,
-          gift_message_signature: data.gift_message_signature || INITIAL_EVENT_CONFIG.gift_message_signature,
+          gift_items: Array.isArray(data.gift_items) ? data.gift_items : INITIAL_EVENT_CONFIG.gift_items,
+          gift_message_title: data.gift_message_title ?? INITIAL_EVENT_CONFIG.gift_message_title,
+          gift_message_subtitle: data.gift_message_subtitle ?? INITIAL_EVENT_CONFIG.gift_message_subtitle,
+          gift_message_intro: data.gift_message_intro ?? INITIAL_EVENT_CONFIG.gift_message_intro,
+          gift_message_outro: data.gift_message_outro ?? INITIAL_EVENT_CONFIG.gift_message_outro,
+          gift_message_signature: data.gift_message_signature ?? INITIAL_EVENT_CONFIG.gift_message_signature,
           theme: {
             preset: data.theme?.preset || defaultTheme.preset,
             invite_mode: data.theme?.invite_mode || defaultTheme.invite_mode,
@@ -896,6 +896,7 @@ export async function getEventConfig(): Promise<EventConfig> {
     mergedConfig = {
       ...INITIAL_EVENT_CONFIG,
       ...cached,
+      gift_items: Array.isArray(cached.gift_items) ? cached.gift_items : INITIAL_EVENT_CONFIG.gift_items,
       theme: {
         preset: cached.theme?.preset || defaultTheme.preset,
         invite_mode: cached.theme?.invite_mode || defaultTheme.invite_mode,
@@ -928,14 +929,19 @@ export async function toggleCheckin(id: string): Promise<Invite | null> {
 }
 
 export async function saveEventConfig(config: EventConfig): Promise<void> {
+  const enrichedConfig: EventConfig = {
+    ...config,
+    updated_at: new Date().toISOString(),
+  };
+
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'event_config', 'settings'), cleanUndefinedForFirestore(config));
+      await setDoc(doc(db, 'event_config', 'settings'), cleanUndefinedForFirestore(enrichedConfig));
     } catch (err) {
       console.error('Erro ao salvar event_config no Firestore:', err);
     }
   }
-  setLS(LS_KEYS.CONFIG, config);
+  setLS(LS_KEYS.CONFIG, enrichedConfig);
 }
 
 /**
