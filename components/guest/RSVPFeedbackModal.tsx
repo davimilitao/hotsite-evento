@@ -13,6 +13,7 @@ interface RSVPFeedbackModalProps {
   onGoToLocation: () => void;
   whatsappGroupLink?: string;
   onOpenSurpriseModal?: () => void;
+  onCloseAndFocusSurprise?: () => void;
 }
 
 export function RSVPFeedbackModal({
@@ -23,8 +24,17 @@ export function RSVPFeedbackModal({
   onGoToLocation,
   whatsappGroupLink,
   onOpenSurpriseModal,
+  onCloseAndFocusSurprise,
 }: RSVPFeedbackModalProps) {
   if (!isOpen) return null;
+
+  const handleClose = () => {
+    if (onCloseAndFocusSurprise) {
+      onCloseAndFocusSurprise();
+    } else {
+      onClose();
+    }
+  };
 
   const isConfirmed = invite.status === 'confirmed';
   const isPendingDate = invite.status === 'pending_date';
@@ -33,7 +43,7 @@ export function RSVPFeedbackModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-purple-500/30 text-center space-y-4 p-6 relative">
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-200 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
@@ -110,7 +120,7 @@ export function RSVPFeedbackModal({
             </div>
 
             {/* CTA HOMENAGEM SURPRESA NO TELÃO */}
-            {onOpenSurpriseModal && !invite.special_role && !invite.head_name.toLowerCase().includes('fernanda') && (
+            {onOpenSurpriseModal && (
               <div className="bg-gradient-to-r from-pink-500/10 via-rose-500/10 to-purple-500/10 border border-pink-500/30 p-3.5 rounded-2xl text-left space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-gradient-to-tr from-pink-600 to-rose-600 text-white rounded-lg shadow-xs">
@@ -167,10 +177,10 @@ export function RSVPFeedbackModal({
           )}
 
           <button
-            onClick={onClose}
-            className="w-full py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
+            onClick={handleClose}
+            className="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors cursor-pointer"
           >
-            Fechar
+            {isConfirmed ? 'Fechar e Ver Detalhes' : 'Entendi, fechar'}
           </button>
         </div>
       </div>

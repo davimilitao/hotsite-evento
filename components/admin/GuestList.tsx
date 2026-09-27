@@ -67,6 +67,7 @@ interface GuestListProps {
   tables: Table[];
   persons: Person[];
   config: EventConfig;
+  currentRole?: 'admin' | 'birthday_person' | 'assessor';
   activeTab?: 'persons' | 'invites';
   setActiveTab?: (tab: 'persons' | 'invites') => void;
   onRefresh: () => void;
@@ -77,6 +78,7 @@ export function GuestList({
   tables,
   persons,
   config,
+  currentRole = 'admin',
   activeTab: externalActiveTab,
   setActiveTab: externalSetActiveTab,
   onRefresh,
@@ -3322,6 +3324,7 @@ export function GuestList({
         allPersons={persons}
         tables={tables}
         config={config}
+        currentRole={currentRole}
         onClose={() => setSelectedDrawerPerson(null)}
         onDispatchWhatsApp={(inv, p) => handleWhatsAppDispatch(inv, p)}
         onAcceptRequestedDate={(inv) => handleAcceptRequestedDate(inv)}

@@ -26,6 +26,7 @@ import {
   Split,
   ChevronDown,
   Crown,
+  Camera,
 } from 'lucide-react';
 
 interface GuestActionDrawerProps {
@@ -34,6 +35,7 @@ interface GuestActionDrawerProps {
   allPersons: Person[];
   tables: Table[];
   config: EventConfig;
+  currentRole?: 'admin' | 'birthday_person' | 'assessor';
   isOpen: boolean;
   onClose: () => void;
   onDispatchWhatsApp: (invite: Invite, person: Person) => void;
@@ -54,6 +56,7 @@ export function GuestActionDrawer({
   allPersons,
   tables,
   config,
+  currentRole = 'admin',
   isOpen,
   onClose,
   onDispatchWhatsApp,
@@ -645,6 +648,80 @@ export function GuestActionDrawer({
                   </span>
                 )}
               </div>
+            )}
+          </div>
+
+          {/* BLOCO 5: HOMENAGEM DO TELÃO (FOTO & MENSAGEM) */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-pink-600" /> Homenagem do Telão (Foto & Mensagem)
+              </span>
+              {(invite?.surprise_sent || invite?.surprise_photo_url || invite?.surprise_message) ? (
+                <span className="text-[10px] font-black text-pink-700 bg-pink-100 border border-pink-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-pink-600" /> Enviada 💖
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
+                  ⏳ Pendente
+                </span>
+              )}
+            </div>
+
+            {(invite?.surprise_sent || invite?.surprise_photo_url || invite?.surprise_message) ? (
+              currentRole === 'birthday_person' ? (
+                /* VISÃO DA ANIVERSARIANTE: PROTEÇÃO ANTI-SPOILER */
+                <div className="p-3 bg-gradient-to-r from-pink-50 via-purple-50 to-rose-50 border border-pink-200 rounded-xl space-y-1">
+                  <div className="flex items-center gap-1.5 text-pink-900 font-extrabold text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Lembrança confirmada para o telão!</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                    🔒 A foto e a mensagem deste convidado estão guardadas em segredo para a surpresa da sua festa! 🤫✨
+                  </p>
+                </div>
+              ) : (
+                /* VISÃO ADMIN / CERIMONIALISTA: ACESSO COMPLETO */
+                <div className="p-3 bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 border border-pink-200 rounded-xl space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    {invite?.surprise_photo_url ? (
+                      <img
+                        src={invite.surprise_photo_url}
+                        alt="Foto do Telão"
+                        className="w-14 h-14 rounded-xl object-cover border-2 border-pink-400 shadow-sm shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center shrink-0">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] font-black text-pink-800 bg-pink-200/80 px-2 py-0.5 rounded-md inline-block">
+                          {invite?.surprise_photo_url ? 'Foto Anexada' : 'Apenas Mensagem'}
+                        </span>
+                        {invite?.surprise_submitted_at && (
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(invite.surprise_submitted_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
+                      {invite?.surprise_message && (
+                        <p className="text-[11px] text-slate-700 italic line-clamp-3 leading-relaxed">
+                          &quot;{invite.surprise_message}&quot;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 italic">
+                    Visível apenas para Admin e Cerimonialista. A aniversariante vê somente o status.
+                  </p>
+                </div>
+              )
+            ) : (
+              <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                Este convidado ainda não enviou foto ou mensagem para o telão da festa.
+              </p>
             )}
           </div>
         </div>

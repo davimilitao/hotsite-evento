@@ -14,6 +14,12 @@ interface BirthdayOnboardingModalProps {
 export function BirthdayOnboardingModal({ isOpen, config, onClose, onSave }: BirthdayOnboardingModalProps) {
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('birthday_onboarding_done_v1') === 'true';
+    }
+    return false;
+  });
 
   // Estados locais dos dados da festa
   const [birthdayPerson, setBirthdayPerson] = useState(config.birthday_person || 'Fernanda Seppi');
@@ -48,6 +54,9 @@ export function BirthdayOnboardingModal({ isOpen, config, onClose, onSave }: Bir
       };
 
       await onSave(updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('birthday_onboarding_done_v1', 'true');
+      }
       onClose();
     } catch (err) {
       console.error('Erro ao salvar onboarding da aniversariante:', err);
@@ -299,6 +308,44 @@ export function BirthdayOnboardingModal({ isOpen, config, onClose, onSave }: Bir
               </button>
             )}
           </div>
+        </div>
+
+        {/* OPÇÃO DE NÃO VER NOVAMENTE ESTA MENSAGEM */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-3 border-t border-slate-800/80">
+          <label className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setDontShowAgain(checked);
+                if (typeof window !== 'undefined') {
+                  if (checked) {
+                    localStorage.setItem('birthday_onboarding_done_v1', 'true');
+                  } else {
+                    localStorage.removeItem('birthday_onboarding_done_v1');
+                  }
+                }
+              }}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-950 text-purple-600 focus:ring-purple-500 cursor-pointer accent-purple-600"
+            />
+            <span className="text-[11px] font-semibold text-slate-300">
+              Não ver novamente esta mensagem ao abrir o painel
+            </span>
+          </label>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('birthday_onboarding_done_v1', 'true');
+              }
+              onClose();
+            }}
+            className="text-[11px] text-slate-400 hover:text-purple-300 underline underline-offset-2 transition-colors cursor-pointer"
+          >
+            Dispensar e não mostrar mais
+          </button>
         </div>
       </div>
     </div>

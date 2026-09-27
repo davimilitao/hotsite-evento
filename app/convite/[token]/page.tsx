@@ -61,9 +61,19 @@ export default function ConvitePage({ params }: ConvitePageProps) {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [token]);
+  const handleCloseFeedbackModalAndFocusSurprise = () => {
+    setShowFeedbackModal(false);
+    setTimeout(() => {
+      const el = document.getElementById('card-homenagem-telao');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-pink-400', 'shadow-2xl');
+        setTimeout(() => {
+          el.classList.remove('ring-4', 'ring-pink-400', 'shadow-2xl');
+        }, 3000);
+      }
+    }, 250);
+  };
 
   if (loading) {
     return (
@@ -249,6 +259,7 @@ export default function ConvitePage({ params }: ConvitePageProps) {
       <RSVPFeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
+        onCloseAndFocusSurprise={handleCloseFeedbackModalAndFocusSurprise}
         invite={invite}
         assignedTable={assignedTable}
         onGoToLocation={() => setActiveTab('location')}

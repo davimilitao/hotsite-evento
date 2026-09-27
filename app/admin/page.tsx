@@ -121,7 +121,10 @@ export default function AdminPage() {
   const handleRoleChange = (newRole: UserRole) => {
     setCurrentRole(newRole);
     if (newRole === 'birthday_person') {
-      setShowBirthdayOnboarding(true);
+      const isDone = typeof window !== 'undefined' ? localStorage.getItem('birthday_onboarding_done_v1') === 'true' : false;
+      if (!isDone) {
+        setShowBirthdayOnboarding(true);
+      }
     }
   };
 
@@ -308,6 +311,7 @@ export default function AdminPage() {
                 tables={tables}
                 persons={persons}
                 config={config}
+                currentRole={currentRole}
                 activeTab={activeTab === 'guests' ? 'persons' : 'invites'}
                 setActiveTab={(tab) => setActiveTab(tab === 'persons' ? 'guests' : 'invites')}
                 onRefresh={loadAll}

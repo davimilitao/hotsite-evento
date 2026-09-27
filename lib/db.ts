@@ -421,7 +421,21 @@ export async function getAllPersons(): Promise<Person[]> {
     try {
       const snap = await getDocs(collection(db, 'persons'));
       if (!snap.empty) {
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Person));
+        const personsList = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Person));
+        const cleanedList = personsList.map((p) => {
+          if (p.name.toLowerCase().includes('tester') || p.phone === '110000000') {
+            const restored: Person = {
+              ...p,
+              name: 'LEONARDO DAVI DA SILVA',
+              phone: '11996895496',
+            };
+            setDoc(doc(db, 'persons', p.id), cleanUndefinedForFirestore(restored)).catch(() => {});
+            return restored;
+          }
+          return p;
+        });
+        setLS(LS_KEYS.PERSONS, cleanedList);
+        return cleanedList;
       } else {
         console.log('Populando Firestore com as pessoas físicas iniciais...');
         for (const person of INITIAL_PERSONS) {
@@ -437,7 +451,18 @@ export async function getAllPersons(): Promise<Person[]> {
 
   const cached = getLS<Person[]>(LS_KEYS.PERSONS, INITIAL_PERSONS);
   if (cached && cached.length > 0) {
-    return cached;
+    const cleaned = cached.map((p) => {
+      if (p.name.toLowerCase().includes('tester') || p.phone === '110000000') {
+        return {
+          ...p,
+          name: 'LEONARDO DAVI DA SILVA',
+          phone: '11996895496',
+        };
+      }
+      return p;
+    });
+    setLS(LS_KEYS.PERSONS, cleaned);
+    return cleaned;
   }
 
   setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
@@ -1041,10 +1066,31 @@ export async function getAllInvites(): Promise<Invite[]> {
     rawInvites = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
   }
 
-  const deduplicated = deduplicateInvitesList(rawInvites);
+  const cleanedRaw = rawInvites.map((i) => {
+    if (i.head_name.toLowerCase().includes('tester') || i.phone === '110000000') {
+      const restored: Invite = {
+        ...i,
+        head_name: 'LEONARDO DAVI DA SILVA',
+        phone: '11996895496',
+        guests: (i.guests || []).map((g) =>
+          g.name.toLowerCase().includes('tester')
+            ? { ...g, name: 'LEONARDO DAVI DA SILVA' }
+            : g
+        ),
+      };
+      if (isFirebaseConfigured) {
+        setDoc(doc(db, 'invites', i.id), cleanUndefinedForFirestore(restored)).catch(() => {});
+      }
+      return restored;
+    }
+    return i;
+  });
 
-  if (deduplicated.length < rawInvites.length) {
-    const removedIds = rawInvites
+  const deduplicated = deduplicateInvitesList(cleanedRaw);
+  setLS(LS_KEYS.INVITES, deduplicated);
+
+  if (deduplicated.length < cleanedRaw.length) {
+    const removedIds = cleanedRaw
       .filter((raw) => !deduplicated.some((d) => d.id === raw.id))
       .map((i) => i.id);
 
