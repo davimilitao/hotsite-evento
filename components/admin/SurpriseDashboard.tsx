@@ -17,7 +17,7 @@ import {
   Save,
   X,
   Plus,
-  Trash2,
+  Trash2, Copy,
   Edit,
   Power,
   CheckCircle2,
@@ -64,7 +64,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
   const [submissions, setSubmissions] = useState<SurpriseSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
   const [activeView, setActiveView] = useState<'gallery' | 'campaigns'>('gallery');
-  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [previewSubmission, setPreviewSubmission] = useState<SurpriseSubmission | null>(null);
 
   // Carrega as campanhas cadastradas
   const loadCampaigns = async () => {
@@ -390,7 +390,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
                   {sub.photo_url ? (
                     <div
                       className="relative aspect-square bg-slate-950 overflow-hidden cursor-pointer"
-                      onClick={() => setPreviewPhoto(sub.photo_url || null)}
+                      onClick={() => setPreviewSubmission(sub)}
                     >
                       <img
                         src={sub.photo_url}
@@ -427,23 +427,25 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
                       )}
                     </div>
 
-                    {sub.photo_url && (
+                    {(sub.photo_url || sub.message) && (
                       <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
                         <button
                           type="button"
-                          onClick={() => setPreviewPhoto(sub.photo_url || null)}
+                          onClick={() => setPreviewSubmission(sub)}
                           className="text-[10px] font-bold text-pink-400 hover:text-pink-300 cursor-pointer"
                         >
-                          Ver em alta resolução
+                          {sub.photo_url ? 'Ver em alta resolução' : 'Ver recado'}
                         </button>
-                        <a
-                          href={sub.photo_url}
-                          download={`homenagem-${sub.guest_name.toLowerCase().replace(/\s+/g, '-')}.jpg`}
-                          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-                          title="Baixar Foto"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
+                        {sub.photo_url && (
+                          <a
+                            href={sub.photo_url}
+                            download={`homenagem-${sub.guest_name.toLowerCase().replace(/\s+/g, '-')}.jpg`}
+                            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                            title="Baixar Foto"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
@@ -920,3 +922,4 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
     </div>
   );
 }
+
