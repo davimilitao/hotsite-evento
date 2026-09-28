@@ -880,37 +880,58 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
         </div>
       )}
 
-      {/* MODAL DE PRÉ-VISUALIZAÇÃO DE FOTO DO TELÃO */}
-      {previewPhoto && (
+      {/* MODAL DE PRÉ-VISUALIZAÇÃO DE FOTO/MENSAGEM */}
+      {previewSubmission && (
         <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setPreviewPhoto(null)}
+          onClick={() => setPreviewSubmission(null)}
         >
           <div
-            className="relative max-w-3xl w-full max-h-[90vh] flex flex-col items-center justify-center"
+            className="relative max-w-3xl w-full max-h-[90vh] flex flex-col items-center justify-center gap-4"
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => setPreviewPhoto(null)}
+              onClick={() => setPreviewSubmission(null)}
               className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-slate-800/80 rounded-full cursor-pointer transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
-            <img
-              src={previewPhoto}
-              alt="Homenagem Telão"
-              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-slate-700 bg-slate-950"
-            />
+            {previewSubmission.photo_url && (
+              <img
+                src={previewSubmission.photo_url}
+                alt="Homenagem Telão"
+                className="max-w-full max-h-[60vh] object-contain rounded-2xl shadow-2xl border border-slate-700 bg-slate-950"
+              />
+            )}
+            
+            {previewSubmission.message && (
+              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full text-center shadow-lg relative">
+                <p className="text-sm md:text-base text-slate-200 italic font-medium">
+                  "{previewSubmission.message}"
+                </p>
+                <div className="absolute top-4 right-4">
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(previewSubmission.message || '')}
+                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-[10px] font-bold"
+                    title="Copiar texto"
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Copiar
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="mt-3 flex items-center gap-3">
-              <a
-                href={previewPhoto}
-                download="foto-homenagem-telao.jpg"
-                className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <Download className="w-4 h-4" /> Baixar em Alta Resolução
-              </a>
+              {previewSubmission.photo_url && (
+                <a
+                  href={previewSubmission.photo_url}
+                  download={`foto-homenagem-${previewSubmission.guest_name}.jpg`}
+                  className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Baixar em Alta Resolução
+                </a>
+              )}
               <button
-                onClick={() => setPreviewPhoto(null)}
+                onClick={() => setPreviewSubmission(null)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
               >
                 Fechar
@@ -922,4 +943,3 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
     </div>
   );
 }
-
