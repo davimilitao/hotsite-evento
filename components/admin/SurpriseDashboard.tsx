@@ -30,7 +30,10 @@ import {
   Users,
   MessageCircle,
   UserCheck,
+  Play,
+  Maximize2,
 } from 'lucide-react';
+import { PresentationManager } from './PresentationManager';
 
 interface SurpriseDashboardProps {
   invites: Invite[];
@@ -63,7 +66,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
 
   const [submissions, setSubmissions] = useState<SurpriseSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
-  const [activeView, setActiveView] = useState<'gallery' | 'campaigns'>('gallery');
+  const [activeView, setActiveView] = useState<'playlists' | 'gallery' | 'campaigns'>('playlists');
   const [previewSubmission, setPreviewSubmission] = useState<SurpriseSubmission | null>(null);
 
   // Carrega as campanhas cadastradas
@@ -307,12 +310,25 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
         </div>
       </div>
 
-      {/* SELETOR DE SUB-ABAS (GALERIA DO TELÃO VS DISPAROS WHATSAPP) */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+      {/* SELETOR DE SUB-ABAS (TELÃO & APRESENTAÇÕES VS GALERIA VS DISPAROS WHATSAPP) */}
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-3 overflow-x-auto scrollbar-none">
+        <button
+          type="button"
+          onClick={() => setActiveView('playlists')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            activeView === 'playlists'
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40 ring-2 ring-purple-400/40'
+              : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Play className="w-4 h-4 text-purple-200 fill-purple-200" />
+          <span>Apresentação & Telão Full-Screen</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveView('gallery')}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
             activeView === 'gallery'
               ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40 ring-2 ring-pink-400/40'
               : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
@@ -325,7 +341,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
         <button
           type="button"
           onClick={() => setActiveView('campaigns')}
-          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
             activeView === 'campaigns'
               ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40 ring-2 ring-purple-400/40'
               : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
@@ -335,6 +351,11 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
           <span>Campanhas & Disparos WhatsApp ({campaigns.length})</span>
         </button>
       </div>
+
+      {/* VISÃO 0: MÓDULO TELÃO FULL-SCREEN & APRESENTAÇÕES */}
+      {activeView === 'playlists' && (
+        <PresentationManager submissions={submissions} />
+      )}
 
       {/* VISÃO 1: GALERIA DE FOTOS E MENSAGENS DO TELÃO */}
       {activeView === 'gallery' && (

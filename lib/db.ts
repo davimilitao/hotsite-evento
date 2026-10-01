@@ -8,7 +8,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory, SurpriseCampaign, SurpriseSubmission, GiftItem } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory, SurpriseCampaign, SurpriseSubmission, GiftItem, PresentationPlaylist, PresentationSlide } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
@@ -1790,6 +1790,132 @@ export async function getAllSurpriseSubmissions(): Promise<SurpriseSubmission[]>
   fromLs.forEach((s) => mergedMap.set(s.id, s));
 
   return Array.from(mergedMap.values());
+}
+
+// ==========================================
+// MÓDULO TELÃO FULL-SCREEN & APRESENTAÇÕES
+// ==========================================
+
+export async function getAllPresentationPlaylists(): Promise<PresentationPlaylist[]> {
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(collection(db, 'presentation_playlists'));
+      if (!snap.empty) {
+        return snap.docs.map((d) => d.data() as PresentationPlaylist);
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar playlists do Firestore:', err);
+    }
+  }
+
+  const cached = getLS<PresentationPlaylist[]>('festa_presentation_playlists_v1', []);
+  if (cached && cached.length > 0) return cached;
+
+  return seedDefaultPlaylists();
+}
+
+export async function getPresentationPlaylistById(id: string): Promise<PresentationPlaylist | null> {
+  const playlists = await getAllPresentationPlaylists();
+  return playlists.find((p) => p.id === id) || null;
+}
+
+export async function savePresentationPlaylist(playlist: PresentationPlaylist): Promise<PresentationPlaylist> {
+  const playlists = await getAllPresentationPlaylists();
+  const index = playlists.findIndex((p) => p.id === playlist.id);
+
+  const updatedPlaylist: PresentationPlaylist = {
+    ...playlist,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (index >= 0) {
+    playlists[index] = updatedPlaylist;
+  } else {
+    playlists.push(updatedPlaylist);
+  }
+
+  if (isFirebaseConfigured) {
+    try {
+      await setDoc(doc(db, 'presentation_playlists', playlist.id), cleanUndefinedForFirestore(updatedPlaylist));
+    } catch (err) {
+      console.error('Erro ao salvar playlist no Firestore:', err);
+    }
+  }
+
+  setLS('festa_presentation_playlists_v1', playlists);
+  return updatedPlaylist;
+}
+
+export async function deletePresentationPlaylist(id: string): Promise<void> {
+  let playlists = await getAllPresentationPlaylists();
+  playlists = playlists.filter((p) => p.id !== id);
+
+  if (isFirebaseConfigured) {
+    try {
+      await deleteDoc(doc(db, 'presentation_playlists', id));
+    } catch (err) {
+      console.error('Erro ao deletar playlist no Firestore:', err);
+    }
+  }
+
+  setLS('festa_presentation_playlists_v1', playlists);
+}
+
+export async function seedDefaultPlaylists(): Promise<PresentationPlaylist[]> {
+  const submissions = await getAllSurpriseSubmissions();
+  const validPhotoSubmissions = submissions.filter((s) => s.photo_url);
+
+  const initialSlides: PresentationSlide[] = validPhotoSubmissions.map((s, idx) => ({
+    id: `slide-${idx + 1}`,
+    photo_url: s.photo_url!,
+    caption: s.message || 'Com todo meu amor para a Fernanda! ✨',
+    author_name: s.guest_name || 'Convidado Especial',
+    duration_seconds: 8,
+    order: idx + 1,
+    source: 'surprise_submission',
+    submission_id: s.id,
+    ken_burns_effect: idx % 2 === 0 ? 'zoom-in' : 'pan-left',
+  }));
+
+  const defaultPlaylists: PresentationPlaylist[] = [
+    {
+      id: 'homenagem-principal',
+      title: 'Homenagem Principal (Momento Solene)',
+      description: 'Apresentação com música e fotos marcantes para emocionar a aniversariante e todos os convidados.',
+      mode: 'presentation',
+      default_slide_duration: 8,
+      audio_url: '',
+      audio_title: 'Trilha Emocional Especial 40 Anos',
+      is_active: true,
+      slides: initialSlides,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'looping-festa',
+      title: 'Looping da Festa (Fotos com Convidados)',
+      description: 'Exibição contínua sem som para rodar ao fundo no telão durante a festa com a trilha do DJ.',
+      mode: 'looping',
+      default_slide_duration: 7,
+      is_active: false,
+      slides: initialSlides,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  if (isFirebaseConfigured) {
+    try {
+      for (const pl of defaultPlaylists) {
+        await setDoc(doc(db, 'presentation_playlists', pl.id), cleanUndefinedForFirestore(pl));
+      }
+    } catch (err) {
+      console.warn('Erro ao semear playlists no Firestore:', err);
+    }
+  }
+
+  setLS('festa_presentation_playlists_v1', defaultPlaylists);
+  return defaultPlaylists;
 }
 
 
