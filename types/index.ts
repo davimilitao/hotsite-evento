@@ -246,3 +246,29 @@ export interface EventConfig {
   theme?: EventTheme;
   updated_at?: string;
 }
+
+export interface PresentationSlide {
+  id: string;
+  photo_url: string;
+  caption?: string;                // "Nesse dia..." ou depoimento carinhoso
+  author_name?: string;            // Nome de quem enviou ou da aniversariante
+  duration_seconds: number;        // Duração individual do frame (ex: 8s)
+  order: number;
+  source?: 'upload' | 'surprise_submission';
+  submission_id?: string;
+  ken_burns_effect?: 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right' | 'subtle';
+}
+
+export interface PresentationPlaylist {
+  id: string;
+  title: string;                   // ex: "Homenagem Principal 40 Anos" ou "Looping da Festa"
+  description?: string;
+  mode: 'presentation' | 'looping'; // 'presentation': áudio sincronizado, controles, tela final / 'looping': mudo, ciclo contínuo
+  default_slide_duration: number;  // Padrão em segundos (ex: 8)
+  audio_url?: string;              // MP3 ou link de música
+  audio_title?: string;
+  is_active?: boolean;             // Playlist marcada como ativa/padrão
+  slides: PresentationSlide[];
+  created_at: string;
+  updated_at: string;
+}
