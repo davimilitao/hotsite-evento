@@ -108,11 +108,10 @@ export function DataNormalizerModal({
           return;
         }
 
-        // Salva o nome e categoria da pessoa
+        // Salva o nome e categoria da pessoa preservando o celular original (se houvesse)
         await savePerson({
           ...currentPerson,
           name: name.trim(),
-          phone: '',
           child_category: childCategory,
           age: targetAge,
           type: childCategory === 'inteira' ? 'adult' : 'child',

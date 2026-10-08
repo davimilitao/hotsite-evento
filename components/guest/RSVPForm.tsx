@@ -127,11 +127,10 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
       for (const g of guests) {
         if (g.person_id) {
           const targetP = allPersons?.find((p) => p.id === g.person_id);
-          if (targetP && (targetP.name !== g.name.trim() || targetP.phone !== (invite.phone || ''))) {
+          if (targetP && targetP.name !== g.name.trim()) {
             await savePerson({
               ...targetP,
               name: g.name.trim(),
-              phone: invite.phone || targetP.phone,
             });
           }
         }
