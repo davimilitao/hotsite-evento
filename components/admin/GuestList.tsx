@@ -1005,14 +1005,14 @@ export function GuestList({
     } else if (field === 'phone') {
       await savePerson({
         ...person,
-        phone: value,
+        phone: tempPhone,
       });
       if (person.invite_id) {
         const invite = invites.find((i) => i.id === person.invite_id);
         if (invite && invite.head_person_id === person.id) {
           await saveInvite({
             ...invite,
-            phone: value,
+            phone: tempPhone,
           });
         }
       }
