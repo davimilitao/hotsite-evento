@@ -2,7 +2,14 @@
 
 import React, { useState, useRef } from 'react';
 import { Table, Invite, Person, EventConfig } from '@/types';
-import { saveTable, deleteTable, assignPersonToSeat, unassignPersonSeat, getTablePosition } from '@/lib/db';
+import {
+  saveTable,
+  deleteTable,
+  assignPersonToSeat,
+  unassignPersonSeat,
+  assignPersonToTableWithAutoSeat,
+  getTablePosition,
+} from '@/lib/db';
 import { triggerHaptic } from '@/lib/utils';
 import {
   Plus,
@@ -32,7 +39,44 @@ interface TableManagerProps {
   onRefresh: () => void;
 }
 
-export function TableManager({ tables, invites, persons, config, onRefresh }: TableManagerProps) {
+/**
+ * Mapeia determinística e individualmente cada pessoa da mesa para 1 única cadeira (1..capacity),
+ * impedindo que uma pessoa com seat_number nulo ou > 1 apareça duplicada em duas cadeiras.
+ */
+function buildSeatMapForTable(tablePersons: Person[], capacity: number): globalThis.Map<number, Person> {
+  const seatMap = new globalThis.Map<number, Person>();
+  const placedPersonIds = new Set<string>();
+  const totalSlots = Math.max(capacity, tablePersons.length);
+
+  // 1ª passagem: respeita seat_number explícito válido e sem colisão
+  for (const p of tablePersons) {
+    if (
+      p.seat_number !== null &&
+      p.seat_number !== undefined &&
+      p.seat_number >= 1 &&
+      p.seat_number <= totalSlots &&
+      !seatMap.has(p.seat_number)
+    ) {
+      seatMap.set(p.seat_number, p);
+      placedPersonIds.add(p.id);
+    }
+  }
+
+  // 2ª passagem: aloca quem estava com seat_number null ou colidindo nas cadeiras livres restantes
+  let nextFreeChair = 1;
+  for (const p of tablePersons) {
+    if (placedPersonIds.has(p.id)) continue;
+    while (seatMap.has(nextFreeChair)) {
+      nextFreeChair++;
+    }
+    seatMap.set(nextFreeChair, p);
+    placedPersonIds.add(p.id);
+  }
+
+  return seatMap;
+}
+
+export function TableManager({ tables, persons, config, onRefresh }: TableManagerProps) {
   const [viewMode, setViewMode] = useState<'cards' | 'floorplan'>('cards');
   const [showMetrics, setShowMetrics] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -75,8 +119,6 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
   const handleOpenAdd = () => {
     setEditingTable(null);
     setTableName(`Mesa ${tables.length + 1}`);
-    // O sistema é inteligente: sugere por padrão o restante de vagas disponíveis, ou 8 se não houver vagas ou for negativo.
-    // Mas se sobram apenas 2 vagas, ele sugere uma mesa de 2.
     setCapacity(remainingChairs > 0 ? remainingChairs : 8);
     setShape('round');
     setDescription('');
@@ -123,6 +165,12 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
 
   const handleAssignPerson = async (personId: string, tableId: string, seatNumber: number) => {
     await assignPersonToSeat(personId, tableId, seatNumber);
+    setSelectedAssignment(null);
+    onRefresh();
+  };
+
+  const handleAssignFamily = async (personId: string, tableId: string) => {
+    await assignPersonToTableWithAutoSeat(personId, tableId, true);
     setSelectedAssignment(null);
     onRefresh();
   };
@@ -406,6 +454,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
             {inspectorTable ? (
               (() => {
                 const tablePersons = persons.filter((p) => p.table_id === inspectorTable.id);
+                const seatMap = buildSeatMapForTable(tablePersons, inspectorTable.capacity);
                 const occupancyPercent = Math.min(
                   Math.round((tablePersons.length / inspectorTable.capacity) * 100),
                   100
@@ -471,8 +520,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {Array.from({ length: inspectorTable.capacity }).map((_, chairIdx) => {
                           const seatNum = chairIdx + 1;
-                          const occupiedPerson =
-                            tablePersons.find((p) => p.seat_number === seatNum) || tablePersons[chairIdx];
+                          const occupiedPerson = seatMap.get(seatNum);
 
                           return (
                             <div
@@ -541,6 +589,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tables.map((table) => {
             const tablePersons = persons.filter((p) => p.table_id === table.id);
+            const seatMap = buildSeatMapForTable(tablePersons, table.capacity);
             const allocatedSeats = tablePersons.length;
             const occupancyPercent = Math.min(Math.round((allocatedSeats / table.capacity) * 100), 100);
 
@@ -611,8 +660,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
                     <div className="grid grid-cols-2 gap-2">
                       {Array.from({ length: table.capacity }).map((_, chairIdx) => {
                         const seatNum = chairIdx + 1;
-                        const occupiedPerson =
-                          tablePersons.find((p) => p.seat_number === seatNum) || tablePersons[chairIdx];
+                        const occupiedPerson = seatMap.get(seatNum);
 
                         return (
                           <div
@@ -711,7 +759,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Digite o nome da pessoa física ({persons.length} da lista) para alocar nesta cadeira:
+              Digite o nome da pessoa ou família ({unassignedPersons.length} sem mesa) para alocar:
             </p>
 
             {/* Campo de Busca com resposta instantânea por digitação */}
@@ -720,7 +768,7 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
               <input
                 type="text"
                 autoFocus
-                placeholder="Digite para buscar nome (ex: Ana, Carlos, Barreto)..."
+                placeholder="Digite para buscar nome ou família..."
                 value={assignSearchTerm}
                 onChange={(e) => setAssignSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-slate-800 dark:text-slate-100"
@@ -729,8 +777,11 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
 
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {(() => {
-                const filtered = unassignedPersons.filter((p) =>
-                  p.name.toLowerCase().includes(assignSearchTerm.toLowerCase().trim())
+                const searchLower = assignSearchTerm.toLowerCase().trim();
+                const filtered = unassignedPersons.filter(
+                  (p) =>
+                    p.name.toLowerCase().includes(searchLower) ||
+                    (p.family_name && p.family_name.toLowerCase().includes(searchLower))
                 );
 
                 if (unassignedPersons.length === 0) {
@@ -749,24 +800,52 @@ export function TableManager({ tables, invites, persons, config, onRefresh }: Ta
                   );
                 }
 
-                return filtered.map((person) => (
-                  <button
-                    key={person.id}
-                    onClick={() =>
-                      handleAssignPerson(
-                        person.id,
-                        selectedAssignment.table.id,
-                        selectedAssignment.seatNumber
-                      )
-                    }
-                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-left flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
-                  >
-                    <span>{person.name}</span>
-                    <span className="text-amber-600 dark:text-amber-400 text-[10px] font-extrabold uppercase">
-                      + Selecionar
-                    </span>
-                  </button>
-                ));
+                return filtered.map((person) => {
+                  const hasFamily = Boolean(
+                    person.family_id || (person.relationships && person.relationships.length > 0)
+                  );
+                  return (
+                    <div
+                      key={person.id}
+                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between gap-2 text-xs font-bold text-slate-800 dark:text-slate-100 transition-all"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate">{person.name}</span>
+                        {person.family_name && (
+                          <span className="text-[10px] text-purple-400 font-semibold block truncate">
+                            👨‍👩‍👧 {person.family_name}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAssignPerson(
+                              person.id,
+                              selectedAssignment.table.id,
+                              selectedAssignment.seatNumber
+                            )
+                          }
+                          className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black rounded-lg uppercase cursor-pointer transition-colors"
+                        >
+                          + Cadeira {selectedAssignment.seatNumber}
+                        </button>
+                        {hasFamily && (
+                          <button
+                            type="button"
+                            onClick={() => handleAssignFamily(person.id, selectedAssignment.table.id)}
+                            className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-black rounded-lg uppercase cursor-pointer transition-colors"
+                            title="Alocar esta pessoa e toda a sua família nas cadeiras livres desta mesa"
+                          >
+                            + Família Toda
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
               })()}
             </div>
           </div>

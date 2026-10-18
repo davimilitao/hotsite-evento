@@ -4,11 +4,10 @@ import {
   getDoc,
   getDocs,
   setDoc,
-  updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { Invite, Table, EventConfig, Guest, InviteStatus, InviteTier, Person, RelationshipType, Relationship, ChildCategory, SurpriseCampaign, SurpriseSubmission, GiftItem, PresentationPlaylist, PresentationSlide } from '@/types';
+import { Invite, Table, EventConfig, Guest, InviteTier, Person, RelationshipType, ChildCategory, SurpriseCampaign, SurpriseSubmission, PresentationPlaylist, PresentationSlide } from '@/types';
 import { generateInviteToken } from './utils';
 
 // Dados Reais da Festa de Fernanda Seppi (40 Anos) com Tema Claro Aquarelado
@@ -380,8 +379,30 @@ function setLS<T>(key: string, data: T): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (err) {
-    console.error('Erro ao salvar no localStorage:', err);
+  } catch {
+    // Em caso de QuotaExceededError, limpa caches secundários que possam conter fotos Base64 antigas
+    try {
+      localStorage.removeItem('hotsite_surprise_submissions_v1');
+      if (key !== 'festa_presentation_playlists_v1') {
+        localStorage.removeItem('festa_presentation_playlists_v1');
+      }
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch {
+      if (key === LS_KEYS.INVITES && Array.isArray(data)) {
+        try {
+          const lightInvites = data.map((inv: Record<string, unknown>) => ({
+            ...inv,
+            surprise_photo_url:
+              typeof inv.surprise_photo_url === 'string' && inv.surprise_photo_url.startsWith('data:')
+                ? ''
+                : inv.surprise_photo_url,
+          }));
+          localStorage.setItem(key, JSON.stringify(lightInvites));
+        } catch {
+          // Dados permanecem sincronizados via Firestore
+        }
+      }
+    }
   }
 }
 
@@ -403,15 +424,15 @@ export async function seedFirestoreData(): Promise<void> {
     return;
   }
 
-  await setDoc(doc(db, 'event_config', 'settings'), INITIAL_EVENT_CONFIG);
+  await setDoc(doc(db, 'event_config', 'settings'), cleanUndefinedForFirestore(INITIAL_EVENT_CONFIG));
 
-  for (const table of INITIAL_TABLES) {
-    await setDoc(doc(db, 'tables', table.id), table);
-  }
+  await Promise.all(
+    INITIAL_TABLES.map((table) => setDoc(doc(db, 'tables', table.id), cleanUndefinedForFirestore(table)))
+  );
 
-  for (const person of INITIAL_PERSONS) {
-    await setDoc(doc(db, 'persons', person.id), person);
-  }
+  await Promise.all(
+    INITIAL_PERSONS.map((person) => setDoc(doc(db, 'persons', person.id), cleanUndefinedForFirestore(person)))
+  );
 }
 
 // ---- API DO BANCO DE DADOS PARA PESSOAS (1:1) ----
@@ -438,9 +459,11 @@ export async function getAllPersons(): Promise<Person[]> {
         return cleanedList;
       } else {
         console.log('Populando Firestore com as pessoas físicas iniciais...');
-        for (const person of INITIAL_PERSONS) {
-          await setDoc(doc(db, 'persons', person.id), cleanUndefinedForFirestore(person));
-        }
+        await Promise.all(
+          INITIAL_PERSONS.map((person) =>
+            setDoc(doc(db, 'persons', person.id), cleanUndefinedForFirestore(person))
+          )
+        );
         setLS(LS_KEYS.PERSONS, INITIAL_PERSONS);
         return INITIAL_PERSONS;
       }
@@ -492,92 +515,168 @@ export function getInverseRelationshipType(relType: RelationshipType): Relations
   }
 }
 
-function cleanUndefinedForFirestore<T extends Record<string, any>>(obj: T): T {
-  const clean: any = {};
-  Object.keys(obj).forEach((key) => {
-    if (obj[key] !== undefined) {
-      clean[key] = obj[key];
-    }
-  });
-  return clean as T;
+function cleanUndefinedForFirestore<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return null as unknown as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj
+      .filter((item) => item !== undefined)
+      .map((item) => cleanUndefinedForFirestore(item)) as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    const clean: Record<string, unknown> = {};
+    Object.keys(obj as Record<string, unknown>).forEach((key) => {
+      const val = (obj as Record<string, unknown>)[key];
+      if (val !== undefined) {
+        clean[key] = cleanUndefinedForFirestore(val);
+      }
+    });
+    return clean as T;
+  }
+  return obj;
 }
 
-export async function savePerson(person: Partial<Person> & { id?: string }): Promise<Person> {
-  const persons = await getAllPersons();
-  let fullPerson: Person;
-
-  if (person.id) {
-    const existingIndex = persons.findIndex((p) => p.id === person.id);
-    if (existingIndex >= 0) {
-      const existing = persons[existingIndex];
-      fullPerson = {
-        ...existing,
-        ...person,
-        age: person.age !== undefined ? person.age : existing.age,
-        child_category: person.child_category !== undefined ? person.child_category : existing.child_category,
-        family_id: person.family_id !== undefined ? person.family_id : existing.family_id,
-        family_name: person.family_name !== undefined ? person.family_name : existing.family_name,
-        relationships: person.relationships !== undefined ? person.relationships : (existing.relationships || []),
-        phone_responsible_person_id: person.phone_responsible_person_id !== undefined ? person.phone_responsible_person_id : existing.phone_responsible_person_id,
-      };
-      persons[existingIndex] = fullPerson;
-    } else {
-      fullPerson = {
-        id: person.id,
-        name: person.name || 'Sem nome',
-        phone: person.phone || '',
-        age: person.age,
-        child_category: person.child_category,
-        type: person.type || (person.age !== undefined && person.age < 12 ? 'child' : 'adult'),
-        family_id: person.family_id || null,
-        family_name: person.family_name || '',
-        relationships: person.relationships || [],
-        phone_responsible_person_id: person.phone_responsible_person_id || null,
-        table_id: person.table_id || null,
-        seat_number: person.seat_number ?? null,
-        invite_id: person.invite_id || null,
-        role_in_invite: person.role_in_invite || null,
-        special_role: person.special_role || 'guest',
-        counts_towards_buffet: person.counts_towards_buffet ?? (person.special_role ? person.special_role === 'guest' : true),
-        special_arrival_time: person.special_arrival_time || '',
-        notes: person.notes || '',
-      };
-      persons.push(fullPerson);
-    }
-  } else {
-    const newId = `person-${Date.now()}`;
-    fullPerson = {
-      id: newId,
-      name: person.name || 'Sem nome',
-      phone: person.phone || '',
-      age: person.age,
-      child_category: person.child_category,
-      type: person.type || (person.age !== undefined && person.age < 12 ? 'child' : 'adult'),
-      family_id: person.family_id || null,
-      family_name: person.family_name || '',
-      relationships: person.relationships || [],
-      phone_responsible_person_id: person.phone_responsible_person_id || null,
-      table_id: person.table_id || null,
-      seat_number: person.seat_number ?? null,
-      invite_id: person.invite_id || null,
-      role_in_invite: person.role_in_invite || null,
-      special_role: person.special_role || 'guest',
-      counts_towards_buffet: person.counts_towards_buffet ?? (person.special_role ? person.special_role === 'guest' : true),
-      special_arrival_time: person.special_arrival_time || '',
-      notes: person.notes || '',
+function buildFullPerson(person: Partial<Person> & { id?: string }, existing?: Person): Person {
+  if (existing) {
+    return {
+      ...existing,
+      ...person,
+      id: existing.id,
+      age: person.age !== undefined ? person.age : existing.age,
+      child_category: person.child_category !== undefined ? person.child_category : existing.child_category,
+      family_id: person.family_id !== undefined ? person.family_id : existing.family_id,
+      family_name: person.family_name !== undefined ? person.family_name : existing.family_name,
+      relationships: person.relationships !== undefined ? person.relationships : (existing.relationships || []),
+      phone_responsible_person_id:
+        person.phone_responsible_person_id !== undefined
+          ? person.phone_responsible_person_id
+          : existing.phone_responsible_person_id,
     };
-    persons.push(fullPerson);
+  }
+  const newId = person.id || `person-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  return {
+    id: newId,
+    name: person.name || 'Sem nome',
+    phone: person.phone || '',
+    age: person.age,
+    child_category: person.child_category,
+    type: person.type || (person.age !== undefined && person.age < 12 ? 'child' : 'adult'),
+    family_id: person.family_id || null,
+    family_name: person.family_name || '',
+    relationships: person.relationships || [],
+    phone_responsible_person_id: person.phone_responsible_person_id || null,
+    table_id: person.table_id || null,
+    seat_number: person.seat_number ?? null,
+    invite_id: person.invite_id || null,
+    role_in_invite: person.role_in_invite || null,
+    special_role: person.special_role || 'guest',
+    counts_towards_buffet:
+      person.counts_towards_buffet ?? (person.special_role ? person.special_role === 'guest' : true),
+    special_arrival_time: person.special_arrival_time || '',
+    notes: person.notes || '',
+  };
+}
+
+async function savePersonsBatch(
+  updates: Array<Partial<Person> & { id?: string }>,
+  existingList?: Person[]
+): Promise<{ updated: Person[]; allPersons: Person[] }> {
+  const persons = existingList ? [...existingList] : await getAllPersons();
+  const updatedList: Person[] = [];
+
+  for (const item of updates) {
+    if (item.id) {
+      const idx = persons.findIndex((p) => p.id === item.id);
+      if (idx >= 0) {
+        const full = buildFullPerson(item, persons[idx]);
+        persons[idx] = full;
+        updatedList.push(full);
+      } else {
+        const full = buildFullPerson(item);
+        persons.push(full);
+        updatedList.push(full);
+      }
+    } else {
+      const full = buildFullPerson(item);
+      persons.push(full);
+      updatedList.push(full);
+    }
   }
 
-  if (isFirebaseConfigured) {
+  if (isFirebaseConfigured && updatedList.length > 0) {
     try {
-      await setDoc(doc(db, 'persons', fullPerson.id), cleanUndefinedForFirestore(fullPerson));
+      await Promise.all(
+        updatedList.map((p) => setDoc(doc(db, 'persons', p.id), cleanUndefinedForFirestore(p)))
+      );
     } catch (err) {
-      console.error('Erro ao salvar pessoa no Firestore:', err);
+      console.error('Erro ao salvar lote de pessoas no Firestore:', err);
     }
   }
 
   setLS(LS_KEYS.PERSONS, persons);
+  return { updated: updatedList, allPersons: persons };
+}
+
+export async function savePerson(
+  person: Partial<Person> & { id?: string },
+  options?: { skipInviteSync?: boolean; existingPersons?: Person[] }
+): Promise<Person> {
+  const { updated } = await savePersonsBatch([person], options?.existingPersons);
+  const fullPerson = updated[0];
+
+  // Sincroniza automaticamente alterações de telefone, nome, mesa e categoria com o Convite (Invite) vinculado
+  if (!options?.skipInviteSync && fullPerson) {
+    try {
+      const invites = getLS<Invite[]>(LS_KEYS.INVITES, INITIAL_INVITES);
+      const linkedInviteIdx = invites.findIndex(
+        (inv) =>
+          inv.id === fullPerson.invite_id ||
+          inv.head_person_id === fullPerson.id ||
+          inv.companion_person_ids?.includes(fullPerson.id)
+      );
+
+      if (linkedInviteIdx >= 0) {
+        const inv = invites[linkedInviteIdx];
+        const isHead = inv.head_person_id === fullPerson.id || fullPerson.role_in_invite === 'head';
+
+        const updatedGuests = (inv.guests || []).map((g) => {
+          if (g.person_id === fullPerson.id || (isHead && !g.person_id && g.name === inv.head_name)) {
+            return {
+              ...g,
+              person_id: fullPerson.id,
+              name: fullPerson.name,
+              type: fullPerson.type || 'adult',
+              age: fullPerson.age,
+              child_category: fullPerson.child_category || 'inteira',
+            };
+          }
+          return g;
+        });
+
+        const syncedInvite: Invite = {
+          ...inv,
+          head_name: isHead ? fullPerson.name : inv.head_name,
+          phone: isHead ? (fullPerson.phone || inv.phone) : inv.phone,
+          table_id: isHead ? (fullPerson.table_id ?? null) : (inv.table_id ?? null),
+          special_role: isHead ? fullPerson.special_role : inv.special_role,
+          counts_towards_buffet: isHead ? fullPerson.counts_towards_buffet : inv.counts_towards_buffet,
+          special_arrival_time: isHead ? fullPerson.special_arrival_time : inv.special_arrival_time,
+          guests: updatedGuests,
+          updated_at: new Date().toISOString(),
+        };
+
+        invites[linkedInviteIdx] = syncedInvite;
+        setLS(LS_KEYS.INVITES, invites);
+        if (isFirebaseConfigured) {
+          await setDoc(doc(db, 'invites', syncedInvite.id), cleanUndefinedForFirestore(syncedInvite));
+        }
+      }
+    } catch (err) {
+      console.warn('Aviso ao sincronizar pessoa com convite:', err);
+    }
+  }
+
   return fullPerson;
 }
 
@@ -601,10 +700,13 @@ export async function linkPersonPhoneResponsible(
     }
   }
 
-  return await savePerson({
-    ...guest,
-    phone_responsible_person_id: responsiblePersonId || null,
-  });
+  return await savePerson(
+    {
+      ...guest,
+      phone_responsible_person_id: responsiblePersonId || null,
+    },
+    { existingPersons: persons }
+  );
 }
 
 export async function linkPeopleRelationship(
@@ -629,21 +731,21 @@ export async function linkPeopleRelationship(
   const p2Rels = (p2.relationships || []).filter((r) => r.target_person_id !== person1Id);
   p2Rels.push({ target_person_id: person1Id, relationship_type: relType2 });
 
-  const updatedP1 = await savePerson({
-    ...p1,
-    family_id: sharedFamilyId,
-    family_name: defaultFamilyName,
-    relationships: p1Rels,
-  });
+  const batchUpdates: Array<Partial<Person> & { id?: string }> = [
+    {
+      ...p1,
+      family_id: sharedFamilyId,
+      family_name: defaultFamilyName,
+      relationships: p1Rels,
+    },
+    {
+      ...p2,
+      family_id: sharedFamilyId,
+      family_name: defaultFamilyName,
+      relationships: p2Rels,
+    },
+  ];
 
-  const updatedP2 = await savePerson({
-    ...p2,
-    family_id: sharedFamilyId,
-    family_name: defaultFamilyName,
-    relationships: p2Rels,
-  });
-
-  // Se outras pessoas pertenciam ao antigo family_id de P2 ou P1, unificar todas no mesmo family_id
   const oldFamilyIds = new Set<string>();
   if (p1.family_id && p1.family_id !== sharedFamilyId) oldFamilyIds.add(p1.family_id);
   if (p2.family_id && p2.family_id !== sharedFamilyId) oldFamilyIds.add(p2.family_id);
@@ -651,7 +753,7 @@ export async function linkPeopleRelationship(
   if (oldFamilyIds.size > 0) {
     for (const member of persons) {
       if (member.id !== p1.id && member.id !== p2.id && member.family_id && oldFamilyIds.has(member.family_id)) {
-        await savePerson({
+        batchUpdates.push({
           ...member,
           family_id: sharedFamilyId,
           family_name: defaultFamilyName,
@@ -660,7 +762,8 @@ export async function linkPeopleRelationship(
     }
   }
 
-  return { person1: updatedP1, person2: updatedP2 };
+  const { updated } = await savePersonsBatch(batchUpdates, persons);
+  return { person1: updated[0], person2: updated[1] };
 }
 
 export async function unlinkPeopleRelationship(
@@ -671,12 +774,11 @@ export async function unlinkPeopleRelationship(
   const p1 = persons.find((p) => p.id === person1Id);
   const p2 = persons.find((p) => p.id === person2Id);
 
-  let updatedP1: Person | null = null;
-  let updatedP2: Person | null = null;
+  const batchUpdates: Array<Partial<Person> & { id?: string }> = [];
 
   if (p1) {
     const newRels = (p1.relationships || []).filter((r) => r.target_person_id !== person2Id);
-    updatedP1 = await savePerson({
+    batchUpdates.push({
       ...p1,
       relationships: newRels,
     });
@@ -684,28 +786,30 @@ export async function unlinkPeopleRelationship(
 
   if (p2) {
     const newRels = (p2.relationships || []).filter((r) => r.target_person_id !== person1Id);
-    updatedP2 = await savePerson({
+    batchUpdates.push({
       ...p2,
       relationships: newRels,
     });
   }
 
-  return { person1: updatedP1, person2: updatedP2 };
+  const { updated } = await savePersonsBatch(batchUpdates, persons);
+  return {
+    person1: updated.find((u) => u.id === person1Id) || null,
+    person2: updated.find((u) => u.id === person2Id) || null,
+  };
 }
 
 export async function updateFamilyGroupName(familyId: string, newFamilyName: string): Promise<Person[]> {
   const persons = await getAllPersons();
-  const updatedPersons: Person[] = [];
-  for (const member of persons) {
-    if (member.family_id === familyId) {
-      const updated = await savePerson({
-        ...member,
-        family_name: newFamilyName,
-      });
-      updatedPersons.push(updated);
-    }
-  }
-  return updatedPersons;
+  const batchUpdates = persons
+    .filter((member) => member.family_id === familyId)
+    .map((member) => ({
+      ...member,
+      family_name: newFamilyName,
+    }));
+
+  const { updated } = await savePersonsBatch(batchUpdates, persons);
+  return updated;
 }
 
 export async function updatePersonFamilyName(personId: string, newFamilyName: string): Promise<Person> {
@@ -714,16 +818,24 @@ export async function updatePersonFamilyName(personId: string, newFamilyName: st
   if (!target) throw new Error('Pessoa não encontrada.');
 
   const familyId = target.family_id || `fam-${Date.now()}`;
+  const batchUpdates: Array<Partial<Person> & { id?: string }> = [];
 
   if (target.family_id) {
-    await updateFamilyGroupName(target.family_id, newFamilyName);
+    persons
+      .filter((m) => m.family_id === target.family_id && m.id !== target.id)
+      .forEach((m) => {
+        batchUpdates.push({ ...m, family_name: newFamilyName });
+      });
   }
 
-  return await savePerson({
+  batchUpdates.push({
     ...target,
     family_id: familyId,
     family_name: newFamilyName,
   });
+
+  const { updated } = await savePersonsBatch(batchUpdates, persons);
+  return updated.find((u) => u.id === personId) || updated[0];
 }
 
 export async function savePersonFamilyAndRelationships(
@@ -738,15 +850,17 @@ export async function savePersonFamilyAndRelationships(
   const sharedFamilyId = mainP.family_id || `fam-${Date.now()}`;
   const finalFamilyName = familyName.trim() || mainP.family_name || `Família ${mainP.name.split(' ')[0]}`;
 
-  // 1. Atualizar a pessoa principal com todos os relacionamentos empilhados
-  const updatedMainP = await savePerson({
+  const updatesMap = new Map<string, Partial<Person> & { id: string }>();
+
+  // 1. Pessoa principal
+  updatesMap.set(mainP.id, {
     ...mainP,
     family_id: sharedFamilyId,
     family_name: finalFamilyName,
     relationships: stagedRelationships,
   });
 
-  // 2. Atualizar todas as pessoas que estão na lista empilhada (vínculos bilaterais)
+  // 2. Pessoas na lista empilhada (vínculos bilaterais)
   const targetIds = new Set(stagedRelationships.map((r) => r.target_person_id));
 
   for (const rel of stagedRelationships) {
@@ -757,7 +871,7 @@ export async function savePersonFamilyAndRelationships(
     const existingTargetRels = (target.relationships || []).filter((r) => r.target_person_id !== mainPersonId);
     existingTargetRels.push({ target_person_id: mainPersonId, relationship_type: inverseRelType });
 
-    await savePerson({
+    updatesMap.set(target.id, {
       ...target,
       family_id: sharedFamilyId,
       family_name: finalFamilyName,
@@ -774,16 +888,27 @@ export async function savePersonFamilyAndRelationships(
     if (!target) continue;
 
     const cleanTargetRels = (target.relationships || []).filter((r) => r.target_person_id !== mainPersonId);
-    await savePerson({
+    const cleanFamily = cleanTargetRels.length === 0 && target.family_id === sharedFamilyId;
+    updatesMap.set(target.id, {
       ...target,
+      family_id: cleanFamily ? null : target.family_id,
+      family_name: cleanFamily ? '' : target.family_name,
       relationships: cleanTargetRels,
     });
   }
 
-  // 4. Garantir que todos do grupo familiar recebam o novo nome de família
-  await updateFamilyGroupName(sharedFamilyId, finalFamilyName);
+  // 4. Garantir que outros integrantes do mesmo grupo familiar recebam o novo nome de família
+  for (const member of persons) {
+    if (member.family_id === sharedFamilyId && !updatesMap.has(member.id) && !removedTargetIds.includes(member.id)) {
+      updatesMap.set(member.id, {
+        ...member,
+        family_name: finalFamilyName,
+      });
+    }
+  }
 
-  return updatedMainP;
+  const { updated } = await savePersonsBatch(Array.from(updatesMap.values()), persons);
+  return updated.find((u) => u.id === mainPersonId) || updated[0];
 }
 
 export async function deletePerson(id: string): Promise<void> {
@@ -816,26 +941,109 @@ export async function deletePerson(id: string): Promise<void> {
 }
 
 export async function assignPersonToSeat(personId: string, tableId: string, seatNumber: number): Promise<Person | null> {
-  const person = (await getAllPersons()).find((p) => p.id === personId);
+  const persons = await getAllPersons();
+  const person = persons.find((p) => p.id === personId);
   if (!person) return null;
 
-  return savePerson({
-    ...person,
-    table_id: tableId,
-    seat_number: seatNumber,
-  });
+  return savePerson(
+    {
+      ...person,
+      table_id: tableId,
+      seat_number: seatNumber,
+    },
+    { existingPersons: persons }
+  );
 }
 
 export async function unassignPersonSeat(personId: string): Promise<Person | null> {
-  const person = (await getAllPersons()).find((p) => p.id === personId);
+  const persons = await getAllPersons();
+  const person = persons.find((p) => p.id === personId);
   if (!person) return null;
 
-  // Se a pessoa estiver associada a um convite, precisamos verificar o impacto
-  return savePerson({
-    ...person,
-    table_id: null,
-    seat_number: null,
+  return savePerson(
+    {
+      ...person,
+      table_id: null,
+      seat_number: null,
+    },
+    { existingPersons: persons }
+  );
+}
+
+export async function assignPersonToTableWithAutoSeat(
+  personId: string,
+  tableId: string | null,
+  syncFamily = false
+): Promise<Person | null> {
+  const [persons, tables] = await Promise.all([getAllPersons(), getAllTables()]);
+  const target = persons.find((p) => p.id === personId);
+  if (!target) return null;
+
+  const targetGroup: Person[] = [target];
+  if (syncFamily) {
+    const relIds = new Set((target.relationships || []).map((r) => r.target_person_id));
+    persons.forEach((p) => {
+      if (
+        p.id !== target.id &&
+        ((target.family_id && p.family_id === target.family_id) ||
+          relIds.has(p.id) ||
+          (target.invite_id && p.invite_id === target.invite_id))
+      ) {
+        targetGroup.push(p);
+      }
+    });
+  }
+
+  if (!tableId) {
+    const updates = targetGroup.map((p) => ({
+      ...p,
+      table_id: null,
+      seat_number: null,
+    }));
+    const { updated } = await savePersonsBatch(updates, persons);
+    // Sync invite table_id = null
+    await savePerson(updated[0], { existingPersons: persons });
+    return updated[0];
+  }
+
+  const tableObj = tables.find((t) => t.id === tableId);
+  const capacity = tableObj?.capacity || 10;
+  const groupIds = new Set(targetGroup.map((p) => p.id));
+
+  // Assentos já ocupados por outras pessoas nesta mesa
+  const occupiedSeats = new Set<number>(
+    persons
+      .filter((p) => p.table_id === tableId && !groupIds.has(p.id) && p.seat_number !== null && p.seat_number !== undefined)
+      .map((p) => Number(p.seat_number))
+  );
+
+  let nextSeat = 1;
+  const getNextFreeSeat = (): number => {
+    while (occupiedSeats.has(nextSeat) && nextSeat <= capacity * 2) {
+      nextSeat++;
+    }
+    occupiedSeats.add(nextSeat);
+    return nextSeat;
+  };
+
+  const updates = targetGroup.map((p) => {
+    const keepSeat =
+      p.table_id === tableId &&
+      p.seat_number !== null &&
+      p.seat_number !== undefined &&
+      !occupiedSeats.has(Number(p.seat_number));
+    const seat = keepSeat ? Number(p.seat_number) : getNextFreeSeat();
+    if (keepSeat) occupiedSeats.add(seat);
+    return {
+      ...p,
+      table_id: tableId,
+      seat_number: seat,
+    };
   });
+
+  const { updated, allPersons } = await savePersonsBatch(updates, persons);
+  await savePerson(updated[0], { existingPersons: allPersons });
+  return updated[0];
 }
 
 // ---- API DO BANCO DE DADOS (CONFIG, CONVITES E MESAS) ----
@@ -1198,12 +1406,12 @@ function createFullInvite(id: string, invite: Partial<Invite>): Invite {
 }
 
 export async function saveInvite(invite: Partial<Invite> & { id?: string }): Promise<Invite> {
-  let invites = await getAllInvites();
+  const [invitesList, persons] = await Promise.all([getAllInvites(), getAllPersons()]);
+  let invites = [...invitesList];
   let targetId = invite.id;
 
   // Se ID não foi fornecido, buscar se já existe convite para esta pessoa (head_person_id ou head_name)
   if (!targetId) {
-    const persons = await getAllPersons();
     if (invite.head_person_id) {
       const personObj = persons.find((p) => p.id === invite.head_person_id);
       if (personObj && personObj.invite_id) {
@@ -1228,7 +1436,6 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
   }
 
   // Tenta vincular head_person_id se não fornecido
-  const persons = await getAllPersons();
   let headPersonId = invite.head_person_id;
   if (!headPersonId && invite.head_name) {
     const matchPerson = persons.find((p) => p.name.trim().toLowerCase() === invite.head_name?.trim().toLowerCase());
@@ -1247,7 +1454,7 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
         if (isFirebaseConfigured) {
           try {
             await deleteDoc(doc(db, 'invites', obs.id));
-          } catch (e) {}
+          } catch {}
         }
       }
     }
@@ -1278,40 +1485,47 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
     invites.push(fullInvite);
   }
 
-  // Sincroniza os objetos Person envolvidos
+  // Sincroniza os objetos Person envolvidos em lote (1 única gravação em vez de N loops lentos)
   const allInvolvedIds = new Set<string>();
   if (fullInvite.head_person_id) allInvolvedIds.add(fullInvite.head_person_id);
   if (fullInvite.companion_person_ids) {
     fullInvite.companion_person_ids.forEach((cId) => allInvolvedIds.add(cId));
   }
 
+  const personBatchUpdates: Array<Partial<Person> & { id: string }> = [];
+
   for (const person of persons) {
     if (person.id === fullInvite.head_person_id) {
-      await savePerson({
+      personBatchUpdates.push({
         ...person,
         invite_id: fullInvite.id,
         role_in_invite: 'head',
         phone: fullInvite.phone || person.phone,
+        table_id: fullInvite.table_id !== undefined ? fullInvite.table_id : person.table_id,
         special_role: fullInvite.special_role,
         counts_towards_buffet: fullInvite.counts_towards_buffet,
         special_arrival_time: fullInvite.special_arrival_time,
       });
     } else if (fullInvite.companion_person_ids?.includes(person.id)) {
-      await savePerson({
+      personBatchUpdates.push({
         ...person,
         invite_id: fullInvite.id,
         role_in_invite: 'companion',
+        table_id: person.table_id || fullInvite.table_id || null,
         special_role: fullInvite.special_role,
         counts_towards_buffet: fullInvite.counts_towards_buffet,
       });
     } else if (person.invite_id === fullInvite.id && !allInvolvedIds.has(person.id)) {
-      // Pessoa foi removida deste convite
-      await savePerson({
+      personBatchUpdates.push({
         ...person,
         invite_id: null,
         role_in_invite: null,
       });
     }
+  }
+
+  if (personBatchUpdates.length > 0) {
+    await savePersonsBatch(personBatchUpdates, persons);
   }
 
   if (isFirebaseConfigured) {
@@ -1326,25 +1540,165 @@ export async function saveInvite(invite: Partial<Invite> & { id?: string }): Pro
   return fullInvite;
 }
 
+export async function quickSetPersonOrInviteStatus(
+  personOrInviteId: string,
+  newStatus: 'confirmed' | 'pending' | 'declined' | 'pending_date',
+  options?: { isInviteId?: boolean; singlePersonOnly?: boolean }
+): Promise<Invite | null> {
+  const [invites, persons] = await Promise.all([getAllInvites(), getAllPersons()]);
+
+  let targetInvite: Invite | undefined;
+  let targetPerson: Person | undefined;
+
+  if (options?.isInviteId) {
+    targetInvite = invites.find((i) => i.id === personOrInviteId);
+    if (targetInvite?.head_person_id) {
+      targetPerson = persons.find((p) => p.id === targetInvite?.head_person_id);
+    }
+  } else {
+    targetPerson = persons.find((p) => p.id === personOrInviteId);
+    if (targetPerson) {
+      const tpId = targetPerson.id;
+      const tpInvId = targetPerson.invite_id;
+      targetInvite = invites.find(
+        (i) =>
+          i.id === tpInvId ||
+          i.head_person_id === tpId ||
+          i.companion_person_ids?.includes(tpId)
+      );
+    }
+  }
+
+  // Caso já exista um convite vinculado
+  if (targetInvite) {
+    const existingGuests =
+      targetInvite.guests && targetInvite.guests.length > 0
+        ? targetInvite.guests
+        : [
+            {
+              person_id: targetInvite.head_person_id,
+              name: targetInvite.head_name,
+              type: 'adult' as const,
+              child_category: 'inteira' as const,
+              status: targetInvite.status,
+              dietary: '',
+            },
+          ];
+
+    let updatedGuests: Guest[];
+    let finalInviteStatus = newStatus;
+
+    if (options?.singlePersonOnly && targetPerson && existingGuests.length > 1) {
+      updatedGuests = existingGuests.map((g) => {
+        if (
+          g.person_id === targetPerson?.id ||
+          g.name.trim().toLowerCase() === targetPerson?.name.trim().toLowerCase()
+        ) {
+          return { ...g, status: newStatus };
+        }
+        return g;
+      });
+      const anyConfirmed = updatedGuests.some((g) => g.status === 'confirmed');
+      const allDeclined = updatedGuests.every((g) => g.status === 'declined');
+      const anyPendingDate = updatedGuests.some((g) => g.status === 'pending_date');
+      finalInviteStatus = anyConfirmed
+        ? 'confirmed'
+        : allDeclined
+        ? 'declined'
+        : anyPendingDate
+        ? 'pending_date'
+        : 'pending';
+    } else {
+      updatedGuests = existingGuests.map((g) => ({
+        ...g,
+        status: newStatus,
+      }));
+    }
+
+    const confirmedCount = updatedGuests.filter((g) => g.status === 'confirmed').length;
+
+    return saveInvite({
+      ...targetInvite,
+      status: finalInviteStatus,
+      confirmed_count: confirmedCount,
+      guests: updatedGuests,
+    });
+  }
+
+  // Caso a pessoa ainda não tenha um objeto Invite criado, cria automaticamente!
+  if (!targetPerson) return null;
+
+  const familyCompanions: Person[] = [];
+  if (!options?.singlePersonOnly) {
+    const relIds = new Set((targetPerson.relationships || []).map((r) => r.target_person_id));
+    persons.forEach((p) => {
+      if (
+        p.id !== targetPerson!.id &&
+        !p.invite_id &&
+        ((targetPerson!.family_id && p.family_id === targetPerson!.family_id) ||
+          relIds.has(p.id) ||
+          p.phone_responsible_person_id === targetPerson!.id)
+      ) {
+        familyCompanions.push(p);
+      }
+    });
+  }
+
+  const allMembers = [targetPerson, ...familyCompanions];
+  const initialGuests: Guest[] = allMembers.map((m) => ({
+    person_id: m.id,
+    name: m.name,
+    type: m.child_category && m.child_category !== 'inteira' ? 'child' : 'adult',
+    age: m.age,
+    child_category: m.child_category || 'inteira',
+    status: newStatus,
+    dietary: '',
+  }));
+
+  const confirmedCount = newStatus === 'confirmed' ? initialGuests.length : 0;
+
+  return saveInvite({
+    invite_type: familyCompanions.length > 0 ? 'family' : 'individual',
+    head_person_id: targetPerson.id,
+    companion_person_ids: familyCompanions.map((c) => c.id),
+    head_name: targetPerson.name,
+    phone: targetPerson.phone || '',
+    max_guests: initialGuests.length,
+    status: newStatus,
+    confirmed_count: confirmedCount,
+    table_id: targetPerson.table_id || null,
+    tier: 'main',
+    sent_status: 'not_sent',
+    guests: initialGuests,
+    special_role: targetPerson.special_role || 'guest',
+    counts_towards_buffet: targetPerson.counts_towards_buffet ?? true,
+    special_arrival_time: targetPerson.special_arrival_time || '',
+  });
+}
+
 export async function deleteInvite(id: string): Promise<void> {
-  const invites = await getAllInvites();
+  const [invites, persons] = await Promise.all([getAllInvites(), getAllPersons()]);
   const targetInvite = invites.find((i) => i.id === id);
   const filtered = invites.filter((i) => i.id !== id);
 
-  // Desvincula as pessoas associadas a este convite
-  const persons = await getAllPersons();
+  // Desvincula as pessoas associadas a este convite em lote
+  const updates: Array<Partial<Person> & { id: string }> = [];
   for (const person of persons) {
     if (
       person.invite_id === id ||
       targetInvite?.head_person_id === person.id ||
       (targetInvite?.companion_person_ids && targetInvite.companion_person_ids.includes(person.id))
     ) {
-      await savePerson({
+      updates.push({
         ...person,
         invite_id: null,
         role_in_invite: null,
       });
     }
+  }
+
+  if (updates.length > 0) {
+    await savePersonsBatch(updates, persons);
   }
 
   if (isFirebaseConfigured) {
@@ -1424,13 +1778,6 @@ export async function splitCompanionToIndividualInvite(
     opened_count: 0,
   });
 
-  // 3. Atualizar o cadastro da pessoa para apontar para o novo convite individual como Head
-  await savePerson({
-    ...targetPerson,
-    invite_id: newIndividualInvite.id,
-    role_in_invite: 'head',
-  });
-
   return newIndividualInvite;
 }
 
@@ -1490,7 +1837,7 @@ export async function saveTable(table: Partial<Table> & { id?: string }): Promis
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'tables', fullTable.id), fullTable);
+      await setDoc(doc(db, 'tables', fullTable.id), cleanUndefinedForFirestore(fullTable));
     } catch (err) {
       console.error('Erro ao salvar mesa no Firestore:', err);
     }
@@ -1501,19 +1848,20 @@ export async function saveTable(table: Partial<Table> & { id?: string }): Promis
 }
 
 export async function deleteTable(id: string): Promise<void> {
-  const tables = await getAllTables();
+  const [tables, persons] = await Promise.all([getAllTables(), getAllPersons()]);
   const filtered = tables.filter((t) => t.id !== id);
 
-  // Pessoas na mesa excluída têm table_id e seat_number limpos
-  const persons = await getAllPersons();
-  for (const p of persons) {
-    if (p.table_id === id) {
-      await savePerson({
-        ...p,
-        table_id: null,
-        seat_number: null,
-      });
-    }
+  // Pessoas na mesa excluída têm table_id e seat_number limpos em lote
+  const updates = persons
+    .filter((p) => p.table_id === id)
+    .map((p) => ({
+      ...p,
+      table_id: null,
+      seat_number: null,
+    }));
+
+  if (updates.length > 0) {
+    await savePersonsBatch(updates, persons);
   }
 
   if (isFirebaseConfigured) {
@@ -1549,15 +1897,19 @@ export async function updateInviteRSVP(
 export async function bulkImportInvites(
   rawInvites: Array<{ head_name: string; phone?: string; max_guests?: number; tier?: InviteTier }>
 ): Promise<number> {
+  const persons = await getAllPersons();
+  const toCreate: Array<Partial<Person> & { id?: string }> = [];
   let count = 0;
+
   for (const item of rawInvites) {
     const cleanName = item.head_name ? item.head_name.trim() : '';
     if (cleanName) {
-      // Cria a pessoa se não existir
-      const persons = await getAllPersons();
-      let person = persons.find((p) => p.name.toLowerCase() === cleanName.toLowerCase());
-      if (!person) {
-        person = await savePerson({
+      const exists =
+        persons.some((p) => p.name.toLowerCase() === cleanName.toLowerCase()) ||
+        toCreate.some((p) => p.name?.toLowerCase() === cleanName.toLowerCase());
+      if (!exists) {
+        toCreate.push({
+          id: `person-${Date.now()}-${count}`,
           name: cleanName,
           phone: item.phone ? item.phone.trim() : '',
           type: 'adult',
@@ -1566,6 +1918,11 @@ export async function bulkImportInvites(
       count++;
     }
   }
+
+  if (toCreate.length > 0) {
+    await savePersonsBatch(toCreate, persons);
+  }
+
   return count;
 }
 
@@ -1576,13 +1933,13 @@ export async function bulkImportInvites(
 export async function resetAllInvitesData(): Promise<void> {
   const invites = await getAllInvites();
   if (isFirebaseConfigured) {
-    for (const inv of invites) {
-      try {
-        await deleteDoc(doc(db, 'invites', inv.id));
-      } catch (err) {
-        console.warn(`Erro ao deletar convite ${inv.id} do Firestore:`, err);
-      }
-    }
+    await Promise.all(
+      invites.map((inv) =>
+        deleteDoc(doc(db, 'invites', inv.id)).catch((err) =>
+          console.warn(`Erro ao deletar convite ${inv.id} do Firestore:`, err)
+        )
+      )
+    );
   }
   setLS(LS_KEYS.INVITES, []);
 
@@ -1593,75 +1950,73 @@ export async function resetAllInvitesData(): Promise<void> {
     role_in_invite: null,
   }));
 
-  if (isFirebaseConfigured) {
-    for (const person of resetPersons) {
-      try {
-        await setDoc(doc(db, 'persons', person.id), person);
-      } catch (err) {
-        console.warn(`Erro ao atualizar pessoa ${person.id} no Firestore:`, err);
-      }
-    }
-  }
-
-  setLS(LS_KEYS.PERSONS, resetPersons);
+  await savePersonsBatch(resetPersons, persons);
 }
 
 export const LS_KEYS_EXT = {
   CAMPAIGNS: 'hotsite_surprise_campaigns_v1',
+  SLIDE_PHOTOS: 'festa_slide_photos_v1',
 };
+
+const DEFAULT_SURPRISE_CAMPAIGNS: SurpriseCampaign[] = [
+  {
+    id: 'camp-mural-fotos',
+    title: 'Fotos para o Mural Surpresa da Festa 📸',
+    type: 'photo',
+    description: 'Fotos marcantes com a aniversariante para serem exibidas no Telão/Mural do buffet.',
+    message_template:
+      'Segredo! 🤫 Shhh... Estamos preparando uma Homenagem Surpresa especial para os 40 Anos da Fernanda Seppi!\n\nPor favor, envie aqui neste WhatsApp uma foto marcante de vocês juntos para colocarmos no Mural/Telão da festa! 📸✨',
+    target_tier: 'all',
+    active: true,
+    created_at: '2026-01-01T12:00:00.000Z',
+  },
+  {
+    id: 'camp-video-depoimento',
+    title: 'Vídeos de Homenagem (15-30s) 🎥',
+    type: 'video',
+    description: 'Envio de vídeos curtos de carinho mandando um grande abraço.',
+    message_template:
+      'Segredo! 🤫 Estamos preparando uma Homenagem Surpresa em Vídeo para os 40 Anos da Fernanda Seppi!\n\nEnvie um vídeo curto (15 a 30 segundos) mandando um abraço carinhoso para ela!\n\n{orientacao} 🎥✨',
+    video_orientation: 'horizontal',
+    target_tier: 'all',
+    active: true,
+    created_at: '2026-01-01T12:00:00.000Z',
+  },
+  {
+    id: 'camp-livro-ouro',
+    title: 'Recados para o Livro de Ouro ✍️',
+    type: 'text',
+    description: 'Mensagens e depoimentos por escrito para guardar de recordação.',
+    message_template:
+      'Segredo! 🤫 Estamos organizando um livro de depoimentos surpresa para os 40 Anos da Fernanda Seppi!\n\nPor favor, responda esta mensagem com um recado ou mensagem carinhosa de aniversário por escrito! ✍️❤️',
+    target_tier: 'all',
+    active: true,
+    created_at: '2026-01-01T12:00:00.000Z',
+  },
+];
 
 export async function getAllSurpriseCampaigns(): Promise<SurpriseCampaign[]> {
   if (isFirebaseConfigured) {
     try {
-      const snap = await getDocs(collection(db, 'surprise_campaigns'));
-      if (!snap.empty) {
-        return snap.docs.map((docSnap) => docSnap.data() as SurpriseCampaign);
+      // Armazenado em event_config/surprise_campaigns_store para garantir permissão total no Firestore
+      const snap = await getDoc(doc(db, 'event_config', 'surprise_campaigns_store'));
+      if (snap.exists()) {
+        const data = snap.data() as { items?: SurpriseCampaign[] };
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setLS(LS_KEYS_EXT.CAMPAIGNS, data.items);
+          return data.items;
+        }
       }
     } catch (err) {
-      console.warn('Erro ao ler campanhas do Firestore, usando fallback LS:', err);
+      console.warn('Aviso ao ler campanhas do Firestore, usando fallback LS:', err);
     }
   }
 
   const local = getLS<SurpriseCampaign[]>(LS_KEYS_EXT.CAMPAIGNS, []);
   if (local && local.length > 0) return local;
 
-  // Campanhas Padrão Iniciais
-  const defaultCampaigns: SurpriseCampaign[] = [
-    {
-      id: 'camp-mural-fotos',
-      title: 'Fotos para o Mural Surpresa da Festa 📸',
-      type: 'photo',
-      description: 'Fotos marcantes com a aniversariante para serem exibidas no Telão/Mural do buffet.',
-      message_template: 'Segredo! 🤫 Shhh... Estamos preparando uma Homenagem Surpresa especial para os 40 Anos da Fernanda Seppi!\n\nPor favor, envie aqui neste WhatsApp uma foto marcante de vocês juntos para colocarmos no Mural/Telão da festa! 📸✨',
-      target_tier: 'all',
-      active: true,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 'camp-video-depoimento',
-      title: 'Vídeos de Homenagem (15-30s) 🎥',
-      type: 'video',
-      description: 'Envio de vídeos curtos de carinho mandando um grande abraço.',
-      message_template: 'Segredo! 🤫 Estamos preparando uma Homenagem Surpresa em Vídeo para os 40 Anos da Fernanda Seppi!\n\nEnvie um vídeo curto (15 a 30 segundos) mandando um abraço carinhoso para ela!\n\n{orientacao} 🎥✨',
-      video_orientation: 'horizontal',
-      target_tier: 'all',
-      active: true,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 'camp-livro-ouro',
-      title: 'Recados para o Livro de Ouro ✍️',
-      type: 'text',
-      description: 'Mensagens e depoimentos por escrito para guardar de recordação.',
-      message_template: 'Segredo! 🤫 Estamos organizando um livro de depoimentos surpresa para os 40 Anos da Fernanda Seppi!\n\nPor favor, responda esta mensagem com um recado ou mensagem carinhosa de aniversário por escrito! ✍️❤️',
-      target_tier: 'all',
-      active: true,
-      created_at: new Date().toISOString(),
-    },
-  ];
-
-  setLS(LS_KEYS_EXT.CAMPAIGNS, defaultCampaigns);
-  return defaultCampaigns;
+  setLS(LS_KEYS_EXT.CAMPAIGNS, DEFAULT_SURPRISE_CAMPAIGNS);
+  return DEFAULT_SURPRISE_CAMPAIGNS;
 }
 
 export async function saveSurpriseCampaign(campaign: SurpriseCampaign): Promise<SurpriseCampaign> {
@@ -1669,14 +2024,6 @@ export async function saveSurpriseCampaign(campaign: SurpriseCampaign): Promise<
     ...campaign,
     updated_at: new Date().toISOString(),
   };
-
-  if (isFirebaseConfigured) {
-    try {
-      await setDoc(doc(db, 'surprise_campaigns', updatedCampaign.id), updatedCampaign);
-    } catch (err) {
-      console.warn('Erro ao salvar campanha no Firestore:', err);
-    }
-  }
 
   const campaigns = await getAllSurpriseCampaigns();
   const index = campaigns.findIndex((c) => c.id === updatedCampaign.id);
@@ -1688,21 +2035,36 @@ export async function saveSurpriseCampaign(campaign: SurpriseCampaign): Promise<
     newCampaigns = [updatedCampaign, ...campaigns];
   }
 
+  if (isFirebaseConfigured) {
+    try {
+      await setDoc(
+        doc(db, 'event_config', 'surprise_campaigns_store'),
+        cleanUndefinedForFirestore({ items: newCampaigns, updated_at: new Date().toISOString() })
+      );
+    } catch (err) {
+      console.warn('Aviso ao salvar campanha no Firestore:', err);
+    }
+  }
+
   setLS(LS_KEYS_EXT.CAMPAIGNS, newCampaigns);
   return updatedCampaign;
 }
 
 export async function deleteSurpriseCampaign(campaignId: string): Promise<void> {
+  const campaigns = await getAllSurpriseCampaigns();
+  const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
+
   if (isFirebaseConfigured) {
     try {
-      await deleteDoc(doc(db, 'surprise_campaigns', campaignId));
+      await setDoc(
+        doc(db, 'event_config', 'surprise_campaigns_store'),
+        cleanUndefinedForFirestore({ items: newCampaigns, updated_at: new Date().toISOString() })
+      );
     } catch (err) {
-      console.warn('Erro ao deletar campanha no Firestore:', err);
+      console.warn('Aviso ao deletar campanha no Firestore:', err);
     }
   }
 
-  const campaigns = await getAllSurpriseCampaigns();
-  const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
   setLS(LS_KEYS_EXT.CAMPAIGNS, newCampaigns);
 }
 
@@ -1716,60 +2078,55 @@ export async function saveSurpriseSubmission(
     guest_name?: string;
   }
 ): Promise<SurpriseSubmission> {
+  const now = new Date().toISOString();
   const fullSubmission: SurpriseSubmission = {
     id: inviteId,
     invite_id: inviteId,
     guest_name: submission.guest_name || 'Convidado',
     photo_url: submission.photo_url || '',
     message: submission.message || '',
-    submitted_at: new Date().toISOString(),
+    submitted_at: now,
   };
 
-  if (isFirebaseConfigured) {
-    try {
-      await setDoc(doc(db, 'surprise_submissions', inviteId), fullSubmission);
-    } catch (err) {
-      console.warn('Erro ao salvar homenagem surpresa no Firestore:', err);
-    }
-  }
-
-  // Atualiza também o convite correspondente
+  // Atualiza o convite correspondente no Firestore (coleção 'invites' possui permissão total e comporta 1 foto comprimida por doc)
   const invites = await getAllInvites();
   const invite = invites.find((i) => i.id === inviteId);
   if (invite) {
     const updatedInvite: Invite = {
       ...invite,
       surprise_sent: true,
-      surprise_photo_sent: !!submission.photo_url,
-      surprise_text_sent: !!submission.message,
-      surprise_photo_url: submission.photo_url || invite.surprise_photo_url || '',
-      surprise_message: submission.message || invite.surprise_message || '',
-      surprise_submitted_at: fullSubmission.submitted_at,
+      surprise_photo_sent: Boolean(submission.photo_url || invite.surprise_photo_url),
+      surprise_text_sent: Boolean(submission.message || invite.surprise_message),
+      surprise_photo_url: submission.photo_url !== undefined ? submission.photo_url : (invite.surprise_photo_url || ''),
+      surprise_message: submission.message !== undefined ? submission.message : (invite.surprise_message || ''),
+      surprise_submitted_at: now,
     };
     await saveInvite(updatedInvite);
+  } else if (isFirebaseConfigured) {
+    // Caso seja uma submissão avulsa sem convite na lista, salva em event_config/surprise_sub_<id>
+    try {
+      await setDoc(
+        doc(db, 'event_config', `surprise_sub_${inviteId}`),
+        cleanUndefinedForFirestore(fullSubmission)
+      );
+    } catch (err) {
+      console.warn('Aviso ao salvar submissão avulsa no Firestore:', err);
+    }
   }
 
-  // Salva no LocalStorage como cache rápido
+  // No LocalStorage, não duplicamos a foto Base64 se ela já está salva no objeto Invite
   const cachedSubmissions = getLS<Record<string, SurpriseSubmission>>('hotsite_surprise_submissions_v1', {});
-  cachedSubmissions[inviteId] = fullSubmission;
+  cachedSubmissions[inviteId] = {
+    ...fullSubmission,
+    photo_url: invite ? '' : fullSubmission.photo_url,
+  };
   setLS('hotsite_surprise_submissions_v1', cachedSubmissions);
 
   return fullSubmission;
 }
 
 export async function getAllSurpriseSubmissions(): Promise<SurpriseSubmission[]> {
-  if (isFirebaseConfigured) {
-    try {
-      const snap = await getDocs(collection(db, 'surprise_submissions'));
-      if (!snap.empty) {
-        return snap.docs.map((d) => d.data() as SurpriseSubmission);
-      }
-    } catch (err) {
-      console.warn('Erro ao carregar homenagens do Firestore:', err);
-    }
-  }
-
-  // Fallback: extrai de convites que possuem fotos ou mensagens cadastradas
+  // 1. Extrai diretamente dos convites sincronizados no Firestore (coleção 'invites')
   const invites = await getAllInvites();
   const fromInvites: SurpriseSubmission[] = invites
     .filter((inv) => inv.surprise_photo_url || inv.surprise_message || inv.surprise_sent)
@@ -1783,33 +2140,224 @@ export async function getAllSurpriseSubmissions(): Promise<SurpriseSubmission[]>
     }));
 
   const cached = getLS<Record<string, SurpriseSubmission>>('hotsite_surprise_submissions_v1', {});
-  const fromLs = Object.values(cached);
-
   const mergedMap = new Map<string, SurpriseSubmission>();
-  fromInvites.forEach((s) => mergedMap.set(s.id, s));
-  fromLs.forEach((s) => mergedMap.set(s.id, s));
 
-  return Array.from(mergedMap.values());
+  Object.values(cached).forEach((s) => {
+    if (s && s.id) mergedMap.set(s.id, s);
+  });
+
+  // 2. Recupera também eventuais slides salvos nas playlists locais para garantir que nenhum envio anterior seja perdido
+  const cachedPlaylists = getLS<PresentationPlaylist[]>('festa_presentation_playlists_v1', []);
+  const slidePhotosCache = getLS<Record<string, string>>(LS_KEYS_EXT.SLIDE_PHOTOS, {});
+  cachedPlaylists.forEach((pl) => {
+    (pl.slides || []).forEach((sl) => {
+      const subId = sl.submission_id || (sl.source === 'surprise_submission' ? sl.id : '');
+      if (!subId) return;
+      const resolvedPhoto =
+        sl.photo_url && sl.photo_url.startsWith('ref:slide_photo:')
+          ? slidePhotosCache[sl.photo_url.replace('ref:slide_photo:', '')] || ''
+          : sl.photo_url || slidePhotosCache[sl.id] || '';
+      const existing = mergedMap.get(subId);
+      if (!existing || (!existing.photo_url && resolvedPhoto) || (!existing.message && sl.caption)) {
+        mergedMap.set(subId, {
+          id: subId,
+          invite_id: subId,
+          guest_name: existing?.guest_name || sl.author_name || 'Convidado',
+          photo_url: existing?.photo_url || resolvedPhoto || '',
+          message: existing?.message || sl.caption || '',
+          submitted_at: existing?.submitted_at || pl.updated_at || new Date().toISOString(),
+        });
+      }
+    });
+  });
+
+  // 3. Dados vindos dos Invites têm prioridade máxima pois contêm o photo_url e message oficiais do Firestore
+  fromInvites.forEach((s) => {
+    const existing = mergedMap.get(s.id);
+    mergedMap.set(s.id, {
+      ...s,
+      photo_url: s.photo_url || existing?.photo_url || '',
+      message: s.message || existing?.message || '',
+    });
+  });
+
+  return Array.from(mergedMap.values()).filter((s) => Boolean(s.photo_url || s.message));
 }
 
 // ==========================================
 // MÓDULO TELÃO FULL-SCREEN & APRESENTAÇÕES
 // ==========================================
 
+/**
+ * Desidrata as fotos em Base64 dos slides antes de gravar no documento da playlist,
+ * evitando estourar o limite de 1MB do Firestore (1.048.576 bytes) e os 5MB do LocalStorage,
+ * MAS garantindo que todo slide com imagem tenha backup individual em `event_config/slide_photo_<id>`.
+ */
+async function dehydratePlaylistForStorage(playlist: PresentationPlaylist): Promise<PresentationPlaylist> {
+  const customPhotosCache = getLS<Record<string, string>>(LS_KEYS_EXT.SLIDE_PHOTOS, {});
+  let customPhotosChanged = false;
+
+  const dehydratedSlides: PresentationSlide[] = await Promise.all(
+    (playlist.slides || []).map(async (slide) => {
+      // Salva qualquer imagem Base64 em um documento dedicado por slide (`slide_photo_<id>`) + cache local
+      // Assim, mesmo que venha de submissão ou do PC, a imagem NUNCA fica órfã nem vazia!
+      if (slide.photo_url && slide.photo_url.startsWith('data:')) {
+        const photoDocId = `slide_photo_${slide.id}`;
+        customPhotosCache[slide.id] = slide.photo_url;
+        customPhotosChanged = true;
+
+        if (isFirebaseConfigured) {
+          try {
+            await setDoc(doc(db, 'event_config', photoDocId), {
+              id: slide.id,
+              photo_url: slide.photo_url,
+              updated_at: new Date().toISOString(),
+            });
+          } catch (err) {
+            console.warn(`Aviso ao salvar foto individual do slide ${slide.id}:`, err);
+          }
+        }
+
+        return {
+          ...slide,
+          photo_url: `ref:slide_photo:${slide.id}`,
+        };
+      }
+
+      return slide;
+    })
+  );
+
+  if (customPhotosChanged) {
+    setLS(LS_KEYS_EXT.SLIDE_PHOTOS, customPhotosCache);
+  }
+
+  return {
+    ...playlist,
+    slides: dehydratedSlides,
+  };
+}
+
+/**
+ * Reidrata as fotos e legendas dos slides em memória buscando das homenagens (Invites)
+ * ou dos documentos individuais de foto (`event_config/slide_photo_<id>`).
+ * Preserva também slides somente de texto (depoimentos sem foto) para exibição no Telão!
+ */
+async function hydratePlaylistsPhotos(playlists: PresentationPlaylist[]): Promise<PresentationPlaylist[]> {
+  const submissions = await getAllSurpriseSubmissions();
+  const subById = new Map<string, SurpriseSubmission>();
+  const subByAuthor = new Map<string, SurpriseSubmission>();
+
+  submissions.forEach((s) => {
+    subById.set(s.id, s);
+    if (s.guest_name) {
+      subByAuthor.set(s.guest_name.trim().toLowerCase(), s);
+    }
+  });
+
+  const customPhotosCache = getLS<Record<string, string>>(LS_KEYS_EXT.SLIDE_PHOTOS, {});
+
+  return Promise.all(
+    playlists.map(async (pl) => {
+      const hydratedSlides = await Promise.all(
+        (pl.slides || []).map(async (slide) => {
+          let resolvedPhoto = slide.photo_url || '';
+          let resolvedCaption = slide.caption || '';
+          let resolvedAuthor = slide.author_name || '';
+
+          // 1. Tenta resolver referência `ref:slide_photo:<id>` no cache local ou no Firestore
+          if (resolvedPhoto.startsWith('ref:slide_photo:')) {
+            const slideId = resolvedPhoto.replace('ref:slide_photo:', '');
+            if (customPhotosCache[slideId]) {
+              resolvedPhoto = customPhotosCache[slideId];
+            } else if (isFirebaseConfigured) {
+              try {
+                const snap = await getDoc(doc(db, 'event_config', `slide_photo_${slideId}`));
+                if (snap.exists()) {
+                  const data = snap.data() as { photo_url?: string };
+                  if (data.photo_url) {
+                    customPhotosCache[slideId] = data.photo_url;
+                    setLS(LS_KEYS_EXT.SLIDE_PHOTOS, customPhotosCache);
+                    resolvedPhoto = data.photo_url;
+                  }
+                }
+              } catch {}
+            }
+            if (resolvedPhoto.startsWith('ref:')) {
+              resolvedPhoto = '';
+            }
+          }
+
+          // 2. Se ainda estiver sem foto (ou se veio de submissão de convidado), busca na lista de submissões/convites
+          const matchedSub =
+            (slide.submission_id ? subById.get(slide.submission_id) : undefined) ||
+            (slide.author_name ? subByAuthor.get(slide.author_name.trim().toLowerCase()) : undefined);
+
+          if (matchedSub) {
+            if (!resolvedPhoto && matchedSub.photo_url) {
+              resolvedPhoto = matchedSub.photo_url;
+            }
+            if (!resolvedCaption && matchedSub.message) {
+              resolvedCaption = matchedSub.message;
+            }
+            if (!resolvedAuthor && matchedSub.guest_name) {
+              resolvedAuthor = matchedSub.guest_name;
+            }
+          }
+
+          // 3. Fallback adicional pelo próprio slide.id no cache de fotos
+          if (!resolvedPhoto && customPhotosCache[slide.id]) {
+            resolvedPhoto = customPhotosCache[slide.id];
+          }
+
+          return {
+            ...slide,
+            photo_url: resolvedPhoto,
+            caption: resolvedCaption,
+            author_name: resolvedAuthor,
+          };
+        })
+      );
+
+      // Mantém qualquer slide que tenha foto válida OU que tenha mensagem/depoimento em texto!
+      return {
+        ...pl,
+        slides: hydratedSlides.filter((s) =>
+          Boolean((s.photo_url && !s.photo_url.startsWith('ref:')) || (s.caption && s.caption.trim()))
+        ),
+      };
+    })
+  );
+}
+
 export async function getAllPresentationPlaylists(): Promise<PresentationPlaylist[]> {
   if (isFirebaseConfigured) {
     try {
-      const snap = await getDocs(collection(db, 'presentation_playlists'));
-      if (!snap.empty) {
-        return snap.docs.map((d) => d.data() as PresentationPlaylist);
+      const snap = await getDoc(doc(db, 'event_config', 'presentation_playlists_store'));
+      if (snap.exists()) {
+        const data = snap.data() as { items?: PresentationPlaylist[] };
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setLS('festa_presentation_playlists_v1', data.items);
+          return hydratePlaylistsPhotos(data.items);
+        }
       }
     } catch (err) {
-      console.warn('Erro ao carregar playlists do Firestore:', err);
+      console.warn('Aviso ao carregar playlists do Firestore:', err);
     }
   }
 
   const cached = getLS<PresentationPlaylist[]>('festa_presentation_playlists_v1', []);
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) {
+    const hasBloatedBase64 = cached.some((pl) =>
+      (pl.slides || []).some((s) => s.photo_url?.startsWith('data:'))
+    );
+    if (hasBloatedBase64) {
+      const slimmed = await Promise.all(cached.map((pl) => dehydratePlaylistForStorage(pl)));
+      setLS('festa_presentation_playlists_v1', slimmed);
+      return hydratePlaylistsPhotos(slimmed);
+    }
+    return hydratePlaylistsPhotos(cached);
+  }
 
   return seedDefaultPlaylists();
 }
@@ -1820,8 +2368,8 @@ export async function getPresentationPlaylistById(id: string): Promise<Presentat
 }
 
 export async function savePresentationPlaylist(playlist: PresentationPlaylist): Promise<PresentationPlaylist> {
-  const playlists = await getAllPresentationPlaylists();
-  const index = playlists.findIndex((p) => p.id === playlist.id);
+  const currentPlaylists = await getAllPresentationPlaylists();
+  const index = currentPlaylists.findIndex((p) => p.id === playlist.id);
 
   const updatedPlaylist: PresentationPlaylist = {
     ...playlist,
@@ -1829,20 +2377,29 @@ export async function savePresentationPlaylist(playlist: PresentationPlaylist): 
   };
 
   if (index >= 0) {
-    playlists[index] = updatedPlaylist;
+    currentPlaylists[index] = updatedPlaylist;
   } else {
-    playlists.push(updatedPlaylist);
+    currentPlaylists.push(updatedPlaylist);
   }
+
+  // Desidrata as fotos antes de persistir no Firestore e no LocalStorage (mantém o documento < 5KB!)
+  const dehydratedList = await Promise.all(currentPlaylists.map((pl) => dehydratePlaylistForStorage(pl)));
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'presentation_playlists', playlist.id), cleanUndefinedForFirestore(updatedPlaylist));
+      await setDoc(
+        doc(db, 'event_config', 'presentation_playlists_store'),
+        cleanUndefinedForFirestore({
+          items: dehydratedList,
+          updated_at: new Date().toISOString(),
+        })
+      );
     } catch (err) {
       console.error('Erro ao salvar playlist no Firestore:', err);
     }
   }
 
-  setLS('festa_presentation_playlists_v1', playlists);
+  setLS('festa_presentation_playlists_v1', dehydratedList);
   return updatedPlaylist;
 }
 
@@ -1850,24 +2407,32 @@ export async function deletePresentationPlaylist(id: string): Promise<void> {
   let playlists = await getAllPresentationPlaylists();
   playlists = playlists.filter((p) => p.id !== id);
 
+  const dehydratedList = await Promise.all(playlists.map((pl) => dehydratePlaylistForStorage(pl)));
+
   if (isFirebaseConfigured) {
     try {
-      await deleteDoc(doc(db, 'presentation_playlists', id));
+      await setDoc(
+        doc(db, 'event_config', 'presentation_playlists_store'),
+        cleanUndefinedForFirestore({
+          items: dehydratedList,
+          updated_at: new Date().toISOString(),
+        })
+      );
     } catch (err) {
       console.error('Erro ao deletar playlist no Firestore:', err);
     }
   }
 
-  setLS('festa_presentation_playlists_v1', playlists);
+  setLS('festa_presentation_playlists_v1', dehydratedList);
 }
 
 export async function seedDefaultPlaylists(): Promise<PresentationPlaylist[]> {
   const submissions = await getAllSurpriseSubmissions();
-  const validPhotoSubmissions = submissions.filter((s) => s.photo_url);
+  const validSubmissions = submissions.filter((s) => s.photo_url || s.message);
 
-  const initialSlides: PresentationSlide[] = validPhotoSubmissions.map((s, idx) => ({
+  const initialSlides: PresentationSlide[] = validSubmissions.map((s, idx) => ({
     id: `slide-${idx + 1}`,
-    photo_url: s.photo_url!,
+    photo_url: s.photo_url || '',
     caption: s.message || 'Com todo meu amor para a Fernanda! ✨',
     author_name: s.guest_name || 'Convidado Especial',
     duration_seconds: 8,
@@ -1881,7 +2446,7 @@ export async function seedDefaultPlaylists(): Promise<PresentationPlaylist[]> {
     {
       id: 'homenagem-principal',
       title: 'Homenagem Principal (Momento Solene)',
-      description: 'Apresentação com música e fotos marcantes para emocionar a aniversariante e todos os convidados.',
+      description: 'Apresentação com música, fotos e depoimentos marcantes para emocionar a aniversariante e todos os convidados.',
       mode: 'presentation',
       default_slide_duration: 8,
       audio_url: '',
@@ -1904,17 +2469,23 @@ export async function seedDefaultPlaylists(): Promise<PresentationPlaylist[]> {
     },
   ];
 
+  const dehydratedList = await Promise.all(defaultPlaylists.map((pl) => dehydratePlaylistForStorage(pl)));
+
   if (isFirebaseConfigured) {
     try {
-      for (const pl of defaultPlaylists) {
-        await setDoc(doc(db, 'presentation_playlists', pl.id), cleanUndefinedForFirestore(pl));
-      }
+      await setDoc(
+        doc(db, 'event_config', 'presentation_playlists_store'),
+        cleanUndefinedForFirestore({
+          items: dehydratedList,
+          updated_at: new Date().toISOString(),
+        })
+      );
     } catch (err) {
-      console.warn('Erro ao semear playlists no Firestore:', err);
+      console.warn('Aviso ao semear playlists no Firestore:', err);
     }
   }
 
-  setLS('festa_presentation_playlists_v1', defaultPlaylists);
+  setLS('festa_presentation_playlists_v1', dehydratedList);
   return defaultPlaylists;
 }
 

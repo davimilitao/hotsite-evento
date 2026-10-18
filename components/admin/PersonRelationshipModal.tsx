@@ -62,21 +62,22 @@ export function PersonRelationshipModal({
   // IDs das pessoas atualmente empilhadas (staged)
   const stagedPersonIds = new Set(stagedRelationships.map((r) => r.target_person_id));
 
-  // Pessoas elegíveis para vincular na busca (exclui titular e pessoas já empilhadas ou de outras famílias)
+  // Pessoas elegíveis para vincular na busca (exclui titular e pessoas já empilhadas)
   const eligiblePersons = livePersonsList.filter(
     (p) => {
       if (p.id === currentPerson.id) return false;
+      if (stagedPersonIds.has(p.id)) return false;
 
+      const searchLower = searchTerm.toLowerCase().trim();
       const belongsToAnotherFamily = p.family_id && p.family_id !== currentPerson.family_id;
       const hasRelationships = (p.relationships || []).length > 0;
       const isRelatedToCurrent = (p.relationships || []).some(r => r.target_person_id === currentPerson.id);
 
-      // Bloquear se já pertence a outra família ou tem relações que não incluem a pessoa atual
-      if (belongsToAnotherFamily || (hasRelationships && !isRelatedToCurrent && !stagedPersonIds.has(p.id))) {
+      // Se a busca estiver vazia, mostra apenas pessoas livres (sem outra família); se o admin digitou um nome, permite encontrar e reagrupar qualquer pessoa
+      if (!searchLower && (belongsToAnotherFamily || (hasRelationships && !isRelatedToCurrent))) {
         return false;
       }
 
-      const searchLower = searchTerm.toLowerCase().trim();
       if (!searchLower) return true;
 
       return p.name.toLowerCase().includes(searchLower) || (p.phone && p.phone.includes(searchTerm.trim()));

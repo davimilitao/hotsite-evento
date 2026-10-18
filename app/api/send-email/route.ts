@@ -19,6 +19,9 @@ export async function POST(req: Request) {
       eventTitle = 'Fernanda Seppi - 40 Anos',
       recipientEmail = 'militao46@gmail.com',
       ccEmail = '',
+      tributeMessage = '',
+      photoBase64 = '',
+      photoFileName = '',
     } = body;
 
     if (!apiKey) {
@@ -26,6 +29,7 @@ export async function POST(req: Request) {
         type,
         headName,
         recipientEmail,
+        hasPhoto: Boolean(photoBase64),
       });
       return NextResponse.json({
         success: true,
@@ -35,6 +39,112 @@ export async function POST(req: Request) {
     }
 
     const resend = new Resend(apiKey);
+
+    // 1. Fluxo de Backup em Alta Resolução da Homenagem Surpresa (Foto + Mensagem no Telão)
+    if (type === 'surprise_tribute') {
+      const subject = `📸✨ [${eventTitle}] Homenagem no Telão de ${headName}${photoBase64 ? ' (Foto Original em Anexo)' : ''}`;
+
+      const attachments: Array<{ filename: string; content: Buffer }> = [];
+      if (photoBase64 && typeof photoBase64 === 'string' && photoBase64.startsWith('data:image')) {
+        const matches = photoBase64.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+        if (matches && matches[2]) {
+          const ext = matches[1] === 'png' ? 'png' : matches[1] === 'webp' ? 'webp' : 'jpg';
+          const cleanName = (headName || 'convidado')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9-_]/g, '-')
+            .toLowerCase();
+          attachments.push({
+            filename: photoFileName || `foto-telao-${cleanName}.${ext}`,
+            content: Buffer.from(matches[2], 'base64'),
+          });
+        }
+      }
+
+      const tributeHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fdf4ff; margin: 0; padding: 20px; color: #1e152d; }
+            .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 24px; border: 1px solid #f5d0fe; overflow: hidden; box-shadow: 0 10px 25px rgba(219,39,119,0.08); }
+            .header { background: linear-gradient(135deg, #db2777, #7e22ce); padding: 28px 24px; text-align: center; color: #ffffff; }
+            .badge { display: inline-block; padding: 6px 14px; background: rgba(255,255,255,0.22); color: #ffffff; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; }
+            .content { padding: 28px 24px; }
+            .msg-box { background: #fdf2f8; border-left: 4px solid #db2777; border-radius: 0 14px 14px 0; padding: 16px 20px; margin: 18px 0; }
+            .att-box { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 14px; padding: 14px 18px; color: #065f46; font-size: 13px; margin-top: 16px; }
+            .footer { padding: 18px 24px; background: #f8fafc; text-align: center; font-size: 12px; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="badge">🤫 Segredo • Homenagem do Telão</div>
+              <h1 style="margin: 0; font-size: 22px; font-weight: 800;">${eventTitle}</h1>
+              <p style="margin: 6px 0 0 0; font-size: 13px; opacity: 0.9;">Backup Oficial de Foto em Alta Resolução & Depoimento</p>
+            </div>
+            <div class="content">
+              <h2 style="font-size: 18px; margin: 0 0 6px 0; color: #1e152d;">
+                Enviado por: <strong style="color: #db2777;">${headName}</strong>
+              </h2>
+              <p style="font-size: 12px; color: #64748b; margin: 0 0 18px 0;">
+                Convite: <strong>#${token || 'avulso'}</strong> &bull; Horário: ${new Date().toLocaleString('pt-BR')}
+              </p>
+
+              ${
+                tributeMessage
+                  ? `
+                <div class="msg-box">
+                  <div style="font-size: 11px; font-weight: 800; color: #be185d; text-transform: uppercase; margin-bottom: 6px;">
+                    💬 Mensagem / Depoimento para o Telão:
+                  </div>
+                  <div style="font-size: 15px; font-style: italic; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">&ldquo;${tributeMessage}&rdquo;</div>
+                </div>
+              `
+                  : `<p style="font-size: 13px; color: #64748b; font-style: italic;">(Enviou foto sem texto adicional)</p>`
+              }
+
+              ${
+                attachments.length > 0
+                  ? `
+                <div class="att-box">
+                  📎 <strong>Foto em Alta Resolução Anexada (${attachments[0].filename})!</strong><br/>
+                  A foto original está anexada neste e-mail para você guardar ou baixar em qualidade máxima, enquanto uma versão otimizada e super leve foi salva automaticamente no site e no Telão da festa.
+                </div>
+              `
+                  : `
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; font-size: 12px; color: #475569;">
+                  📝 Depoimento em texto salvo automaticamente na Galeria e no Telão da festa.
+                </div>
+              `
+              }
+            </div>
+            <div class="footer">
+              Backup automático via <strong>Resend</strong> &bull; Hotsite ${eventTitle}
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const tributeEmailOptions: any = {
+        from: 'Fernanda Seppi 40 Anos <notificacoes@cachorrosalsicha.com.br>',
+        to: [recipientEmail],
+        subject,
+        html: tributeHtml,
+      };
+
+      if (ccEmail && ccEmail.trim() && ccEmail.trim().toLowerCase() !== recipientEmail.trim().toLowerCase()) {
+        tributeEmailOptions.cc = [ccEmail.trim()];
+      }
+      if (attachments.length > 0) {
+        tributeEmailOptions.attachments = attachments;
+      }
+
+      const data = await resend.emails.send(tributeEmailOptions);
+      return NextResponse.json({ success: true, data });
+    }
 
     let subject = `[${eventTitle}] Nova atualização de convite`;
     let badgeBg = '#6d44e4';

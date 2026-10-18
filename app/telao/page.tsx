@@ -388,44 +388,73 @@ function TelaoPlayerContent() {
 
       {/* CAMADA 1: BACKDROP BLUR CINEMATOGRÁFICO (Preenche 100% da tela sem faixas pretas) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          key={`backdrop-${currentSlide?.id}`}
-          className="absolute inset-0 bg-cover bg-center scale-125 blur-3xl opacity-45 transition-all duration-1000 ease-out"
-          style={{ backgroundImage: `url(${currentSlide?.photo_url})` }}
-        />
+        {currentSlide?.photo_url ? (
+          <div
+            key={`backdrop-${currentSlide?.id}`}
+            className="absolute inset-0 bg-cover bg-center scale-125 blur-3xl opacity-45 transition-all duration-1000 ease-out"
+            style={{ backgroundImage: `url(${currentSlide?.photo_url})` }}
+          />
+        ) : (
+          <div
+            key={`backdrop-msg-${currentSlide?.id}`}
+            className="absolute inset-0 bg-gradient-to-br from-purple-950 via-pink-950/60 to-black opacity-90 transition-all duration-1000"
+          />
+        )}
         {/* Vinheta escura nas bordas para foco no centro */}
         <div className="absolute inset-0 bg-radial from-transparent via-black/40 to-black/90" />
       </div>
 
-      {/* CAMADA 2: FOTO PRINCIPAL COM EFEITO KEN BURNS */}
-      <div className="relative w-full h-full flex items-center justify-center p-4 md:p-8 z-10">
-        <div className="relative max-w-full max-h-full flex items-center justify-center overflow-hidden rounded-2xl shadow-2xl">
-          <img
-            key={`slide-${currentSlide?.id}`}
-            src={currentSlide?.photo_url}
-            alt={currentSlide?.caption || 'Homenagem Telão'}
-            className="max-h-[82vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl animate-ken-burns border border-white/10"
-          />
-        </div>
-      </div>
+      {/* CAMADA 2: FOTO PRINCIPAL OU CARD DE DEPOIMENTO EM DESTAQUE */}
+      {currentSlide?.photo_url ? (
+        <>
+          <div className="relative w-full h-full flex items-center justify-center p-4 md:p-8 z-10">
+            <div className="relative max-w-full max-h-full flex items-center justify-center overflow-hidden rounded-2xl shadow-2xl">
+              <img
+                key={`slide-${currentSlide?.id}`}
+                src={currentSlide?.photo_url}
+                alt={currentSlide?.caption || 'Homenagem Telão'}
+                className="max-h-[82vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl animate-ken-burns border border-white/10"
+              />
+            </div>
+          </div>
 
-      {/* CAMADA 3: LEGENDA / DEPOIMENTO CINEMATOGRÁFICO ("NESSE DIA...") */}
-      {(currentSlide?.caption || currentSlide?.author_name) && (
-        <div
-          className={`absolute bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 max-w-3xl w-[90%] z-20 transition-all duration-500 ${
-            showControls ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-95'
-          }`}
-        >
-          <div className="bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl p-4 md:p-6 text-center shadow-2xl space-y-1.5">
-            {currentSlide.caption && (
-              <p className="text-white text-base md:text-xl font-medium italic leading-relaxed drop-shadow-md">
-                &ldquo;{currentSlide.caption}&rdquo;
-              </p>
-            )}
+          {/* CAMADA 3: LEGENDA / DEPOIMENTO CINEMATOGRÁFICO ("NESSE DIA...") */}
+          {(currentSlide?.caption || currentSlide?.author_name) && (
+            <div
+              className={`absolute bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 max-w-3xl w-[90%] z-20 transition-all duration-500 ${
+                showControls ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-95'
+              }`}
+            >
+              <div className="bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl p-4 md:p-6 text-center shadow-2xl space-y-1.5">
+                {currentSlide.caption && (
+                  <p className="text-white text-base md:text-xl font-medium italic leading-relaxed drop-shadow-md">
+                    &ldquo;{currentSlide.caption}&rdquo;
+                  </p>
+                )}
 
-            {currentSlide.author_name && (
-              <p className="text-purple-300 text-xs md:text-sm font-black uppercase tracking-widest flex items-center justify-center gap-1.5 pt-1">
-                <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
+                {currentSlide.author_name && (
+                  <p className="text-purple-300 text-xs md:text-sm font-black uppercase tracking-widest flex items-center justify-center gap-1.5 pt-1">
+                    <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
+                    <span>{currentSlide.author_name}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        /* SLIDE DE DEPOIMENTO / MENSAGEM ESPECIAL (QUANDO O CONVIDADO ENVIOU APENAS TEXTO) */
+        <div className="relative w-full h-full flex items-center justify-center p-6 md:p-16 z-20">
+          <div className="max-w-4xl w-full bg-black/55 backdrop-blur-2xl border border-pink-500/30 rounded-3xl p-8 md:p-14 text-center shadow-2xl space-y-6 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-500/20 border border-pink-500/40 text-pink-300 text-xs font-black uppercase tracking-widest">
+              <Sparkles className="w-4 h-4 text-amber-300" /> Homenagem Especial • 40 Anos
+            </div>
+            <p className="text-white text-2xl md:text-4xl font-medium italic leading-relaxed drop-shadow-lg">
+              &ldquo;{currentSlide?.caption || 'Parabéns pelos 40 anos, Fernanda!'}&rdquo;
+            </p>
+            {currentSlide?.author_name && (
+              <p className="text-pink-300 text-sm md:text-lg font-black uppercase tracking-widest flex items-center justify-center gap-2 pt-2">
+                <Heart className="w-5 h-5 text-pink-400 fill-pink-400" />
                 <span>{currentSlide.author_name}</span>
               </p>
             )}
