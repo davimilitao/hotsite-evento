@@ -589,6 +589,9 @@ export function RSVPForm({ invite, config, allPersons, onUpdate, onSubmittedFeed
         isOpen={isSurpriseModalOpen}
         onClose={() => setIsSurpriseModalOpen(false)}
         invite={invite}
+        recipientEmail={config.support_email || 'militao46@gmail.com'}
+        ccEmail={config.admin_cc_email || ''}
+        eventTitle={config.title}
         onSaved={(updated) => onUpdate(updated)}
       />
     </section>

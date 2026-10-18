@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Invite, Guest, InviteStatus, Table, EventConfig, InviteTier, Person, SpecialRole, ChildCategory } from '@/types';
-import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory, linkPersonPhoneResponsible, splitCompanionToIndividualInvite } from '@/lib/db';
+import { saveInvite, deleteInvite, markInviteAsSent, promoteInviteToMain, savePerson, deletePerson, unassignPersonSeat, calculateChildCategory, linkPersonPhoneResponsible, splitCompanionToIndividualInvite, assignPersonToTableWithAutoSeat } from '@/lib/db';
 import { buildWhatsAppLink, formatPhoneDisplay, getDeadlineInfo, formatDateShort, formatPhoneE164, triggerHaptic } from '@/lib/utils';
 import { BulkImporter } from './BulkImporter';
 import { PersonRelationshipModal } from './PersonRelationshipModal';
@@ -993,29 +993,12 @@ export function GuestList({
         ...person,
         name: cleanName,
       });
-      if (person.invite_id) {
-        const invite = invites.find((i) => i.id === person.invite_id);
-        if (invite && invite.head_person_id === person.id) {
-          await saveInvite({
-            ...invite,
-            head_name: cleanName,
-          });
-        }
-      }
     } else if (field === 'phone') {
+      const cleanPhone = value.trim();
       await savePerson({
         ...person,
-        phone: tempPhone,
+        phone: cleanPhone,
       });
-      if (person.invite_id) {
-        const invite = invites.find((i) => i.id === person.invite_id);
-        if (invite && invite.head_person_id === person.id) {
-          await saveInvite({
-            ...invite,
-            phone: tempPhone,
-          });
-        }
-      }
     }
 
     setEditingCell(null);
@@ -1024,20 +1007,7 @@ export function GuestList({
 
   const handleTableChangeForPerson = async (person: Person, newTableId: string) => {
     const tableIdToSave = newTableId === '' ? null : newTableId;
-    await savePerson({
-      ...person,
-      table_id: tableIdToSave,
-      seat_number: tableIdToSave ? person.seat_number : null,
-    });
-    if (person.invite_id) {
-      const invite = invites.find((i) => i.id === person.invite_id);
-      if (invite && invite.head_person_id === person.id) {
-        await saveInvite({
-          ...invite,
-          table_id: tableIdToSave,
-        });
-      }
-    }
+    await assignPersonToTableWithAutoSeat(person.id, tableIdToSave, false);
     onRefresh();
   };
 
@@ -1522,21 +1492,24 @@ export function GuestList({
 
       {/* TABELA PRINCIPAL CONFORME A ABA ATIVA */}
       {activeTab === 'persons' ? (
-        /* TAB 1: GESTÃO DA LISTA DE CONVIDADOS (PESSOAS FÍSICAS, IDADES & PARENTESCOS) */
+        /* TAB 1: GESTÃO DA LISTA DE CONVIDADOS (PESSOAS FÍSICAS, IDADES, MESAS & PARENTESCOS) */
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[350px]">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[950px]">
+            <table className="w-full text-left border-collapse min-w-[980px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
-                  <th onClick={() => handleSort('name')} className="py-3 px-3 cursor-pointer hover:text-purple-500">
+                  <th onClick={() => handleSort('name')} className="py-3 px-3 cursor-pointer hover:text-purple-500 select-none">
                     Convidado(a) {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="py-3 px-2.5">Telefone (WhatsApp)</th>
                   <th className="py-3 px-2.5">Faixa Etária</th>
-                  <th onClick={() => handleSort('family')} className="py-3 px-2.5 cursor-pointer hover:text-purple-500">
+                  <th onClick={() => handleSort('family')} className="py-3 px-2.5 cursor-pointer hover:text-purple-500 select-none">
                     Família & Parentescos {sortField === 'family' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="py-3 px-3 text-right w-12"></th>
+                  <th onClick={() => handleSort('table')} className="py-3 px-2.5 cursor-pointer hover:text-purple-500 select-none">
+                    Mesa Reservada {sortField === 'table' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="py-3 px-3 text-right">Ações Rápidas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
@@ -1553,7 +1526,7 @@ export function GuestList({
                   if (sortedPersons.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={5} className="py-16 text-center">
+                        <td colSpan={6} className="py-16 text-center">
                           <div className="flex flex-col items-center justify-center gap-3">
                             <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-2">
                               <FolderSearch className="w-8 h-8 text-slate-300 dark:text-slate-600" />
@@ -1584,6 +1557,9 @@ export function GuestList({
                     const famKey = person.family_id || person.family_name || (person.relationships && person.relationships.length > 0 ? `fam-rel-${person.id}` : null);
                     const famIndex = famKey !== null ? familyIndexMap.get(famKey) : null;
                     const isZebraEven = famIndex !== undefined && famIndex !== null && famIndex % 2 === 0;
+                    const invite = invites.find(
+                      (i) => i.id === person.invite_id || i.head_person_id === person.id || i.companion_person_ids?.includes(person.id)
+                    );
 
                     const rowBgClass = sortField === 'family' && famIndex !== null && famIndex !== undefined
                       ? isZebraEven
@@ -1593,15 +1569,33 @@ export function GuestList({
 
                     return (
                       <tr key={person.id} className={`transition-colors ${rowBgClass}`}>
-                        {/* Nome */}
+                        {/* Nome (Clicável para abrir gaveta Raio-X ou editar) */}
                         <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-100">
-                          <div className="flex items-center gap-2">
-                            <span>{person.name}</span>
-                            {person.special_role && person.special_role !== 'guest' && (
-                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-300">
-                                {person.special_role}
-                              </span>
-                            )}
+                          <div className="flex items-center justify-between gap-2 group">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDrawerPerson(person)}
+                              className="text-left flex items-center gap-2 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                              title="Clique para abrir o painel de ações rápidas deste convidado"
+                            >
+                              <span className="hover:underline decoration-purple-400 decoration-2 underline-offset-2">{person.name}</span>
+                              {person.special_role && person.special_role !== 'guest' && (
+                                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-300">
+                                  {person.special_role}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditModalPerson(person);
+                                setIsPersonEditOpen(true);
+                              }}
+                              className="opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-purple-500 transition-opacity cursor-pointer"
+                              title="Editar cadastro completo"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </td>
 
@@ -1615,24 +1609,34 @@ export function GuestList({
                                     type="text"
                                     value={tempPhone}
                                     onChange={(e) => setTempPhone(e.target.value)}
+                                    onKeyDown={async (e) => {
+                                      if (e.key === 'Enter') {
+                                        await savePerson({ ...person, phone: tempPhone.trim() });
+                                        setEditingPhonePersonId(null);
+                                        onRefresh();
+                                      } else if (e.key === 'Escape') {
+                                        setEditingPhonePersonId(null);
+                                      }
+                                    }}
                                     placeholder="(11) 99999-9999"
                                     className="w-32 px-2 py-1 bg-slate-900 border border-purple-500 rounded text-[11px] font-mono text-white focus:outline-none"
                                     autoFocus
                                   />
                                   <button
                                     onClick={async () => {
-                                      await savePerson({ ...person, phone: tempPhone });
+                                      await savePerson({ ...person, phone: tempPhone.trim() });
                                       setEditingPhonePersonId(null);
                                       onRefresh();
                                     }}
                                     className="p-1 text-emerald-400 hover:bg-emerald-950 rounded cursor-pointer"
-                                    title="Salvar Telefone"
+                                    title="Salvar Telefone (Enter)"
                                   >
                                     <Check className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => setEditingPhonePersonId(null)}
                                     className="p-1 text-slate-400 hover:bg-slate-800 rounded cursor-pointer"
+                                    title="Cancelar (Esc)"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </button>
@@ -1745,21 +1749,84 @@ export function GuestList({
                           </select>
                         </td>
 
-                        {/* Família & Parentescos (Clean Badge) */}
+                        {/* Família & Parentescos (1-Click p/ Abrir Agrupamento Familiar) */}
                         <td className="py-3 px-2.5">
                           {hasFamily ? (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 rounded-lg font-extrabold text-[10px] border border-purple-300/60 dark:border-purple-800/60 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRelationshipModalPerson(person);
+                                setIsRelationshipOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-800 dark:text-purple-300 rounded-lg font-extrabold text-[10px] border border-purple-300/60 dark:border-purple-800/60 shadow-sm transition-colors cursor-pointer"
+                              title="Clique para editar os integrantes desta família"
+                            >
                               <Home className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
                               <span>{person.family_name || 'Grupo Familiar'}</span>
-                            </div>
+                              <Edit className="w-2.5 h-2.5 opacity-60" />
+                            </button>
                           ) : (
-                            <span className="text-[10px] text-slate-400 font-medium italic">Sem vínculo familiar</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRelationshipModalPerson(person);
+                                setIsRelationshipOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 border border-dashed border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+                              title="Clique para vincular acompanhantes / família"
+                            >
+                              <Users className="w-3 h-3" />
+                              <span>+ Agrupar Família</span>
+                            </button>
                           )}
                         </td>
 
-                        {/* Ações */}
+                        {/* Mesa Reservada (Select Direto em 1 Clique) */}
+                        <td className="py-3 px-2.5 min-w-[145px]">
+                          <select
+                            value={person.table_id || ''}
+                            onChange={(e) => handleTableChangeForPerson(person, e.target.value)}
+                            className="w-full p-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                          >
+                            <option value="">-- Sem Mesa --</option>
+                            {tables.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} ({persons.filter((p) => p.table_id === t.id).length}/{t.capacity})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* Ações Rápidas (1-Click + Menu) */}
                         <td className="py-3 px-3 text-right relative">
-                          <div className="inline-block text-left">
+                          <div className="inline-flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditModalPerson(person);
+                                setIsPersonEditOpen(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                              title="Editar Cadastro do Convidado"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (invite) {
+                                  handleWhatsAppDispatch(invite, person);
+                                } else {
+                                  handleOpenAddForPerson(person);
+                                }
+                              }}
+                              className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
+                              title={invite ? 'Disparar / Reenviar Convite no WhatsApp' : 'Gerar e Enviar Convite'}
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1767,9 +1834,9 @@ export function GuestList({
                                 setOpenDropdownId(openDropdownId === person.id ? null : person.id);
                               }}
                               className="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
-                              title="Opções"
+                              title="Mais Opções"
                             >
-                              <MoreVertical className="w-5 h-5" />
+                              <MoreVertical className="w-4 h-4" />
                             </button>
                             
                             {openDropdownId === person.id && (
@@ -1781,7 +1848,7 @@ export function GuestList({
                                     setOpenDropdownId(null);
                                   }} 
                                 />
-                                <div className="absolute right-5 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden text-left py-1">
+                                <div className="absolute right-5 top-full mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden text-left py-1">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -2012,11 +2079,11 @@ export function GuestList({
                           )}
                         </td>
 
-                        {/* COLUNA 2: STATUS RSVP (CONFIRMAÇÃO) */}
+                        {/* COLUNA 2: STATUS RSVP (CONFIRMAÇÃO + AÇÃO 1-CLIQUE) */}
                         <td className="py-2.5 px-2.5 align-middle">
                           {invite ? (
                             <div className="flex flex-col justify-center gap-1 items-start h-full min-h-[38px]">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span
                                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold border shadow-sm ${
                                     rsvpStatus === 'confirmed'
@@ -2055,9 +2122,9 @@ export function GuestList({
                                     type="button"
                                     onClick={() => setOpenTooltipId(openTooltipId === person.id ? null : person.id)}
                                     onBlur={() => setTimeout(() => setOpenTooltipId(null), 200)}
-                                    className="flex items-center justify-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                    className="flex items-center justify-center p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                                   >
-                                    <Eye className={`w-4 h-4 ${invite.opened_count && invite.opened_count > 0 ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`} />
+                                    <Eye className={`w-3.5 h-3.5 ${invite.opened_count && invite.opened_count > 0 ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`} />
                                   </button>
                                   
                                   {openTooltipId === person.id && (
@@ -2069,6 +2136,40 @@ export function GuestList({
                                       )}
                                       <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-800"></div>
                                     </div>
+                                  )}
+                                </div>
+
+                                {/* Botões Rápidos 1-Clique de Confirmação / Ausência / Reabertura */}
+                                <div className="inline-flex items-center gap-1 opacity-90 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity">
+                                  {rsvpStatus !== 'confirmed' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleManualConfirm(person, invite)}
+                                      className="p-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-white transition-colors cursor-pointer"
+                                      title="Confirmar presença em 1 clique"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  {rsvpStatus !== 'declined' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleManualDecline(person, invite)}
+                                      className="p-1 rounded-md bg-rose-500/15 hover:bg-rose-500 text-rose-600 dark:text-rose-400 hover:text-white transition-colors cursor-pointer"
+                                      title="Registrar ausência em 1 clique"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  {(rsvpStatus === 'confirmed' || rsvpStatus === 'declined') && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleManualReopen(person, invite)}
+                                      className="p-1 rounded-md bg-amber-500/15 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-slate-950 transition-colors cursor-pointer"
+                                      title="Reabrir para pendente"
+                                    >
+                                      <Clock className="w-3 h-3" />
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -2109,8 +2210,26 @@ export function GuestList({
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center h-full min-h-[38px]">
+                            <div className="flex items-center gap-2 h-full min-h-[38px]">
                               <span className="text-[10px] text-slate-400 font-medium">Não Enviado</span>
+                              <div className="inline-flex items-center gap-1 opacity-90 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => handleManualConfirm(person, null)}
+                                  className="px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-600 text-emerald-600 dark:text-emerald-400 hover:text-white text-[9px] font-extrabold transition-colors flex items-center gap-0.5 cursor-pointer"
+                                  title="Confirmar presença diretamente (gera convite confirmado)"
+                                >
+                                  <Check className="w-2.5 h-2.5" /> Confirmar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleManualDecline(person, null)}
+                                  className="p-1 rounded bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white transition-colors cursor-pointer"
+                                  title="Registrar ausência diretamente"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
                             </div>
                           )}
                         </td>
@@ -2911,8 +3030,8 @@ export function GuestList({
               </div>
             )}
 
-            {/* NAVEGAÇÃO DOS BOTÕES DO WIZARD (ANTERIOR / PRÓXIMO / SALVAR) */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+            {/* NAVEGAÇÃO DOS BOTÕES DO WIZARD (ANTERIOR / PRÓXIMO / SALVAR EXPRESSO) */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 gap-2 flex-wrap">
               {wizardStep > 1 ? (
                 <button
                   type="button"
@@ -2929,26 +3048,44 @@ export function GuestList({
                 <div />
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 {wizardStep < (inviteType === 'family' ? 5 : 4) ? (
-                  <button
-                    type="button"
-                    disabled={
-                      (wizardStep === 1 && !headPersonId && isDirectPersonInvite) ||
-                      (wizardStep === 2 && !headPersonId) ||
-                      (wizardStep === 3 && phone.replace(/\D/g, '').length < 8) ||
-                      (wizardStep === 4 && inviteType === 'family' && companionPersonIds.filter(Boolean).length < (familySlotsCount - 1))
-                    }
-                    onClick={() =>
-                      setWizardStep(
-                        wizardStep === 1 && headPersonId && isDirectPersonInvite ? 3 : wizardStep + 1
-                      )
-                    }
-                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Avançar</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  <>
+                    {/* Botão Expresso 1-Clique se os dados essenciais já estiverem completos */}
+                    {headPersonId &&
+                      phone.replace(/\D/g, '').length >= 8 &&
+                      (inviteType === 'individual' || companionPersonIds.filter(Boolean).length >= familySlotsCount - 1) && (
+                        <button
+                          type="button"
+                          disabled={loadingForm}
+                          onClick={() => handleSaveInviteForm(true)}
+                          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                          title="Pular etapas opcionais e disparar agora no WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Salvar & Enviar Agora</span>
+                        </button>
+                      )}
+
+                    <button
+                      type="button"
+                      disabled={
+                        (wizardStep === 1 && !headPersonId && isDirectPersonInvite) ||
+                        (wizardStep === 2 && !headPersonId) ||
+                        (wizardStep === 3 && phone.replace(/\D/g, '').length < 8) ||
+                        (wizardStep === 4 && inviteType === 'family' && companionPersonIds.filter(Boolean).length < (familySlotsCount - 1))
+                      }
+                      onClick={() =>
+                        setWizardStep(
+                          wizardStep === 1 && headPersonId && isDirectPersonInvite ? 3 : wizardStep + 1
+                        )
+                      }
+                      className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Avançar</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button
@@ -3413,7 +3550,7 @@ export function GuestList({
 
       {/* MODAL DE VÍNCULO DE PARENTESCO & GRUPO FAMILIAR */}
       <PersonRelationshipModal
-        person={relationshipModalPerson}
+        person={relationshipModalPerson ? (persons.find((p) => p.id === relationshipModalPerson.id) || relationshipModalPerson) : null}
         allPersons={persons}
         isOpen={isRelationshipOpen}
         onClose={() => setIsRelationshipOpen(false)}
@@ -3422,7 +3559,7 @@ export function GuestList({
 
       {/* MODAL DE CADASTRO / EDIÇÃO COMPLETA DE CONVIDADO */}
       <PersonEditModal
-        person={editModalPerson}
+        person={editModalPerson ? (persons.find((p) => p.id === editModalPerson.id) || editModalPerson) : null}
         config={config}
         isOpen={isPersonEditOpen}
         onClose={() => setIsPersonEditOpen(false)}
@@ -3460,7 +3597,7 @@ export function GuestList({
       {/* DRAWER / BOTTOM SHEET RESPONSIVO DE AÇÕES DO CONVIDADO */}
       <GuestActionDrawer
         isOpen={Boolean(selectedDrawerPerson)}
-        person={selectedDrawerPerson}
+        person={selectedDrawerPerson ? (persons.find((p) => p.id === selectedDrawerPerson.id) || selectedDrawerPerson) : null}
         invite={
           selectedDrawerPerson
             ? invites.find(
@@ -3479,10 +3616,17 @@ export function GuestList({
         onDispatchWhatsApp={(inv, p) => handleWhatsAppDispatch(inv, p)}
         onAcceptRequestedDate={(inv) => handleAcceptRequestedDate(inv)}
         onRejectRequestedDate={(inv) => handleRejectRequestedDate(inv)}
-        onEditInvite={(inv) => handleOpenEdit(inv)}
+        onEditInvite={(inv) => {
+          if (inv && inv.id) {
+            handleOpenEdit(inv);
+          } else if (selectedDrawerPerson) {
+            const freshPerson = persons.find((p) => p.id === selectedDrawerPerson.id) || selectedDrawerPerson;
+            handleOpenAddForPerson(freshPerson);
+          }
+        }}
         onTableChange={(p, tableId) => handleTableChangeForPerson(p, tableId)}
         onSavePhone={async (p, newPhone) => {
-          await savePerson({ ...p, phone: newPhone });
+          await savePerson({ ...p, phone: newPhone.trim() });
           onRefresh();
         }}
         onSplitCompanion={(p, inv) => handleSplitAndDispatchCompanion(p, inv)}

@@ -8,6 +8,7 @@ import {
   deletePresentationPlaylist,
   seedDefaultPlaylists,
 } from '@/lib/db';
+import { compressImageFile } from '@/lib/utils';
 import {
   Play,
   Sparkles,
@@ -30,6 +31,10 @@ import {
   Copy,
   ChevronRight,
   Info,
+  Eye,
+  Download,
+  MessageSquareHeart,
+  RefreshCw,
 } from 'lucide-react';
 
 interface PresentationManagerProps {
@@ -45,6 +50,7 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAddPhotosModalOpen, setIsAddPhotosModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<PresentationSlide | null>(null);
+  const [previewSlide, setPreviewSlide] = useState<PresentationSlide | null>(null);
 
   // Form de nova playlist
   const [newTitle, setNewTitle] = useState('');
@@ -78,7 +84,7 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
 
   useEffect(() => {
     loadPlaylists();
-  }, []);
+  }, [submissions.length]);
 
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId) || playlists[0] || null;
 
@@ -135,13 +141,13 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
     }
   };
 
-  // Adiciona fotos da galeria de homenagens
+  // Adiciona fotos ou depoimentos da galeria de homenagens
   const handleAddSubmissionToPlaylist = async (sub: SurpriseSubmission) => {
-    if (!selectedPlaylist || !sub.photo_url) return;
+    if (!selectedPlaylist || (!sub.photo_url && !sub.message)) return;
 
     const newSlide: PresentationSlide = {
-      id: `slide-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      photo_url: sub.photo_url,
+      id: `slide-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      photo_url: sub.photo_url || '',
       caption: sub.message || 'Com todo carinho para a Fernanda! ✨',
       author_name: sub.guest_name,
       duration_seconds: selectedPlaylist.default_slide_duration || 8,
@@ -160,19 +166,59 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
     await loadPlaylists();
   };
 
-  // Adiciona foto por upload local do computador
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Sincroniza de uma vez todos os envios da galeria que ainda não estão na playlist
+  const handleSyncAllFromGallery = async () => {
+    if (!selectedPlaylist) return;
+    const validSubs = submissions.filter((s) => Boolean(s.photo_url || s.message));
+    const missingSubs = validSubs.filter(
+      (sub) =>
+        !selectedPlaylist.slides.some(
+          (sl) =>
+            sl.submission_id === sub.id ||
+            (sub.photo_url && sl.photo_url === sub.photo_url) ||
+            (sl.author_name?.trim().toLowerCase() === sub.guest_name?.trim().toLowerCase() &&
+              sl.caption === sub.message)
+        )
+    );
+
+    if (missingSubs.length === 0) {
+      alert('Todos os envios da Galeria já estão incluídos nesta playlist!');
+      return;
+    }
+
+    const newSlides: PresentationSlide[] = missingSubs.map((sub, idx) => ({
+      id: `slide-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 5)}`,
+      photo_url: sub.photo_url || '',
+      caption: sub.message || 'Com todo carinho para a Fernanda! ✨',
+      author_name: sub.guest_name,
+      duration_seconds: selectedPlaylist.default_slide_duration || 8,
+      order: selectedPlaylist.slides.length + idx + 1,
+      source: 'surprise_submission',
+      submission_id: sub.id,
+      ken_burns_effect: (selectedPlaylist.slides.length + idx) % 2 === 0 ? 'zoom-in' : 'pan-left',
+    }));
+
+    const updatedPl: PresentationPlaylist = {
+      ...selectedPlaylist,
+      slides: [...selectedPlaylist.slides, ...newSlides],
+    };
+
+    await savePresentationPlaylist(updatedPl);
+    await loadPlaylists();
+  };
+
+  // Adiciona foto por upload local do computador (com compressão automática leve)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedPlaylist) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64 = event.target?.result as string;
-      if (!base64) return;
+    try {
+      const compressedBase64 = await compressImageFile(file, 900, 900, 0.72);
+      if (!compressedBase64) return;
 
       const newSlide: PresentationSlide = {
-        id: `slide-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        photo_url: base64,
+        id: `slide-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        photo_url: compressedBase64,
         caption: uploadCaption.trim() || 'Nesse dia inesquecível...',
         author_name: uploadAuthor.trim() || 'Fernanda Seppi',
         duration_seconds: uploadDuration || 8,
@@ -189,10 +235,12 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
       await savePresentationPlaylist(updatedPl);
       await loadPlaylists();
       setUploadCaption('');
-    };
-
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    } catch (err) {
+      console.error('Erro ao comprimir/enviar foto para o telão:', err);
+      alert('Não foi possível processar esta foto. Tente outra imagem.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Remove slide da playlist
@@ -274,6 +322,8 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
     );
   }
 
+  const galleryValidSubmissions = submissions.filter((s) => Boolean(s.photo_url || s.message));
+
   return (
     <div className="space-y-6">
       {/* BANNER PRINCIPAL COM BOTÃO DE PROJETAR NO TELÃO */}
@@ -286,7 +336,7 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
             Telão & Histórias da Festa
           </h3>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Monte playlists com transições suaves (Ken Burns), controle de tempo por frame e reprodução sincronizada com música para projetar no telão do buffet via cabo HDMI.
+            Clique em qualquer slide abaixo para <strong>abrir a foto em tamanho grande e ler a mensagem completa</strong>, ou projete no telão do buffet em tela cheia.
           </p>
         </div>
 
@@ -397,7 +447,7 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
               <div className="flex items-center gap-2">
                 <h4 className="text-lg font-black text-white">{selectedPlaylist.title}</h4>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  {selectedPlaylist.slides.length} Fotos
+                  {selectedPlaylist.slides.length} Slides
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
@@ -405,15 +455,28 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
               </p>
             </div>
 
-            {/* Ações de Adicionar Fotos */}
+            {/* Ações de Adicionar Fotos & Mensagens */}
             <div className="flex flex-wrap items-center gap-2">
               <button
+                type="button"
                 onClick={() => setIsAddPhotosModalOpen(true)}
                 className="px-3.5 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
               >
                 <Heart className="w-3.5 h-3.5 fill-white" />
-                <span>Puxar da Galeria ({submissions.filter((s) => !!s.photo_url).length})</span>
+                <span>Puxar da Galeria ({galleryValidSubmissions.length})</span>
               </button>
+
+              {galleryValidSubmissions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSyncAllFromGallery}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-pink-300 border border-pink-500/30 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                  title="Importa automaticamente todas as fotos e mensagens recebidas que ainda não estão neste slide"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Importar Todos Envios</span>
+                </button>
+              )}
 
               <label className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md">
                 <Upload className="w-3.5 h-3.5" />
@@ -467,7 +530,7 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
             </div>
           )}
 
-          {/* LISTA DE SLIDES ORDENÁVEIS */}
+          {/* LISTA DE SLIDES ORDENÁVEIS E CLICÁVEIS PARA ABRIR FOTO/MENSAGEM */}
           {selectedPlaylist.slides.length === 0 ? (
             <div className="p-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
               <div className="w-12 h-12 bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto">
@@ -475,55 +538,114 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
               </div>
               <h5 className="text-sm font-extrabold text-white">Nenhum slide nesta playlist ainda</h5>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Adicione fotos que os convidados já mandaram pelo formulário de homenagens ou envie fotos do seu computador.
+                Adicione fotos e mensagens que os convidados já enviaram pelo formulário de homenagens ou envie fotos do seu computador.
               </p>
-              <div className="pt-2 flex justify-center gap-2">
+              <div className="pt-2 flex flex-wrap justify-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setIsAddPhotosModalOpen(true)}
                   className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-bold cursor-pointer"
                 >
-                  Puxar Fotos da Galeria
+                  Puxar Fotos & Mensagens da Galeria ({galleryValidSubmissions.length})
                 </button>
+                {galleryValidSubmissions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSyncAllFromGallery}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold cursor-pointer"
+                  >
+                    Importar Todos Automaticamente
+                  </button>
+                )}
               </div>
             </div>
           ) : (
             <div className="space-y-3">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                Ordem dos Slides ({selectedPlaylist.slides.length})
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  Ordem dos Slides ({selectedPlaylist.slides.length}) — Clique em qualquer slide para abrir a Foto e a Mensagem
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 gap-2.5">
                 {selectedPlaylist.slides.map((slide, index) => (
                   <div
                     key={slide.id}
-                    className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl flex items-center justify-between gap-4 hover:border-slate-700 transition-colors"
+                    onClick={() => setPreviewSlide(slide)}
+                    className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl flex items-center justify-between gap-4 hover:border-purple-500/60 hover:bg-slate-900/90 transition-all cursor-pointer group"
                   >
                     {/* Lado Esquerdo: Posição, Miniatura e Informações */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-xs font-black text-slate-500 w-5 text-center">
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      <span className="text-xs font-black text-slate-500 w-5 text-center shrink-0">
                         {index + 1}
                       </span>
 
-                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0">
-                        <img
-                          src={slide.photo_url}
-                          alt="Thumb"
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 shrink-0 relative flex items-center justify-center group-hover:border-pink-500 transition-colors">
+                        {slide.photo_url ? (
+                          <>
+                            <img
+                              src={slide.photo_url}
+                              alt={slide.author_name || 'Slide'}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Eye className="w-4 h-4 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-pink-400 p-1 text-center">
+                            <MessageSquareHeart className="w-6 h-6" />
+                            <span className="text-[8px] font-black uppercase">Depoimento</span>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="text-xs font-bold text-white truncate max-w-xs md:max-w-md">
-                          &ldquo;{slide.caption || 'Sem legenda'}&rdquo;
-                        </p>
-                        <p className="text-[11px] text-purple-300 font-medium truncate">
-                          {slide.author_name || 'Anônimo'} • {slide.duration_seconds}s por slide
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-black text-pink-300">
+                            {slide.author_name || 'Convidado Especial'}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold">
+                            {slide.duration_seconds}s
+                          </span>
+                          {!slide.photo_url && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 font-bold">
+                              Somente Mensagem
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-medium text-slate-200 line-clamp-2 italic">
+                          &ldquo;{slide.caption || 'Sem mensagem em texto'}&rdquo;
                         </p>
                       </div>
                     </div>
 
-                    {/* Lado Direito: Ações (Subir, Descer, Editar, Excluir) */}
-                    <div className="flex items-center gap-1 shrink-0">
+                    {/* Lado Direito: Ações (Abrir/Ver, Baixar, Subir, Descer, Editar, Excluir) */}
+                    <div
+                      className="flex items-center gap-1 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSlide(slide)}
+                        className="px-2.5 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/30 rounded-lg text-[11px] font-extrabold flex items-center gap-1 cursor-pointer mr-1"
+                        title="Abrir Foto e Ler Mensagem Completa"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-purple-300" />
+                        <span className="hidden sm:inline">Ver Slide</span>
+                      </button>
+
+                      {slide.photo_url && (
+                        <a
+                          href={slide.photo_url}
+                          download={`slide-${(slide.author_name || 'convidado').replace(/\s+/g, '-').toLowerCase()}.jpg`}
+                          className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg cursor-pointer"
+                          title="Baixar Foto deste Slide"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => handleMoveSlide(index, 'up')}
@@ -567,6 +689,93 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL LIGHTBOX: ABRIR E VER FOTO + MENSAGEM COMPLETA PELO SLIDE */}
+      {previewSlide && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setPreviewSlide(null)}
+        >
+          <div
+            className="bg-slate-900 border border-purple-500/40 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-300 font-black text-sm">
+                  {(previewSlide.author_name || 'C').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white">
+                    {previewSlide.author_name || 'Convidado Especial'}
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Exibição no Telão: {previewSlide.duration_seconds} segundos
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {previewSlide.photo_url && (
+                  <a
+                    href={previewSlide.photo_url}
+                    download={`foto-telao-${(previewSlide.author_name || 'convidado').replace(/\s+/g, '-').toLowerCase()}.jpg`}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Baixar Foto
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = previewSlide;
+                    setPreviewSlide(null);
+                    setEditingSlide(target);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit className="w-3.5 h-3.5" /> Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewSlide(null)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {previewSlide.photo_url ? (
+                <div className="bg-black rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center max-h-[55vh]">
+                  <img
+                    src={previewSlide.photo_url}
+                    alt={previewSlide.author_name || 'Foto do Slide'}
+                    className="max-h-[55vh] w-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-purple-950/60 via-pink-950/40 to-slate-950 border border-pink-500/30 rounded-2xl p-8 text-center space-y-2">
+                  <MessageSquareHeart className="w-10 h-10 text-pink-400 mx-auto" />
+                  <p className="text-xs font-bold uppercase tracking-widest text-pink-300">
+                    Slide de Depoimento / Mensagem Especial
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-slate-950/90 border border-purple-500/30 rounded-2xl p-4 space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-pink-400 block">
+                  💬 Mensagem / Legenda Completa do Slide:
+                </span>
+                <p className="text-sm sm:text-base text-slate-100 italic leading-relaxed whitespace-pre-wrap">
+                  &ldquo;{previewSlide.caption || 'Sem mensagem cadastrada neste slide.'}&rdquo;
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -660,17 +869,17 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
         </div>
       )}
 
-      {/* MODAL 2: SELECIONAR FOTOS DA GALERIA DE HOMENAGENS */}
+      {/* MODAL 2: SELECIONAR FOTOS E MENSAGENS DA GALERIA DE HOMENAGENS */}
       {isAddPhotosModalOpen && selectedPlaylist && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-3xl max-h-[85vh] rounded-3xl p-6 space-y-4 text-white shadow-2xl flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
               <div>
                 <h4 className="text-base font-black flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-pink-400 fill-pink-400" /> Fotos Recebidas dos Convidados
+                  <Heart className="w-4 h-4 text-pink-400 fill-pink-400" /> Fotos & Depoimentos Recebidos ({galleryValidSubmissions.length})
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Clique na foto para adicioná-la à playlist &quot;{selectedPlaylist.title}&quot;.
+                  Clique em qualquer envio (foto ou mensagem) para adicioná-lo à playlist &quot;{selectedPlaylist.title}&quot;.
                 </p>
               </div>
               <button
@@ -681,12 +890,17 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 pr-1 grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {submissions
-                .filter((s) => !!s.photo_url)
-                .map((sub) => {
+            {galleryValidSubmissions.length === 0 ? (
+              <div className="p-10 text-center text-slate-400 text-xs">
+                Nenhuma foto ou mensagem enviada pelos convidados até o momento.
+              </div>
+            ) : (
+              <div className="overflow-y-auto flex-1 pr-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {galleryValidSubmissions.map((sub) => {
                   const alreadyInPlaylist = selectedPlaylist.slides.some(
-                    (s) => s.submission_id === sub.id || s.photo_url === sub.photo_url
+                    (s) =>
+                      s.submission_id === sub.id ||
+                      (sub.photo_url && s.photo_url === sub.photo_url)
                   );
 
                   return (
@@ -699,12 +913,21 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
                           : 'bg-slate-950 border-slate-800 hover:border-pink-500 cursor-pointer hover:scale-[1.02]'
                       }`}
                     >
-                      <div className="w-full h-32 rounded-xl overflow-hidden bg-black relative">
-                        <img
-                          src={sub.photo_url}
-                          alt={sub.guest_name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="w-full h-32 rounded-xl overflow-hidden bg-black relative flex items-center justify-center">
+                        {sub.photo_url ? (
+                          <img
+                            src={sub.photo_url}
+                            alt={sub.guest_name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="p-3 text-center space-y-1 bg-gradient-to-br from-purple-950/80 to-pink-950/60 w-full h-full flex flex-col items-center justify-center">
+                            <MessageSquareHeart className="w-7 h-7 text-pink-400" />
+                            <span className="text-[10px] font-black uppercase text-pink-200">
+                              Depoimento em Texto
+                            </span>
+                          </div>
+                        )}
                         {alreadyInPlaylist && (
                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                             <span className="px-2 py-1 rounded-md bg-emerald-600/90 text-white text-[10px] font-black uppercase">
@@ -716,12 +939,13 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
 
                       <div className="space-y-1">
                         <h6 className="text-xs font-black text-white truncate">{sub.guest_name}</h6>
-                        <p className="text-[10px] text-slate-400 line-clamp-2 italic">
-                          &ldquo;{sub.message || 'Sem mensagem'}&rdquo;
+                        <p className="text-[10px] text-slate-300 line-clamp-3 italic">
+                          &ldquo;{sub.message || 'Enviou foto especial'}&rdquo;
                         </p>
                       </div>
 
                       <button
+                        type="button"
                         disabled={alreadyInPlaylist}
                         className={`w-full py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
                           alreadyInPlaylist
@@ -729,14 +953,22 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
                             : 'bg-pink-600 hover:bg-pink-500 text-white shadow-sm'
                         }`}
                       >
-                        {alreadyInPlaylist ? 'Já Adicionada' : '+ Incluir no Telão'}
+                        {alreadyInPlaylist ? 'Já Adicionado' : '+ Incluir no Telão'}
                       </button>
                     </div>
                   );
                 })}
-            </div>
+              </div>
+            )}
 
-            <div className="flex items-center justify-end pt-3 border-t border-slate-800 shrink-0">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800 shrink-0">
+              <button
+                type="button"
+                onClick={handleSyncAllFromGallery}
+                className="px-4 py-2 bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 border border-pink-500/30 rounded-xl text-xs font-extrabold cursor-pointer"
+              >
+                + Adicionar Todos de Uma Vez
+              </button>
               <button
                 type="button"
                 onClick={() => setIsAddPhotosModalOpen(false)}
@@ -768,10 +1000,10 @@ export function PresentationManager({ submissions }: PresentationManagerProps) {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-300 font-extrabold mb-1">
-                  Legenda / &quot;Nesse dia...&quot;
+                  Legenda / Mensagem Completa
                 </label>
                 <textarea
-                  rows={3}
+                  rows={4}
                   value={editingSlide.caption || ''}
                   onChange={(e) => setEditingSlide({ ...editingSlide, caption: e.target.value })}
                   className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"

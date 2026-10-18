@@ -335,7 +335,10 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
           }`}
         >
           <Camera className="w-4 h-4 text-pink-300" />
-          <span>Galeria do Telão ({submissions.filter((s) => !!s.photo_url).length} Fotos)</span>
+          <span>
+            Galeria do Telão ({submissions.filter((s) => !!s.photo_url).length} Fotos •{' '}
+            {submissions.filter((s) => !!s.message).length} Mensagens)
+          </span>
         </button>
 
         <button
@@ -365,16 +368,19 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="space-y-1">
                 <span className="text-xs font-black text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-400" /> Armazenamento para Homenagem do Telão
+                  <Sparkles className="w-4 h-4 text-amber-400" /> Armazenamento Oficial (Site + Backup no E-mail)
                 </span>
                 <h3 className="text-lg font-black text-white">
-                  {submissions.filter((s) => !!s.photo_url).length} de 100 Fotos Recebidas
+                  {submissions.filter((s) => !!s.photo_url).length} Fotos &bull; {submissions.filter((s) => !!s.message).length} Mensagens Recebidas
                 </h3>
+                <p className="text-[11px] text-slate-400">
+                  Cada novo envio salva uma versão leve no site/Telão e envia automaticamente a foto original em alta definição + mensagem para o seu e-mail.
+                </p>
               </div>
 
               <div className="text-right">
                 <span className="text-xs font-bold text-slate-400">
-                  Total de Depoimentos: <strong className="text-white">{submissions.filter((s) => !!s.message).length}</strong>
+                  Total de Envios: <strong className="text-white">{submissions.length}</strong>
                 </span>
               </div>
             </div>
@@ -384,7 +390,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
               <div
                 className="bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 h-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, (submissions.filter((s) => !!s.photo_url).length / 100) * 100)}%`,
+                  width: `${Math.min(100, (submissions.length / 100) * 100)}%`,
                 }}
               />
             </div>
@@ -396,7 +402,7 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
               <div className="w-16 h-16 bg-pink-500/10 text-pink-400 rounded-3xl flex items-center justify-center mx-auto border border-pink-500/20">
                 <Camera className="w-8 h-8" />
               </div>
-              <h4 className="text-base font-black text-white">Nenhuma foto recebida ainda</h4>
+              <h4 className="text-base font-black text-white">Nenhuma foto ou mensagem recebida ainda</h4>
               <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
                 Assim que os convidados confirmarem presença no Hotsite, eles poderão enviar suas fotos marcantes e recados para a homenagem!
               </p>
@@ -406,13 +412,11 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
               {submissions.map((sub) => (
                 <div
                   key={sub.id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group hover:border-pink-500/50 transition-all shadow-md"
+                  onClick={() => setPreviewSubmission(sub)}
+                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group hover:border-pink-500/60 transition-all shadow-md cursor-pointer"
                 >
                   {sub.photo_url ? (
-                    <div
-                      className="relative aspect-square bg-slate-950 overflow-hidden cursor-pointer"
-                      onClick={() => setPreviewSubmission(sub)}
-                    >
+                    <div className="relative aspect-square bg-slate-950 overflow-hidden">
                       <img
                         src={sub.photo_url}
                         alt={`Foto de ${sub.guest_name}`}
@@ -420,13 +424,16 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <span className="px-3 py-1 bg-white text-slate-950 font-black text-[11px] rounded-xl shadow-md">
-                          Ampliar Foto
+                          Abrir Foto & Mensagem
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="aspect-video bg-pink-950/20 border-b border-slate-800 flex items-center justify-center text-pink-400">
-                      <MessageSquareText className="w-8 h-8 opacity-60" />
+                    <div className="aspect-video bg-gradient-to-br from-pink-950/40 to-purple-950/40 border-b border-slate-800 flex flex-col items-center justify-center text-pink-400 gap-1">
+                      <MessageSquareText className="w-8 h-8 opacity-80" />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-pink-300">
+                        Clique para Ler Recado
+                      </span>
                     </div>
                   )}
 
@@ -449,13 +456,16 @@ export function SurpriseDashboard({ invites, persons = [], tables = [], config, 
                     </div>
 
                     {(sub.photo_url || sub.message) && (
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                      <div
+                        className="pt-2 border-t border-slate-800 flex items-center justify-between"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           type="button"
                           onClick={() => setPreviewSubmission(sub)}
                           className="text-[10px] font-bold text-pink-400 hover:text-pink-300 cursor-pointer"
                         >
-                          {sub.photo_url ? 'Ver em alta resolução' : 'Ver recado'}
+                          {sub.photo_url ? 'Abrir Foto & Recado' : 'Ler Recado Completo'}
                         </button>
                         {sub.photo_url && (
                           <a

@@ -1,17 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Invite } from '@/types';
+import { Invite, Table } from '@/types';
 import { toggleCheckin } from '@/lib/db';
 import { Search, UserCheck, CheckCircle2, QrCode, ShieldCheck, DoorOpen, Users } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface CheckinScannerProps {
   invites: Invite[];
+  tables?: Table[];
   onRefresh: () => void;
 }
 
-export function CheckinScanner({ invites, onRefresh }: CheckinScannerProps) {
+export function CheckinScanner({ invites, tables = [], onRefresh }: CheckinScannerProps) {
   const [search, setSearch] = useState('');
 
   const confirmedInvites = invites.filter((i) => i.status === 'confirmed');
@@ -105,7 +106,7 @@ export function CheckinScanner({ invites, onRefresh }: CheckinScannerProps) {
 
                 {invite.table_id && (
                   <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                    📍 Assento: {invite.table_id}
+                    📍 Assento: {tables.find((t) => t.id === invite.table_id)?.name || invite.table_id}
                   </p>
                 )}
 

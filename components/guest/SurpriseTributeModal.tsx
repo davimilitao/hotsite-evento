@@ -10,6 +10,9 @@ interface SurpriseTributeModalProps {
   isOpen: boolean;
   onClose: () => void;
   invite: Invite;
+  recipientEmail?: string;
+  ccEmail?: string;
+  eventTitle?: string;
   onSaved: (updatedInvite: Invite) => void;
 }
 
@@ -17,9 +20,13 @@ export function SurpriseTributeModal({
   isOpen,
   onClose,
   invite,
+  recipientEmail = 'militao46@gmail.com',
+  ccEmail = '',
+  eventTitle = 'Fernanda Seppi - 40 Anos',
   onSaved,
 }: SurpriseTributeModalProps) {
   const [photoUrl, setPhotoUrl] = useState<string>(invite.surprise_photo_url || '');
+  const [highResPhotoUrl, setHighResPhotoUrl] = useState<string>('');
   const [message, setMessage] = useState<string>(invite.surprise_message || '');
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
@@ -34,9 +41,12 @@ export function SurpriseTributeModal({
 
     setCompressing(true);
     try {
-      // Compacta no cliente para ~100-180KB mantendo resolução HD para o telão
-      const compressed = await compressImageFile(file, 1200, 1200, 0.78);
-      setPhotoUrl(compressed);
+      // 1. Versão reduzida e ultra-leve (~55-90KB) para o site/Firestore/Telão não estourar cota de 1MB
+      const siteLightweight = await compressImageFile(file, 850, 850, 0.70);
+      // 2. Versão em Alta Definição (Full HD 1920px, 0.88) exclusiva para enviar em anexo para o seu E-mail
+      const emailHighRes = await compressImageFile(file, 1920, 1920, 0.88);
+      setPhotoUrl(siteLightweight);
+      setHighResPhotoUrl(emailHighRes);
     } catch (err) {
       console.error('Erro ao processar imagem:', err);
       alert('Não foi possível carregar a imagem. Tente outra foto.');
@@ -59,6 +69,22 @@ export function SurpriseTributeModal({
         message: message.trim(),
         guest_name: invite.head_name,
       });
+
+      // Envia cópia de segurança em Alta Resolução + Mensagem para o e-mail do organizador
+      fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'surprise_tribute',
+          token: invite.id,
+          headName: invite.head_name,
+          tributeMessage: message.trim(),
+          photoBase64: highResPhotoUrl || photoUrl || '',
+          eventTitle,
+          recipientEmail: recipientEmail || 'militao46@gmail.com',
+          ccEmail,
+        }),
+      }).catch((err) => console.warn('Aviso ao enviar backup por e-mail:', err));
 
       const updatedInvite: Invite = {
         ...invite,
